@@ -167,6 +167,7 @@ struct SpriteEditor {
     mouse_y: i32,
     mouse_pressed: bool,
     highlit_color: Color,
+    sprite_sheet: Vec<Color>,
 }
 
 const CANVAS_X: i32 = 79; // end = 120
@@ -179,6 +180,7 @@ impl App for SpriteEditor {
             mouse_y: 64,
             mouse_pressed: false,
             highlit_color: 11,
+            sprite_sheet: vec![0; 8 * 8],
         }
     }
 
@@ -193,6 +195,16 @@ impl App for SpriteEditor {
                 if color_position(color).contains(self.mouse_x, self.mouse_y) {
                     self.highlit_color = color;
                     return;
+                }
+            }
+
+            if canvas_position().contains(self.mouse_x, self.mouse_y) {
+                for x in 0..8 {
+                    for y in 0..8 {
+                        if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
+                            self.sprite_sheet[(x + y * 8) as usize] = self.highlit_color;
+                        }
+                    }
                 }
             }
         }
@@ -218,7 +230,12 @@ impl App for SpriteEditor {
         draw_context.rectfill(0, 121, 127, 127, 8);
 
         // draw canvas
-        draw_context.rectfill(8, 10, 8 + 8 * 8 + 2, 10 + 8 * 8 + 2, 0);
+        canvas_position().fill(draw_context, 0);
+        for x in 0..8 {
+            for y in 0..8 {
+                canvas_pixel_rect(x, y).fill(draw_context, self.sprite_sheet[(x + y * 8) as usize])
+            }
+        }
 
         // Draw color palette
 
@@ -255,6 +272,26 @@ impl App for SpriteEditor {
     }
 }
 
+const CANVAS_BORDER: i32 = 1;
+fn canvas_position() -> Rect {
+    Rect {
+        x: 8,
+        y: 10,
+        width: 8 * 8 + CANVAS_BORDER * 2,
+        height: 8 * 8 + CANVAS_BORDER * 2,
+    }
+}
+
+fn canvas_pixel_rect(x: i32, y: i32) -> Rect {
+    let canvas = canvas_position();
+
+    Rect {
+        x: canvas.x + CANVAS_BORDER + 8 * x,
+        y: canvas.y + CANVAS_BORDER + 8 * y,
+        width: 8,
+        height: 8,
+    }
+}
 const SIZE: i32 = 10;
 const BOX_SIZE: i32 = 4 * SIZE + 2;
 
@@ -271,6 +308,16 @@ impl Rect {
         let contains_y = y >= self.y && y < self.y + self.height;
 
         contains_x && contains_y
+    }
+
+    pub fn fill(&self, draw_context: &mut DrawContext, color: Color) {
+        draw_context.rectfill(
+            self.x,
+            self.y,
+            self.x + self.width - 1,
+            self.y + self.height - 1,
+            color,
+        )
     }
 }
 
