@@ -1,4 +1,5 @@
 pub mod app;
+mod font;
 mod screen;
 
 pub use app::App;
@@ -92,6 +93,28 @@ impl DrawContext {
         for i in 0..8 {
             for j in 0..8 {
                 self.set_color(x + i, y + j, sprite[(i + j * 8) as usize]);
+            }
+        }
+    }
+
+    pub fn print(&mut self, str: &str, x: i32, y: i32, color: Color) {
+        for (pos, char) in str.chars().enumerate() {
+            let index = char as u8 - font::FIRST_CHAR as u8;
+
+            self.print_char(index as usize, x + (pos * 4) as i32, y, color);
+        }
+    }
+
+    fn print_char(&mut self, index: usize, x: i32, y: i32, color: Color) {
+        let char_data = font::FONT[index];
+
+        for x_offset in 0..4_i32 {
+            for y_offset in 0..6 {
+                let print = char_data[(x_offset + y_offset * 4) as usize] != 0;
+
+                if print {
+                    self.set_color(x + x_offset, y + y_offset, color);
+                }
             }
         }
     }

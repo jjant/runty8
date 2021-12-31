@@ -166,8 +166,9 @@ struct SpriteEditor {
     mouse_x: i32,
     mouse_y: i32,
     mouse_pressed: bool,
-    highlit_color: Color,
+    highlighted_color: Color,
     sprite_sheet: Vec<Color>,
+    bottom_text: String,
 }
 
 const CANVAS_X: i32 = 79; // end = 120
@@ -179,8 +180,9 @@ impl App for SpriteEditor {
             mouse_x: 64,
             mouse_y: 64,
             mouse_pressed: false,
-            highlit_color: 11,
+            highlighted_color: 11,
             sprite_sheet: vec![0; 8 * 8],
+            bottom_text: String::new(),
         }
     }
 
@@ -189,20 +191,25 @@ impl App for SpriteEditor {
         self.mouse_x = state.mouse_x;
         self.mouse_y = state.mouse_y;
         self.mouse_pressed = state.mouse_pressed;
+        self.bottom_text = String::new();
 
-        if self.mouse_pressed {
-            for color in 0..16 {
-                if color_position(color).contains(self.mouse_x, self.mouse_y) {
-                    self.highlit_color = color;
-                    return;
+        for color in 0..16 {
+            if color_position(color).contains(self.mouse_x, self.mouse_y) {
+                self.bottom_text = format!("COLOUR{}", color);
+                if self.mouse_pressed {
+                    self.highlighted_color = color;
                 }
+                return;
             }
+        }
 
-            if canvas_position().contains(self.mouse_x, self.mouse_y) {
-                for x in 0..8 {
-                    for y in 0..8 {
-                        if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
-                            self.sprite_sheet[(x + y * 8) as usize] = self.highlit_color;
+        if canvas_position().contains(self.mouse_x, self.mouse_y) {
+            for x in 0..8 {
+                for y in 0..8 {
+                    if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
+                        self.bottom_text = format!("X:{}@Y:{}", x, y);
+                        if self.mouse_pressed {
+                            self.sprite_sheet[(x + y * 8) as usize] = self.highlighted_color;
                         }
                     }
                 }
@@ -264,10 +271,13 @@ impl App for SpriteEditor {
             y,
             width,
             height,
-        } = color_position(self.highlit_color);
+        } = color_position(self.highlighted_color);
         draw_context.rect(x, y, x + width - 1, y + height - 1, 0);
         draw_context.rect(x - 1, y - 1, x + width, y + height, 7);
 
+        draw_context.print(&self.bottom_text, 1, 122, 2);
+
+        // Always render the mouse last (on top of everything)
         draw_context.raw_spr(MOUSE_SPRITE, self.mouse_x, self.mouse_y);
     }
 }
@@ -331,4 +341,14 @@ fn color_position(color: Color) -> Rect {
         width: SIZE,
         height: SIZE,
     }
+}
+
+//// DEBUG STUFF
+
+#[allow(dead_code)]
+fn print_debug_strings(draw_context: &mut DrawContext, x: i32, y: i32) {
+    draw_context.print("0123456789:;<=>?@", x, y, 7);
+    let mut letters = "abcdefghijklmnopqrstuvwxyz".to_owned();
+    letters.make_ascii_uppercase();
+    draw_context.print(&letters, x, y + 10, 7);
 }
