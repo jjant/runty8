@@ -1,7 +1,10 @@
-use runty8::{app::App, Button, DrawContext, State};
+use runty8::{app::App, Button, Color, DrawContext, State};
+mod examples;
 
 fn main() {
-    runty8::run_app::<ExampleApp>();
+    runty8::run_app::<SpriteEditor>();
+
+    // runty8::run_app::<ExampleApp>();
 }
 
 pub struct ExampleApp {
@@ -32,13 +35,25 @@ impl App for ExampleApp {
         //     0,
         //     6,
         // );
-        draw_context.line(0, 72, 127, 72, [30, 10, 10]);
-        // draw_context.spr(1, self.x / 100, self.y / 100)
+        draw_context.line(0, 72, 127, 72, 4);
 
         let x0 = self.x / 100 + 1;
         let y0 = self.y / 100 + 1;
 
-        draw_context.rectfill(x0, y0, x0 + 6, y0 + 6, [30, 160, 60])
+        #[rustfmt::skip]
+        let sprite: [u8; 8 * 8] = [
+            0, 0, 0, 0, 0, 0, 0, 0,
+            6, 6, 6, 6, 6, 6, 6, 0,
+            6, 7, 7, 7, 7, 7, 6, 0,
+            6, 7, 6, 6, 6, 7, 6, 0,
+            6, 7, 6, 6, 6, 7, 6, 0,
+            6, 7, 6, 6, 6, 7, 6, 0,
+            6, 7, 7, 7, 7, 7, 6, 0,
+            6, 6, 6, 6, 6, 6, 6, 0,
+        ];
+
+        draw_context.rectfill(x0, y0, x0 + 6, y0 + 6, 4);
+        draw_context.raw_spr(sprite, self.x / 100, self.y / 100);
     }
 
     fn update(&mut self, state: &State) {
@@ -146,3 +161,127 @@ impl App for ExampleApp {
 //         );
 //     });
 // }
+
+struct SpriteEditor {
+    mouse_x: i32,
+    mouse_y: i32,
+    mouse_pressed: bool,
+    highlit_color: Color,
+}
+
+const CANVAS_X: i32 = 79; // end = 120
+const CANVAS_Y: i32 = 10;
+
+impl App for SpriteEditor {
+    fn init() -> Self {
+        Self {
+            mouse_x: 64,
+            mouse_y: 64,
+            mouse_pressed: false,
+            highlit_color: 11,
+        }
+    }
+
+    fn update(&mut self, state: &State) {
+        println!("{:?}", state);
+        self.mouse_x = state.mouse_x;
+        self.mouse_y = state.mouse_y;
+        self.mouse_pressed = state.mouse_pressed;
+
+        if self.mouse_pressed {
+            for color in 0..16 {
+                if color_position(color).contains(self.mouse_x, self.mouse_y) {
+                    self.highlit_color = color;
+                    return;
+                }
+            }
+        }
+    }
+
+    fn draw(&self, draw_context: &mut DrawContext) {
+        const MOUSE_SPRITE: [u8; 8 * 8] = [
+            0, 1, 0, 0, 0, 0, 0, 0, //
+            1, 7, 1, 0, 0, 0, 0, 0, //
+            1, 7, 7, 1, 0, 0, 0, 0, //
+            1, 7, 7, 7, 1, 0, 0, 0, //
+            1, 7, 7, 7, 7, 1, 0, 0, //
+            1, 7, 7, 1, 1, 0, 0, 0, //
+            0, 1, 1, 7, 1, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+        ];
+
+        draw_context.cls();
+        draw_context.rectfill(0, 0, 127, 127, 5);
+
+        // Draw menu bars
+        draw_context.rectfill(0, 0, 127, 7, 8);
+        draw_context.rectfill(0, 121, 127, 127, 8);
+
+        // draw canvas
+        draw_context.rectfill(8, 10, 8 + 8 * 8 + 2, 10 + 8 * 8 + 2, 0);
+
+        // Draw color palette
+
+        draw_context.rectfill(
+            CANVAS_X,
+            CANVAS_Y,
+            CANVAS_X + BOX_SIZE - 1,
+            CANVAS_Y + BOX_SIZE - 1,
+            0,
+        );
+
+        for color in 0..16 {
+            let Rect {
+                x,
+                y,
+                width,
+                height,
+            } = color_position(color);
+
+            draw_context.rectfill(x, y, x + width - 1, y + height - 1, color as u8);
+        }
+
+        // draw highlight
+        let Rect {
+            x,
+            y,
+            width,
+            height,
+        } = color_position(self.highlit_color);
+        draw_context.rect(x, y, x + width - 1, y + height - 1, 0);
+        draw_context.rect(x - 1, y - 1, x + width, y + height, 7);
+
+        draw_context.raw_spr(MOUSE_SPRITE, self.mouse_x, self.mouse_y);
+    }
+}
+
+const SIZE: i32 = 10;
+const BOX_SIZE: i32 = 4 * SIZE + 2;
+
+struct Rect {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+impl Rect {
+    pub fn contains(&self, x: i32, y: i32) -> bool {
+        let contains_x = x >= self.x && x < self.x + self.width;
+        let contains_y = y >= self.y && y < self.y + self.height;
+
+        contains_x && contains_y
+    }
+}
+
+fn color_position(color: Color) -> Rect {
+    let x = CANVAS_X + 1 + (color as i32 % 4) * SIZE;
+    let y = CANVAS_Y + 1 + (color as i32 / 4) * SIZE;
+
+    Rect {
+        x,
+        y,
+        width: SIZE,
+        height: SIZE,
+    }
+}

@@ -1,7 +1,7 @@
 use crate::app::App;
 use crate::{DrawContext, State};
-use glium::glutin::dpi::LogicalSize;
-use glium::glutin::event::{ElementState, Event, KeyboardInput, VirtualKeyCode};
+use glium::glutin::dpi::{LogicalPosition, LogicalSize};
+use glium::glutin::event::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode};
 use glium::glutin::event_loop::ControlFlow;
 use glium::uniforms::MagnifySamplerFilter;
 use glium::{glutin, Surface};
@@ -48,10 +48,18 @@ pub fn do_something<T: App + 'static>(mut state: State, mut draw_context: DrawCo
     let mut app = T::init();
 
     let event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(600.0, 600.0));
+    let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, &event_loop).unwrap();
-    // let scale_factor = display.gl_window().window().scale_factor();
+    {
+        display.gl_window().window().set_cursor_visible(false);
+    }
+    let scale_factor = display.gl_window().window().scale_factor();
+    let logical_size = display
+        .gl_window()
+        .window()
+        .inner_size()
+        .to_logical(scale_factor);
 
     let vertex1 = Vertex {
         position: [-1.0, -1.0, 0.0, 1.0],
@@ -91,7 +99,7 @@ pub fn do_something<T: App + 'static>(mut state: State, mut draw_context: DrawCo
 
     event_loop.run(move |event, _, control_flow| {
 
-        let should_return = handle_event(event, control_flow, &mut state);
+        let should_return = handle_event(event, scale_factor, logical_size, control_flow, &mut state);
 
         if let ShouldReturn::Yes = should_return {
             return;
@@ -118,7 +126,7 @@ pub fn do_something<T: App + 'static>(mut state: State, mut draw_context: DrawCo
         }
 
         let image = glium::texture::RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
-        let texture = glium::texture::Texture2d::new(&display, image).unwrap();
+        let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
         let uniforms = uniform! {
             tex: glium::uniforms::Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
         };
@@ -143,6 +151,8 @@ enum ShouldReturn {
 
 fn handle_event(
     event: Event<()>,
+    hidpi_factor: f64,
+    window_size: LogicalSize<f64>,
     control_flow: &mut ControlFlow,
     state: &mut State,
 ) -> ShouldReturn {
@@ -157,10 +167,24 @@ fn handle_event(
 
                 return ShouldReturn::Yes;
             }
-            // glutin::event::WindowEvent::CursorMoved {position,..} => {
-            //     on_mouse_move(position.to_logical(scale_factor), &mut data);
-            //     println!("{:?}", position);
-            // },
+            // TODO: Handle resize events.
+            glutin::event::WindowEvent::CursorMoved { position, .. } => {
+                let logical_mouse: LogicalPosition<f64> = position.to_logical(hidpi_factor);
+
+                state.mouse_x = (logical_mouse.x / window_size.width * 128.).floor() as i32;
+                state.mouse_y = (logical_mouse.y / window_size.height * 128.).floor() as i32;
+
+                return ShouldReturn::No;
+            }
+            glutin::event::WindowEvent::MouseInput {
+                button: MouseButton::Left,
+                state: input_state,
+                ..
+            } => {
+                state.mouse_pressed = input_state == ElementState::Pressed;
+
+                return ShouldReturn::No;
+            }
             glutin::event::WindowEvent::KeyboardInput { input, .. } => {
                 handle_key(input, state);
                 return ShouldReturn::Yes;
