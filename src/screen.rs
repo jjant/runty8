@@ -209,6 +209,7 @@ fn handle_key(input: KeyboardInput, state: &mut State) {
             VirtualKeyCode::Up => &mut state.up,
             VirtualKeyCode::Right => &mut state.right,
             VirtualKeyCode::Down => &mut state.down,
+            VirtualKeyCode::Escape => std::process::exit(0),
             _ => return,
         };
         *key_ref = input.state == ElementState::Pressed;

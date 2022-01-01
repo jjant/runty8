@@ -1,3 +1,7 @@
+use std::io::Write;
+use std::{fs::File, io::Read};
+
+use itertools::Itertools;
 use runty8::{app::App, Button, Color, DrawContext, State};
 mod examples;
 
@@ -57,7 +61,7 @@ impl App for ExampleApp {
     }
 
     fn update(&mut self, state: &State) {
-        println!("{:?}", state);
+        // println!("{:?}", state);
 
         // -- lower -100/100 less max spd
         // -- lower -10/10 slower start
@@ -169,6 +173,7 @@ struct SpriteEditor {
     highlighted_color: Color,
     bottom_text: String,
     sprite_sheet: Vec<Color>,
+    #[allow(dead_code)]
     selected_sprite: u8,
 }
 
@@ -177,7 +182,6 @@ const CANVAS_Y: i32 = 10;
 
 const SPRITE_WIDTH: usize = 8;
 const SPRITE_SIZE: usize = SPRITE_WIDTH * 8;
-const SPRITE_COUNT: usize = 256;
 const SPRITES_PER_ROW: i32 = SPRITE_SHEET_WIDTH / SPRITE_WIDTH as i32;
 const SPRITE_SHEET_WIDTH: i32 = 128;
 
@@ -187,16 +191,19 @@ impl SpriteEditor {
         const HEIGHT: i32 = 32;
 
         draw_context.line(0, y_start, 128, y_start, 0);
-        for x in 0..128 {
-            for y in 0..HEIGHT {
-                draw_context.pset(
-                    x,
-                    y_start + y + BORDER,
-                    self.sprite_sheet[(x + y * SPRITE_SHEET_WIDTH) as usize],
+
+        for sprite_y in 0..4 {
+            for sprite_x in 0..16 {
+                let sprite = sprite_x + sprite_y * 16;
+
+                self.draw_sprite(
+                    draw_context,
+                    sprite,
+                    (sprite_x * SPRITE_WIDTH) as i32,
+                    y_start + BORDER as i32 + (sprite_y * SPRITE_WIDTH) as i32,
                 );
             }
         }
-
         draw_context.line(
             0,
             y_start + HEIGHT + BORDER,
@@ -208,38 +215,69 @@ impl SpriteEditor {
 
     // TODO: Reorganize this.
     fn draw_sprite(&self, draw_context: &mut DrawContext, sprite: usize, x: i32, y: i32) {
-        for i in 0..8 {
-            for j in 0..8 {
-                let x_off = sprite % SPRITES_PER_ROW as usize;
-                let y_off = sprite / SPRITES_PER_ROW as usize;
+        let x_pos = sprite % SPRITES_PER_ROW as usize;
+        let y_pos = sprite / SPRITES_PER_ROW as usize;
+        let idx = x_pos * SPRITE_WIDTH + y_pos * 128 * 8;
 
-                let idx = (x_off + y_off * SPRITE_WIDTH);
+        for j in 0..8 {
+            let y_offset = j * 128;
 
+            for i in 0..8 {
                 draw_context.pset(
-                    x + i,
-                    y + j,
-                    self.sprite_sheet[idx + (i + j * SPRITE_SHEET_WIDTH) as usize],
+                    x + i as i32,
+                    y + j as i32,
+                    self.sprite_sheet[idx + y_offset + i],
                 );
             }
         }
     }
+
+    fn serialize(&self) -> String {
+        let lines = self.sprite_sheet.chunks(128).map(|chunk| {
+            Itertools::intersperse(chunk.iter().map(|n| format!("{:X}", n)), "".to_owned())
+                .collect()
+        });
+
+        Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
+    }
+}
+
+fn serialize(bytes: &[u8]) {
+    let mut file = File::create("sprite_sheet.txt").unwrap();
+    file.write_all(bytes).unwrap();
+}
+
+// TODO: Make a more reliable version of this.
+fn deserialize() -> Vec<u8> {
+    let mut file = Vec::with_capacity(128 * 128);
+    File::open("sprite_sheet.txt")
+        .expect("Couldn't read file")
+        .read_to_end(&mut file)
+        .unwrap();
+
+    file.into_iter()
+        .filter_map(|c| (c as char).to_digit(16))
+        .map(|c| c as u8)
+        .collect()
 }
 
 impl App for SpriteEditor {
     fn init() -> Self {
+        // let mut sprite_sheet = vec![11; SPRITE_SIZE * SPRITE_COUNT];
+        let sprite_sheet = deserialize();
+
         Self {
             mouse_x: 64,
             mouse_y: 64,
             mouse_pressed: false,
-            highlighted_color: 11,
+            highlighted_color: 7,
             bottom_text: String::new(),
-            sprite_sheet: vec![11; SPRITE_SIZE * SPRITE_COUNT],
+            sprite_sheet,
             selected_sprite: 0,
         }
     }
 
     fn update(&mut self, state: &State) {
-        println!("{:?}", state);
         self.mouse_x = state.mouse_x;
         self.mouse_y = state.mouse_y;
         self.mouse_pressed = state.mouse_pressed;
@@ -267,6 +305,12 @@ impl App for SpriteEditor {
                 }
             }
         }
+
+        if state.btn(Button::X) {
+            serialize(self.serialize().as_bytes());
+
+            std::process::exit(1);
+        }
     }
 
     fn draw(&self, draw_context: &mut DrawContext) {
@@ -281,6 +325,7 @@ impl App for SpriteEditor {
             0, 0, 0, 0, 0, 0, 0, 0, //
         ];
 
+        #[allow(dead_code)]
         const MOUSE_TARGET_SPRITE: [u8; SPRITE_SIZE] = [
             0, 0, 0, 0, 0, 0, 0, 0, //
             0, 0, 0, 1, 0, 0, 0, 0, //
@@ -337,7 +382,10 @@ impl App for SpriteEditor {
             width: 128,
             height: 34,
         };
+        // TODO: Remove this, just here to make sure I'm not displaying the sprite sheet incorrectly
         sprite_sheet_area.fill(draw_context, 2);
+        //
+
         self.draw_sprite_sheet(sprite_sheet_area.y, draw_context);
 
         // Draw color palette
@@ -360,15 +408,7 @@ impl App for SpriteEditor {
             draw_context.rectfill(x, y, x + width - 1, y + height - 1, color as u8);
         }
 
-        // draw highlight
-        let Rect {
-            x,
-            y,
-            width,
-            height,
-        } = color_position(self.highlighted_color);
-        draw_context.rect(x, y, x + width - 1, y + height - 1, 0);
-        draw_context.rect(x - 1, y - 1, x + width, y + height, 7);
+        color_position(self.highlighted_color).highlight(draw_context, true);
 
         draw_context.print(&self.bottom_text, 1, 122, 2);
 
@@ -431,6 +471,20 @@ impl Rect {
 
     pub fn right(&self) -> i32 {
         self.x + self.width - 1
+    }
+
+    pub fn highlight(&self, draw_context: &mut DrawContext, include_inner: bool) {
+        let Rect {
+            x,
+            y,
+            width,
+            height,
+        } = *self;
+
+        if include_inner {
+            draw_context.rect(x, y, x + width - 1, y + height - 1, 0)
+        };
+        draw_context.rect(x - 1, y - 1, x + width, y + height, 7);
     }
 }
 
