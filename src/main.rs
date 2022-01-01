@@ -174,6 +174,9 @@ struct SpriteEditor {
 const CANVAS_X: i32 = 79; // end = 120
 const CANVAS_Y: i32 = 10;
 
+const SPRITE_SIZE: usize = 8 * 8;
+const SPRITE_COUNT: usize = 256;
+
 impl App for SpriteEditor {
     fn init() -> Self {
         Self {
@@ -181,7 +184,7 @@ impl App for SpriteEditor {
             mouse_y: 64,
             mouse_pressed: false,
             highlighted_color: 11,
-            sprite_sheet: vec![0; 8 * 8],
+            sprite_sheet: vec![7; SPRITE_SIZE * SPRITE_COUNT],
             bottom_text: String::new(),
         }
     }
@@ -229,11 +232,24 @@ impl App for SpriteEditor {
             0, 0, 0, 0, 0, 0, 0, 0, //
         ];
 
+        const MOUSE_TARGET_SPRITE: [u8; SPRITE_SIZE] = [
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 1, 0, 0, 0, 0, //
+            0, 0, 1, 7, 1, 0, 0, 0, //
+            0, 1, 0, 0, 0, 1, 0, 0, //
+            1, 7, 0, 0, 0, 7, 1, 0, //
+            0, 1, 0, 0, 0, 1, 0, 0, //
+            0, 0, 1, 7, 1, 0, 0, 0, //
+            0, 0, 0, 1, 0, 0, 0, 0, //
+        ];
+
         draw_context.cls();
         draw_context.rectfill(0, 0, 127, 127, 5);
 
-        // Draw menu bars
+        // Draw top menu bar
         draw_context.rectfill(0, 0, 127, 7, 8);
+
+        // Draw bottom menu bar
         draw_context.rectfill(0, 121, 127, 127, 8);
 
         // draw canvas
@@ -244,8 +260,33 @@ impl App for SpriteEditor {
             }
         }
 
-        // Draw color palette
+        let tools_area = Rect {
+            x: 0,
+            y: canvas_position().bottom() + 1,
+            width: 128,
+            height: 11,
+        };
+        tools_area.fill(draw_context, 12);
 
+        let thumbnail_area = Rect {
+            x: canvas_position().right() - 2,
+            y: canvas_position().bottom() + 3,
+            width: 8,
+            height: 8,
+        };
+
+        thumbnail_area.fill(draw_context, 9);
+
+        // Draw sprite sheet
+        let sprite_sheet_area = Rect {
+            x: 0,
+            y: tools_area.bottom() + 1,
+            width: 128,
+            height: 34,
+        };
+        sprite_sheet_area.fill(draw_context, 0);
+
+        // Draw color palette
         draw_context.rectfill(
             CANVAS_X,
             CANVAS_Y,
@@ -328,6 +369,14 @@ impl Rect {
             self.y + self.height - 1,
             color,
         )
+    }
+
+    pub fn bottom(&self) -> i32 {
+        self.y + self.height - 1
+    }
+
+    pub fn right(&self) -> i32 {
+        self.x + self.width - 1
     }
 }
 
