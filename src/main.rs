@@ -167,15 +167,63 @@ struct SpriteEditor {
     mouse_y: i32,
     mouse_pressed: bool,
     highlighted_color: Color,
-    sprite_sheet: Vec<Color>,
     bottom_text: String,
+    sprite_sheet: Vec<Color>,
+    selected_sprite: u8,
 }
 
 const CANVAS_X: i32 = 79; // end = 120
 const CANVAS_Y: i32 = 10;
 
-const SPRITE_SIZE: usize = 8 * 8;
+const SPRITE_WIDTH: usize = 8;
+const SPRITE_SIZE: usize = SPRITE_WIDTH * 8;
 const SPRITE_COUNT: usize = 256;
+const SPRITES_PER_ROW: i32 = SPRITE_SHEET_WIDTH / SPRITE_WIDTH as i32;
+const SPRITE_SHEET_WIDTH: i32 = 128;
+
+impl SpriteEditor {
+    fn draw_sprite_sheet(&self, y_start: i32, draw_context: &mut DrawContext) {
+        const BORDER: i32 = 1;
+        const HEIGHT: i32 = 32;
+
+        draw_context.line(0, y_start, 128, y_start, 0);
+        for x in 0..128 {
+            for y in 0..HEIGHT {
+                draw_context.pset(
+                    x,
+                    y_start + y + BORDER,
+                    self.sprite_sheet[(x + y * SPRITE_SHEET_WIDTH) as usize],
+                );
+            }
+        }
+
+        draw_context.line(
+            0,
+            y_start + HEIGHT + BORDER,
+            128,
+            y_start + HEIGHT + BORDER,
+            0,
+        );
+    }
+
+    // TODO: Reorganize this.
+    fn draw_sprite(&self, draw_context: &mut DrawContext, sprite: usize, x: i32, y: i32) {
+        for i in 0..8 {
+            for j in 0..8 {
+                let x_off = sprite % SPRITES_PER_ROW as usize;
+                let y_off = sprite / SPRITES_PER_ROW as usize;
+
+                let idx = (x_off + y_off * SPRITE_WIDTH);
+
+                draw_context.pset(
+                    x + i,
+                    y + j,
+                    self.sprite_sheet[idx + (i + j * SPRITE_SHEET_WIDTH) as usize],
+                );
+            }
+        }
+    }
+}
 
 impl App for SpriteEditor {
     fn init() -> Self {
@@ -184,8 +232,9 @@ impl App for SpriteEditor {
             mouse_y: 64,
             mouse_pressed: false,
             highlighted_color: 11,
-            sprite_sheet: vec![7; SPRITE_SIZE * SPRITE_COUNT],
             bottom_text: String::new(),
+            sprite_sheet: vec![11; SPRITE_SIZE * SPRITE_COUNT],
+            selected_sprite: 0,
         }
     }
 
@@ -207,12 +256,12 @@ impl App for SpriteEditor {
         }
 
         if canvas_position().contains(self.mouse_x, self.mouse_y) {
-            for x in 0..8 {
-                for y in 0..8 {
+            for x in 0..(SPRITE_SIZE as i32) {
+                for y in 0..(SPRITE_SIZE as i32) {
                     if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
                         self.bottom_text = format!("X:{}@Y:{}", x, y);
                         if self.mouse_pressed {
-                            self.sprite_sheet[(x + y * 8) as usize] = self.highlighted_color;
+                            self.sprite_sheet[(x + y * 128) as usize] = self.highlighted_color;
                         }
                     }
                 }
@@ -256,7 +305,10 @@ impl App for SpriteEditor {
         canvas_position().fill(draw_context, 0);
         for x in 0..8 {
             for y in 0..8 {
-                canvas_pixel_rect(x, y).fill(draw_context, self.sprite_sheet[(x + y * 8) as usize])
+                canvas_pixel_rect(x, y).fill(
+                    draw_context,
+                    self.sprite_sheet[(x + y * SPRITE_SHEET_WIDTH) as usize],
+                )
             }
         }
 
@@ -276,6 +328,7 @@ impl App for SpriteEditor {
         };
 
         thumbnail_area.fill(draw_context, 9);
+        self.draw_sprite(draw_context, 0, thumbnail_area.x, thumbnail_area.y);
 
         // Draw sprite sheet
         let sprite_sheet_area = Rect {
@@ -284,7 +337,8 @@ impl App for SpriteEditor {
             width: 128,
             height: 34,
         };
-        sprite_sheet_area.fill(draw_context, 0);
+        sprite_sheet_area.fill(draw_context, 2);
+        self.draw_sprite_sheet(sprite_sheet_area.y, draw_context);
 
         // Draw color palette
         draw_context.rectfill(

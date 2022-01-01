@@ -57,7 +57,7 @@ impl DrawContext {
         let mut err = dx + dy; /* error value e_xy */
 
         loop {
-            self.set_color(x0, y0, color);
+            self.pset(x0, y0, color);
             if x0 == x1 && y0 == y1 {
                 break;
             }
@@ -92,7 +92,7 @@ impl DrawContext {
     pub fn raw_spr(&mut self, sprite: Sprite, x: i32, y: i32) {
         for i in 0..8 {
             for j in 0..8 {
-                self.set_color(x + i, y + j, sprite[(i + j * 8) as usize]);
+                self.pset(x + i, y + j, sprite[(i + j * 8) as usize]);
             }
         }
     }
@@ -113,7 +113,7 @@ impl DrawContext {
                 let print = char_data[(x_offset + y_offset * 4) as usize] != 0;
 
                 if print {
-                    self.set_color(x + x_offset, y + y_offset, color);
+                    self.pset(x + x_offset, y + y_offset, color);
                 }
             }
         }
@@ -124,12 +124,12 @@ impl DrawContext {
 
     //     for i in 0..8 {
     //         for j in 0..8 {
-    //             self.set_color(x, y, sprite[i + j * 8]);
+    //             self.pset(x, y, sprite[i + j * 8]);
     //         }
     //     }
     // }
 
-    fn set_color(&mut self, x: i32, y: i32, color: Color) {
+    pub fn pset(&mut self, x: i32, y: i32, color: Color) {
         if let Some(index) = self.index(x, y) {
             let c = get_color(color);
             let r = ((c >> 16) & 0x0000FF) as u8;
