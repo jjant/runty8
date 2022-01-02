@@ -80,6 +80,18 @@ impl SpriteSheet {
 
         Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
     }
+
+    pub fn deserialize(str: &str) -> Self {
+        let sprite_sheet = str
+            .as_bytes()
+            .into_iter()
+            .copied()
+            .filter_map(|c| (c as char).to_digit(16))
+            .map(|c| c as u8)
+            .collect();
+
+        Self { sprite_sheet }
+    }
 }
 
 pub struct DrawContext {

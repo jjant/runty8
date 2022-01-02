@@ -75,17 +75,16 @@ fn serialize(bytes: &[u8]) {
 }
 
 // TODO: Make a more reliable version of this.
-fn deserialize() -> Vec<u8> {
-    let mut file = Vec::with_capacity(128 * 128);
+// TODO: Improve capacity calculation? It's kinda flakey
+fn deserialize() -> SpriteSheet {
+    let capacity = 128 * 128 + 128;
+    let mut file = String::with_capacity(capacity);
     File::open("sprite_sheet.txt")
-        .expect("Couldn't read file")
-        .read_to_end(&mut file)
-        .unwrap();
+        .expect("Couldn't OPEN file")
+        .read_to_string(&mut file)
+        .expect("Couldn't READ file");
 
-    file.into_iter()
-        .filter_map(|c| (c as char).to_digit(16))
-        .map(|c| c as u8)
-        .collect()
+    SpriteSheet::deserialize(&file)
 }
 
 static MOUSE_SPRITE: &'static [Color] = &[
@@ -113,7 +112,7 @@ static MOUSE_TARGET_SPRITE: &'static [Color] = &[
 impl App for SpriteEditor {
     fn init() -> Self {
         // let mut sprite_sheet = vec![11; SPRITE_AREA * SPRITE_COUNT];
-        // let sprite_sheet = deserialize();
+        let sprite_sheet = deserialize();
 
         Self {
             mouse_x: 64,
@@ -121,7 +120,7 @@ impl App for SpriteEditor {
             mouse_pressed: false,
             highlighted_color: 7,
             bottom_text: String::new(),
-            sprite_sheet: SpriteSheet::new(),
+            sprite_sheet,
             selected_sprite: 0,
             cursor_sprite: Sprite::new(MOUSE_SPRITE),
         }
