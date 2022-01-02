@@ -5,7 +5,7 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{font, App, Button, Color, DrawContext, State};
+use crate::{font, App, Button, Color, DrawContext, Sprite, State};
 
 pub struct SpriteEditor {
     mouse_x: i32,
@@ -14,15 +14,15 @@ pub struct SpriteEditor {
     highlighted_color: Color,
     bottom_text: String,
     sprite_sheet: Vec<Color>,
-    #[allow(dead_code)]
     selected_sprite: u8,
+    cursor_sprite: &'static Sprite,
 }
 
 const CANVAS_X: i32 = 79; // end = 120
 const CANVAS_Y: i32 = 10;
 
 const SPRITE_WIDTH: usize = 8;
-const SPRITE_SIZE: usize = SPRITE_WIDTH * 8;
+const SPRITE_AREA: usize = SPRITE_WIDTH * 8;
 const SPRITES_PER_ROW: i32 = SPRITE_SHEET_WIDTH / SPRITE_WIDTH as i32;
 const SPRITE_SHEET_WIDTH: i32 = 128;
 
@@ -102,9 +102,31 @@ fn deserialize() -> Vec<u8> {
         .collect()
 }
 
+static MOUSE_SPRITE: &'static Sprite = &[
+    0, 0, 0, 0, 0, 0, 0, 0, //
+    0, 0, 0, 1, 0, 0, 0, 0, //
+    0, 0, 1, 7, 1, 0, 0, 0, //
+    0, 0, 1, 7, 7, 1, 0, 0, //
+    0, 0, 1, 7, 7, 7, 1, 0, //
+    0, 0, 1, 7, 7, 7, 7, 1, //
+    0, 0, 1, 7, 7, 1, 1, 0, //
+    0, 0, 0, 1, 1, 7, 1, 0, //
+];
+
+static MOUSE_TARGET_SPRITE: &'static Sprite = &[
+    0, 0, 0, 1, 0, 0, 0, 0, //
+    0, 0, 1, 7, 1, 0, 0, 0, //
+    0, 1, 0, 0, 0, 1, 0, 0, //
+    1, 7, 0, 0, 0, 7, 1, 0, //
+    0, 1, 0, 0, 0, 1, 0, 0, //
+    0, 0, 1, 7, 1, 0, 0, 0, //
+    0, 0, 0, 1, 0, 0, 0, 0, //
+    0, 0, 0, 0, 0, 0, 0, 0, //
+];
+
 impl App for SpriteEditor {
     fn init() -> Self {
-        // let mut sprite_sheet = vec![11; SPRITE_SIZE * SPRITE_COUNT];
+        // let mut sprite_sheet = vec![11; SPRITE_AREA * SPRITE_COUNT];
         let sprite_sheet = deserialize();
 
         Self {
@@ -115,6 +137,7 @@ impl App for SpriteEditor {
             bottom_text: String::new(),
             sprite_sheet,
             selected_sprite: 0,
+            cursor_sprite: &MOUSE_SPRITE,
         }
     }
 
@@ -123,6 +146,7 @@ impl App for SpriteEditor {
         self.mouse_y = state.mouse_y;
         self.mouse_pressed = state.mouse_pressed;
         self.bottom_text = String::new();
+        self.cursor_sprite = MOUSE_SPRITE;
 
         for color in 0..16 {
             if color_position(color).contains(self.mouse_x, self.mouse_y) {
@@ -135,8 +159,9 @@ impl App for SpriteEditor {
         }
 
         if canvas_position().contains(self.mouse_x, self.mouse_y) {
-            for x in 0..(SPRITE_SIZE as i32) {
-                for y in 0..(SPRITE_SIZE as i32) {
+            self.cursor_sprite = MOUSE_TARGET_SPRITE;
+            for x in 0..(SPRITE_WIDTH as i32) {
+                for y in 0..(SPRITE_WIDTH as i32) {
                     if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
                         self.bottom_text = format!("X:{} Y:{}", x, y);
                         if self.mouse_pressed {
@@ -155,29 +180,7 @@ impl App for SpriteEditor {
     }
 
     fn draw(&self, draw_context: &mut DrawContext) {
-        const MOUSE_SPRITE: [u8; 8 * 8] = [
-            0, 1, 0, 0, 0, 0, 0, 0, //
-            1, 7, 1, 0, 0, 0, 0, 0, //
-            1, 7, 7, 1, 0, 0, 0, 0, //
-            1, 7, 7, 7, 1, 0, 0, 0, //
-            1, 7, 7, 7, 7, 1, 0, 0, //
-            1, 7, 7, 1, 1, 0, 0, 0, //
-            0, 1, 1, 7, 1, 0, 0, 0, //
-            0, 0, 0, 0, 0, 0, 0, 0, //
-        ];
-
         #[allow(dead_code)]
-        const MOUSE_TARGET_SPRITE: [u8; SPRITE_SIZE] = [
-            0, 0, 0, 0, 0, 0, 0, 0, //
-            0, 0, 0, 1, 0, 0, 0, 0, //
-            0, 0, 1, 7, 1, 0, 0, 0, //
-            0, 1, 0, 0, 0, 1, 0, 0, //
-            1, 7, 0, 0, 0, 7, 1, 0, //
-            0, 1, 0, 0, 0, 1, 0, 0, //
-            0, 0, 1, 7, 1, 0, 0, 0, //
-            0, 0, 0, 1, 0, 0, 0, 0, //
-        ];
-
         draw_context.cls();
         draw_context.rectfill(0, 0, 127, 127, 5);
 
@@ -216,6 +219,21 @@ impl App for SpriteEditor {
         thumbnail_area.fill(draw_context, 9);
         self.draw_sprite(draw_context, 0, thumbnail_area.x, thumbnail_area.y);
 
+        Rect {
+            x: thumbnail_area.right() + 2,
+            y: thumbnail_area.y + 1,
+            width: 13,
+            height: 7,
+        }
+        .fill(draw_context, 6);
+        let selected_sprite_str = format!("{:0width$}", self.selected_sprite, width = 3);
+        draw_context.print(
+            &selected_sprite_str,
+            thumbnail_area.right() + 3,
+            thumbnail_area.y + 2,
+            13,
+        );
+
         // Draw sprite sheet
         let sprite_sheet_area = Rect {
             x: 0,
@@ -249,12 +267,12 @@ impl App for SpriteEditor {
             draw_context.rectfill(x, y, x + width - 1, y + height - 1, color as u8);
         }
 
-        color_position(self.highlighted_color).highlight(draw_context, true);
+        color_position(self.highlighted_color).highlight(draw_context, true, 7);
 
         draw_context.print(&self.bottom_text, 1, 122, 2);
 
         // Always render the mouse last (on top of everything)
-        draw_context.raw_spr(MOUSE_SPRITE, self.mouse_x, self.mouse_y);
+        draw_context.raw_spr(*self.cursor_sprite, self.mouse_x, self.mouse_y);
 
         print_debug_strings(draw_context, 10, 100);
     }
@@ -316,7 +334,12 @@ impl Rect {
         self.x + self.width - 1
     }
 
-    pub fn highlight(&self, draw_context: &mut DrawContext, include_inner: bool) {
+    pub fn highlight(
+        &self,
+        draw_context: &mut DrawContext,
+        include_inner: bool,
+        highlight_color: Color,
+    ) {
         let Rect {
             x,
             y,
@@ -327,7 +350,7 @@ impl Rect {
         if include_inner {
             draw_context.rect(x, y, x + width - 1, y + height - 1, 0)
         };
-        draw_context.rect(x - 1, y - 1, x + width, y + height, 7);
+        draw_context.rect(x - 1, y - 1, x + width, y + height, highlight_color);
     }
 }
 
