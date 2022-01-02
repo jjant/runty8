@@ -1,8 +1,10 @@
 pub mod app;
+mod editor;
 mod font;
 mod screen;
 
 pub use app::App;
+use editor::SpriteEditor;
 
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
@@ -212,6 +214,10 @@ pub fn run_app<T: App + 'static>() {
     let draw_context = DrawContext::new();
 
     screen::do_something::<T>(state, draw_context);
+}
+
+pub fn run_editor() {
+    run_app::<SpriteEditor>();
 }
 
 #[cfg(test)]
