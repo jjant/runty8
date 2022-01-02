@@ -149,6 +149,8 @@ enum ShouldReturn {
     No,
 }
 
+// TODO: (IMPORTANT)
+// Apparently draw() stops working if you move the mouse outside the window???
 fn handle_event(
     event: Event<()>,
     hidpi_factor: f64,

@@ -1,12 +1,7 @@
-use std::io::Write;
-use std::{fs::File, io::Read};
-
-use itertools::Itertools;
-use runty8::{app::App, Button, Color, DrawContext, State};
+use runty8::{app::App, Button, DrawContext, State};
 mod examples;
 
 fn main() {
-    // runty8::run_app::<SpriteEditor>();
     runty8::run_editor();
 
     // runty8::run_app::<ExampleApp>();
@@ -33,13 +28,12 @@ impl App for ExampleApp {
 
     fn draw(&self, draw_context: &mut DrawContext) {
         draw_context.cls();
-        // println!("x={} y={} yc={}", self.x / 100, self.y / 100, self.yc);
-        // draw_context.print(
-        //     format!("x={} y={} yc={}", self.x / 100, self.y / 100, self.yc),
-        //     0,
-        //     0,
-        //     6,
-        // );
+        draw_context.print(
+            &format!("X={} Y={} YC={}", self.x / 100, self.y / 100, self.yc),
+            0,
+            0,
+            6,
+        );
         draw_context.line(0, 72, 127, 72, 4);
 
         let x0 = self.x / 100 + 1;

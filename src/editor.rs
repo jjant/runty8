@@ -134,6 +134,7 @@ impl App for SpriteEditor {
         self.bottom_text = String::new();
         self.cursor_sprite = Sprite::new(MOUSE_SPRITE);
 
+        // Handle mouse over color palette
         for color in 0..16 {
             if color_position(color).contains(self.mouse_x, self.mouse_y) {
                 self.bottom_text = format!("COLOUR {}", color);
@@ -144,6 +145,7 @@ impl App for SpriteEditor {
             }
         }
 
+        // Handle mouse over canvas
         if canvas_position().contains(self.mouse_x, self.mouse_y) {
             self.cursor_sprite = Sprite::new(MOUSE_TARGET_SPRITE);
 
@@ -160,6 +162,32 @@ impl App for SpriteEditor {
                         if self.mouse_pressed {
                             sprite[(x + y * 8) as usize] = self.highlighted_color;
                         }
+                    }
+                }
+            }
+        }
+
+        // Handle mouse over sprite sheet
+        if SPRITE_SHEET_AREA.contains(self.mouse_x, self.mouse_y) {
+            self.bottom_text = "IN SPRITE SHEET".into();
+
+            for x in 0..SPRITES_PER_ROW {
+                // TODO: Use a const for the "4"
+                for y in 0..4 {
+                    let sprite_area = Rect {
+                        x: x as i32 * SPRITE_WIDTH as i32,
+                        y: SPRITE_SHEET_AREA.y + (y as usize * SPRITE_WIDTH) as i32,
+                        width: SPRITE_WIDTH as i32,
+                        height: SPRITE_HEIGHT as i32,
+                    };
+
+                    if sprite_area.contains(self.mouse_x, self.mouse_y) {
+                        let sprite = x + y * SPRITES_PER_ROW;
+                        self.bottom_text = format!("IN SPRITE {}", sprite);
+                        if self.mouse_pressed {
+                            self.selected_sprite = sprite;
+                        }
+                        break;
                     }
                 }
             }
@@ -193,13 +221,13 @@ impl App for SpriteEditor {
             }
         }
 
-        let tools_area = Rect {
-            x: 0,
-            y: canvas_position().bottom() + 1,
-            width: 128,
-            height: 11,
-        };
-        tools_area.fill(draw_context, 12);
+        // let tools_area = Rect {
+        //     x: 0,
+        //     y: canvas_position().bottom() + 1,
+        //     width: 128,
+        //     height: 11,
+        // };
+        // tools_area.fill(draw_context, 12);
 
         let thumbnail_area = Rect {
             x: canvas_position().right() - 2,
@@ -227,17 +255,10 @@ impl App for SpriteEditor {
         );
 
         // Draw sprite sheet
-        let sprite_sheet_area = Rect {
-            x: 0,
-            y: tools_area.bottom() + 1,
-            width: 128,
-            height: 34,
-        };
         // TODO: Remove this, just here to make sure I'm not displaying the sprite sheet incorrectly
-        sprite_sheet_area.fill(draw_context, 2);
-        //
+        SPRITE_SHEET_AREA.fill(draw_context, 2);
 
-        self.draw_sprite_sheet(sprite_sheet_area.y, draw_context);
+        self.draw_sprite_sheet(SPRITE_SHEET_AREA.y, draw_context);
 
         // Draw color palette
         draw_context.rectfill(
@@ -270,6 +291,13 @@ impl App for SpriteEditor {
     }
 }
 
+const SPRITE_SHEET_AREA: Rect = Rect {
+    x: 0,
+    y: 87,
+    width: 128,
+    height: 34,
+};
+
 const CANVAS_BORDER: i32 = 1;
 fn canvas_position() -> Rect {
     Rect {
@@ -293,6 +321,7 @@ fn canvas_pixel_rect(x: i32, y: i32) -> Rect {
 const SIZE: i32 = 10;
 const BOX_SIZE: i32 = 4 * SIZE + 2;
 
+#[derive(Debug)]
 struct Rect {
     x: i32,
     y: i32,
