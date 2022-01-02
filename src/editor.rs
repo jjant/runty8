@@ -5,7 +5,7 @@ use std::{
 
 use itertools::Itertools;
 
-use crate::{App, Button, Color, DrawContext, State};
+use crate::{font, App, Button, Color, DrawContext, State};
 
 pub struct SpriteEditor {
     mouse_x: i32,
@@ -126,7 +126,7 @@ impl App for SpriteEditor {
 
         for color in 0..16 {
             if color_position(color).contains(self.mouse_x, self.mouse_y) {
-                self.bottom_text = format!("COLOUR{}", color);
+                self.bottom_text = format!("COLOUR {}", color);
                 if self.mouse_pressed {
                     self.highlighted_color = color;
                 }
@@ -138,7 +138,7 @@ impl App for SpriteEditor {
             for x in 0..(SPRITE_SIZE as i32) {
                 for y in 0..(SPRITE_SIZE as i32) {
                     if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
-                        self.bottom_text = format!("X:{}@Y:{}", x, y);
+                        self.bottom_text = format!("X:{} Y:{}", x, y);
                         if self.mouse_pressed {
                             self.sprite_sheet[(x + y * 128) as usize] = self.highlighted_color;
                         }
@@ -255,6 +255,8 @@ impl App for SpriteEditor {
 
         // Always render the mouse last (on top of everything)
         draw_context.raw_spr(MOUSE_SPRITE, self.mouse_x, self.mouse_y);
+
+        print_debug_strings(draw_context, 10, 100);
     }
 }
 
@@ -345,6 +347,7 @@ fn color_position(color: Color) -> Rect {
 
 #[allow(dead_code)]
 fn print_debug_strings(draw_context: &mut DrawContext, x: i32, y: i32) {
+    draw_context.print(" !\"#$%&'()*+,-.", x, y - 10, 7);
     draw_context.print("0123456789:;<=>?@", x, y, 7);
     let mut letters = "abcdefghijklmnopqrstuvwxyz".to_owned();
     letters.make_ascii_uppercase();
