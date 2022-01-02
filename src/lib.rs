@@ -5,11 +5,82 @@ mod screen;
 
 pub use app::App;
 use editor::SpriteEditor;
+use itertools::Itertools;
 
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
 type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
+
+#[repr(transparent)]
+pub struct Sprite {
+    pub sprite: [Color],
+}
+
+impl Sprite {
+    fn new(sprite: &[u8]) -> &Self {
+        unsafe { &*(sprite as *const [u8] as *const Self) }
+    }
+
+    fn new_mut(sprite: &mut [u8]) -> &mut Self {
+        unsafe { &mut *(sprite as *mut [u8] as *mut Self) }
+    }
+
+    pub fn pset(&mut self, x: isize, y: isize, color: Color) {
+        self.sprite[Self::index(x, y).unwrap()] = color;
+    }
+
+    pub fn pget(&self, x: isize, y: isize) -> Color {
+        self.sprite[Self::index(x, y).unwrap()]
+    }
+
+    fn index(x: isize, y: isize) -> Option<usize> {
+        (x + y * (SPRITE_WIDTH as isize)).try_into().ok()
+    }
+}
+
+pub struct SpriteSheet {
+    sprite_sheet: Vec<Color>,
+}
+
+pub const SPRITE_WIDTH: usize = 8;
+pub const SPRITE_HEIGHT: usize = 8;
+
+impl SpriteSheet {
+    pub const SPRITE_COUNT: usize = 256;
+
+    pub fn new() -> Self {
+        Self {
+            sprite_sheet: vec![0; Self::SPRITE_COUNT * SPRITE_WIDTH * SPRITE_HEIGHT],
+        }
+    }
+
+    pub fn get_sprite(&self, sprite: usize) -> &Sprite {
+        let index = self.sprite_index(sprite);
+
+        Sprite::new(&self.sprite_sheet[index..(index + SPRITE_WIDTH * SPRITE_HEIGHT)])
+    }
+
+    pub fn get_sprite_mut(&mut self, sprite: usize) -> &mut Sprite {
+        let index = self.sprite_index(sprite);
+
+        Sprite::new_mut(&mut self.sprite_sheet[index..(index + SPRITE_WIDTH * SPRITE_HEIGHT)])
+    }
+
+    fn sprite_index(&self, sprite: usize) -> usize {
+        // How many pixels we need to skip to get to the start of this sprite.
+        sprite * SPRITE_WIDTH * SPRITE_HEIGHT
+    }
+
+    pub fn serialize(&self) -> String {
+        let lines = self.sprite_sheet.chunks(128).map(|chunk| {
+            Itertools::intersperse(chunk.iter().map(|n| format!("{:X}", n)), "".to_owned())
+                .collect()
+        });
+
+        Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
+    }
+}
 
 pub struct DrawContext {
     buffer: Buffer,
@@ -36,7 +107,6 @@ const COLORS: [u32; 16] = [
 ];
 
 pub type Color = u8; // Actually a u4
-type Sprite = [Color; 8 * 8];
 
 impl DrawContext {
     fn new() -> Self {
@@ -91,10 +161,12 @@ impl DrawContext {
         self.line(x1, y0, x1, y1, color);
     }
 
-    pub fn raw_spr(&mut self, sprite: Sprite, x: i32, y: i32) {
+    pub fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
+        let buffer = &sprite.sprite;
+
         for i in 0..8 {
             for j in 0..8 {
-                self.pset(x + i, y + j, sprite[(i + j * 8) as usize]);
+                self.pset(x + i, y + j, buffer[(i + j * 8) as usize]);
             }
         }
     }

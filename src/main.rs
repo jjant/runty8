@@ -45,20 +45,20 @@ impl App for ExampleApp {
         let x0 = self.x / 100 + 1;
         let y0 = self.y / 100 + 1;
 
-        #[rustfmt::skip]
+        #[allow(dead_code, unused_variables)]
         let sprite: [u8; 8 * 8] = [
-            0, 0, 0, 0, 0, 0, 0, 0,
-            6, 6, 6, 6, 6, 6, 6, 0,
-            6, 7, 7, 7, 7, 7, 6, 0,
-            6, 7, 6, 6, 6, 7, 6, 0,
-            6, 7, 6, 6, 6, 7, 6, 0,
-            6, 7, 6, 6, 6, 7, 6, 0,
-            6, 7, 7, 7, 7, 7, 6, 0,
-            6, 6, 6, 6, 6, 6, 6, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            6, 6, 6, 6, 6, 6, 6, 0, //
+            6, 7, 7, 7, 7, 7, 6, 0, //
+            6, 7, 6, 6, 6, 7, 6, 0, //
+            6, 7, 6, 6, 6, 7, 6, 0, //
+            6, 7, 6, 6, 6, 7, 6, 0, //
+            6, 7, 7, 7, 7, 7, 6, 0, //
+            6, 6, 6, 6, 6, 6, 6, 0, //
         ];
 
         draw_context.rectfill(x0, y0, x0 + 6, y0 + 6, 4);
-        draw_context.raw_spr(sprite, self.x / 100, self.y / 100);
+        // draw_context.raw_spr(sprite, self.x / 100, self.y / 100);
     }
 
     fn update(&mut self, state: &State) {
