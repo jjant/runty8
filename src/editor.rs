@@ -180,6 +180,8 @@ impl DevApp for SpriteEditor {
     fn draw(&self, draw_context: &mut DrawContext) {
         #[allow(dead_code)]
         draw_context.cls();
+
+        draw_context.palt(None);
         draw_context.rectfill(0, 0, 127, 127, 5);
 
         // Draw top menu bar
@@ -268,6 +270,7 @@ impl DevApp for SpriteEditor {
         draw_context.print(&self.bottom_text, 1, 122, 2);
 
         // Always render the mouse last (on top of everything)
+        draw_context.palt(Some(0));
         draw_context.raw_spr(self.cursor_sprite, self.mouse_x, self.mouse_y);
 
         // print_debug_strings(draw_context, 10, 100);

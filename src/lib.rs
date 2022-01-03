@@ -134,6 +134,7 @@ fn deserialize() -> SpriteSheet {
 pub struct DrawContext {
     buffer: Buffer,
     state: State,
+    transparent_color: Option<Color>,
 }
 
 impl DrawContext {
@@ -141,6 +142,7 @@ impl DrawContext {
         Self {
             buffer: BLACK_BUFFER,
             state,
+            transparent_color: Some(0),
         }
     }
 
@@ -247,6 +249,12 @@ impl DrawContext {
     }
 
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
+        if let Some(transparent_color) = self.transparent_color {
+            if color == transparent_color {
+                return;
+            }
+        }
+
         if let Some(index) = self.index(x, y) {
             Self::set_pixel(&mut self.buffer, index, color);
             // let c = get_color(color);
@@ -258,6 +266,10 @@ impl DrawContext {
             // self.buffer[NUM_COMPONENTS * index + 1] = g;
             // self.buffer[NUM_COMPONENTS * index + 2] = b;
         }
+    }
+
+    pub fn palt(&mut self, transparent_color: Option<Color>) {
+        self.transparent_color = transparent_color
     }
 
     fn index(&self, x: i32, y: i32) -> Option<usize> {
