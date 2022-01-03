@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write};
 
-use crate::{App, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH};
+use crate::{app::DevApp, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH};
 
 pub struct SpriteEditor {
     mouse_x: i32,
@@ -57,10 +57,8 @@ impl SpriteEditor {
         .highlight(draw_context, false, 7);
     }
 
-    fn selected_sprite<'a>(&self, draw_context: &'a DrawContext) -> &'a Sprite {
-        draw_context
-            .sprite_sheet
-            .get_sprite(self.selected_sprite.into())
+    fn selected_sprite<'a>(&self, state: &'a State) -> &'a Sprite {
+        state.sprite_sheet.get_sprite(self.selected_sprite.into())
     }
 }
 
@@ -91,7 +89,7 @@ static MOUSE_TARGET_SPRITE: &'static [Color] = &[
     0, 0, 0, 0, 0, 0, 0, 0, //
 ];
 
-impl App for SpriteEditor {
+impl DevApp for SpriteEditor {
     fn init() -> Self {
         // let mut sprite_sheet = vec![11; SPRITE_AREA * SPRITE_COUNT];
 
@@ -106,7 +104,7 @@ impl App for SpriteEditor {
         }
     }
 
-    fn update(&mut self, state: &State, draw_context: &mut DrawContext) {
+    fn update(&mut self, state: &mut State) {
         self.mouse_x = state.mouse_x;
         self.mouse_y = state.mouse_y;
         self.mouse_pressed = state.mouse_pressed;
@@ -128,7 +126,7 @@ impl App for SpriteEditor {
         if canvas_position().contains(self.mouse_x, self.mouse_y) {
             self.cursor_sprite = Sprite::new(MOUSE_TARGET_SPRITE);
 
-            let sprite = &mut draw_context
+            let sprite = &mut state
                 .sprite_sheet
                 .get_sprite_mut(self.selected_sprite.into())
                 .sprite;
@@ -173,7 +171,7 @@ impl App for SpriteEditor {
         }
 
         if state.btn(Button::X) {
-            serialize(draw_context.sprite_sheet.serialize().as_bytes());
+            serialize(state.sprite_sheet.serialize().as_bytes());
 
             std::process::exit(1);
         }
@@ -196,7 +194,7 @@ impl App for SpriteEditor {
         for x in 0..8 {
             for y in 0..8 {
                 let color = self
-                    .selected_sprite(draw_context)
+                    .selected_sprite(&draw_context.state)
                     .pget(x as isize, y as isize);
                 canvas_pixel_rect(x, y).fill(draw_context, color);
             }

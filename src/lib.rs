@@ -6,7 +6,6 @@ mod screen;
 use std::{fs::File, io::Read};
 
 pub use app::App;
-use editor::SpriteEditor;
 use itertools::Itertools;
 
 const WIDTH: usize = 128;
@@ -41,6 +40,7 @@ impl Sprite {
     }
 }
 
+#[derive(Debug)]
 pub struct SpriteSheet {
     sprite_sheet: Vec<Color>,
 }
@@ -96,11 +96,6 @@ impl SpriteSheet {
     }
 }
 
-pub struct DrawContext {
-    buffer: Buffer,
-    pub(crate) sprite_sheet: SpriteSheet,
-}
-
 // Add _FF at the end for alpha
 const COLORS: [u32; 16] = [
     0x000000, // _FF,
@@ -136,13 +131,16 @@ fn deserialize() -> SpriteSheet {
     SpriteSheet::deserialize(&file)
 }
 
-impl DrawContext {
-    fn new() -> Self {
-        let sprite_sheet = deserialize();
+pub struct DrawContext {
+    buffer: Buffer,
+    state: State,
+}
 
+impl DrawContext {
+    fn new(state: State) -> Self {
         Self {
             buffer: BLACK_BUFFER,
-            sprite_sheet,
+            state,
         }
     }
 
@@ -193,7 +191,7 @@ impl DrawContext {
     }
 
     pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
-        let sprite = self.sprite_sheet.get_sprite(sprite);
+        let sprite = self.state.sprite_sheet.get_sprite(sprite);
         let buffer = &sprite.sprite;
 
         for i in 0..8 {
@@ -279,6 +277,21 @@ fn get_color(index: Color) -> u32 {
 }
 
 #[derive(Debug)]
+pub enum Scene {
+    Editor,
+    App,
+}
+
+impl Scene {
+    pub fn flip(&mut self) {
+        *self = match self {
+            Scene::Editor => Scene::App,
+            Scene::App => Scene::Editor,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct State {
     left: bool,
     right: bool,
@@ -286,13 +299,18 @@ pub struct State {
     down: bool,
     x: bool,
     c: bool,
+    pub(crate) escape: ButtonState,
     pub mouse_x: i32,
     pub mouse_y: i32,
     pub mouse_pressed: bool,
+    pub(crate) scene: Scene,
+    pub(crate) sprite_sheet: SpriteSheet,
 }
 
 impl State {
     fn new() -> Self {
+        let sprite_sheet = deserialize();
+
         Self {
             left: false,
             right: false,
@@ -300,9 +318,12 @@ impl State {
             down: false,
             x: false,
             c: false,
+            escape: ButtonState::new(),
             mouse_x: 64,
             mouse_y: 64,
             mouse_pressed: false,
+            scene: Scene::Editor,
+            sprite_sheet,
         }
     }
 
@@ -329,14 +350,61 @@ pub enum Button {
 
 pub fn run_app<T: App + 'static>() {
     let state = State::new();
-    let draw_context = DrawContext::new();
+    let draw_context = DrawContext::new(state);
 
-    screen::do_something::<T>(state, draw_context);
+    screen::do_something::<T>(draw_context);
 }
 
-pub fn run_editor() {
-    run_app::<SpriteEditor>();
+// TODO: Implement properly
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ButtonState {
+    pressed: bool,
+    pressed_last_frame: bool,
 }
+
+impl ButtonState {
+    fn new() -> Self {
+        Self {
+            pressed: false,
+            pressed_last_frame: false,
+        }
+    }
+
+    fn update(self, new_pressed: Option<bool>) -> Self {
+        Self {
+            pressed: match new_pressed {
+                Some(pressed) => pressed,
+                None => self.pressed,
+            },
+            pressed_last_frame: self.pressed,
+        }
+    }
+    fn press(self) -> Self {
+        Self {
+            pressed: true,
+            pressed_last_frame: self.pressed,
+        }
+    }
+
+    fn unpress(self) -> Self {
+        Self {
+            pressed: false,
+            pressed_last_frame: self.pressed,
+        }
+    }
+
+    pub fn btn(&self) -> bool {
+        self.pressed
+    }
+
+    pub fn btnp(&self) -> bool {
+        self.pressed && !self.pressed_last_frame
+    }
+}
+
+// pub fn run_editor() {
+//     run_app::<SpriteEditor>();
+// }
 
 #[cfg(test)]
 mod tests {
