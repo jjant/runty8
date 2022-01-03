@@ -271,7 +271,7 @@ impl DevApp for SpriteEditor {
 
         // Always render the mouse last (on top of everything)
         draw_context.palt(Some(0));
-        draw_context.raw_spr(self.cursor_sprite, self.mouse_x, self.mouse_y);
+        draw_context.raw_spr(self.cursor_sprite, self.mouse_x - 3, self.mouse_y - 2);
 
         // print_debug_strings(draw_context, 10, 100);
     }
