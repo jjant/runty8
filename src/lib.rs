@@ -199,7 +199,12 @@ impl DrawContext {
         for i in 0..8 {
             for j in 0..8 {
                 if let Some(index) = self.index(x + i, y + j) {
-                    Self::set_pixel(&mut self.buffer, index, buffer[(i + j * 8) as usize])
+                    Self::set_pixel(
+                        &mut self.buffer,
+                        self.transparent_color,
+                        index,
+                        buffer[(i + j * 8) as usize],
+                    )
                 }
             }
         }
@@ -237,8 +242,20 @@ impl DrawContext {
         }
     }
 
-    fn set_pixel(buffer: &mut [Color], index: usize, color: Color) {
+    fn set_pixel(
+        buffer: &mut [Color],
+        transparent_color: Option<Color>,
+        index: usize,
+        color: Color,
+    ) {
         let c = get_color(color);
+
+        if let Some(transparent_color) = transparent_color {
+            if color == transparent_color {
+                return;
+            }
+        }
+
         let r = ((c >> 16) & 0x0000FF) as u8;
         let g = ((c >> 8) & 0x0000FF) as u8;
         let b = ((c >> 0) & 0x0000FF) as u8;
@@ -249,22 +266,8 @@ impl DrawContext {
     }
 
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
-        if let Some(transparent_color) = self.transparent_color {
-            if color == transparent_color {
-                return;
-            }
-        }
-
         if let Some(index) = self.index(x, y) {
-            Self::set_pixel(&mut self.buffer, index, color);
-            // let c = get_color(color);
-            // let r = ((c >> 16) & 0x0000FF) as u8;
-            // let g = ((c >> 8) & 0x0000FF) as u8;
-            // let b = ((c >> 0) & 0x0000FF) as u8;
-
-            // self.buffer[NUM_COMPONENTS * index + 0] = r;
-            // self.buffer[NUM_COMPONENTS * index + 1] = g;
-            // self.buffer[NUM_COMPONENTS * index + 2] = b;
+            Self::set_pixel(&mut self.buffer, self.transparent_color, index, color);
         }
     }
 
@@ -334,7 +337,7 @@ impl State {
             mouse_x: 64,
             mouse_y: 64,
             mouse_pressed: false,
-            scene: Scene::Editor,
+            scene: Scene::App,
             sprite_sheet,
         }
     }

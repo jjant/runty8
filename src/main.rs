@@ -1,89 +1,104 @@
-use runty8::{self, App, DrawContext, State};
+use runty8::{self, App, Button, DrawContext, State};
 mod examples;
 
 use rand::{self, Rng};
 fn main() {
-    runty8::run_app::<Game>();
+    runty8::run_app::<GameState>();
 }
 
-struct Game {
-    particles: Vec<Particle>,
+struct GameState {
+    player: Player,
+    inventory_open: bool,
+    inventory: Inventory,
 }
 
-impl App for Game {
+impl App for GameState {
     fn init() -> Self {
-        Self { particles: vec![] }
+        Self {
+            player: Player::new(),
+            inventory_open: true,
+            inventory: Inventory::new(),
+        }
     }
 
     fn update(&mut self, state: &State) {
-        if state.mouse_pressed {
-            for _ in 0..10 {
-                self.particles
-                    .push(Particle::new(state.mouse_x as f32, state.mouse_y as f32));
-            }
-        }
+        let dx = state.btn(Button::Right) as i32 - state.btn(Button::Left) as i32;
+        let dy = state.btn(Button::Down) as i32 - state.btn(Button::Up) as i32;
 
-        let mut i = 0;
-        while i < self.particles.len() {
-            if self.particles[i].ttl == 0 {
-                self.particles.remove(i);
-            } else {
-                self.particles[i].update();
-
-                i += 1
-            }
-        }
-    }
-
-    fn draw(&self, draw_context: &mut runty8::DrawContext) {
-        draw_context.cls();
-
-        for particle in self.particles.iter() {
-            particle.draw(draw_context)
-        }
-    }
-}
-
-struct Particle {
-    x: f32,
-    y: f32,
-    vx: f32,
-    vy: f32,
-    ay: f32,
-    ttl: i32,
-    color: u8,
-}
-
-impl Particle {
-    fn new(x: f32, y: f32) -> Self {
-        let x = rand::thread_rng().gen_range(-2.0..2.0) + x;
-        let y = rand::thread_rng().gen_range(-2.0..2.0) + y;
-        let vx = rand::thread_rng().gen_range(-15.0..15.0) / 50.0;
-        let vy = rand::thread_rng().gen_range(-50.0..10.0) / 50.0;
-        let ttl = rand::thread_rng().gen_range(10..70);
-
-        Self {
-            x,
-            y,
-            vx,
-            vy,
-            ay: 0.05,
-            ttl,
-            color: rand::thread_rng().gen_range(1..16),
-        }
-    }
-
-    fn update(&mut self) {
-        self.vy += self.ay;
-        self.x += self.vx;
-        self.y += self.vy;
-        self.ttl -= 1;
+        self.player.x += dx;
+        self.player.y += dy;
     }
 
     fn draw(&self, draw_context: &mut DrawContext) {
-        let x = self.x as i32;
-        let y = self.y as i32;
-        draw_context.pset(x, y, self.color);
-        draw_context.spr(55, x, y);
+        draw_context.palt(Some(0));
+        draw_context.cls();
+        self.player.draw(draw_context);
+
+        if self.inventory_open {
+            self.inventory.draw(draw_context);
+        }
     }
+}
+struct Player {
+    x: i32,
+    y: i32,
+}
+
+impl Player {
+    fn new() -> Self {
+        Self { x: 64, y: 64 }
+    }
+
+    fn draw(&self, draw_context: &mut DrawContext) {
+        draw_context.spr(1, self.x, self.y)
+    }
+}
+
+struct Inventory {
+    items: Vec<Item>,
+}
+
+impl Inventory {
+    fn new() -> Self {
+        Self {
+            items: vec![
+                Item {
+                    name: "SWORD",
+                    sprite: 48,
+                },
+                Item {
+                    name: "STAFF",
+                    sprite: 51,
+                },
+            ],
+        }
+    }
+
+    fn draw(&self, draw_context: &mut DrawContext) {
+        draw_context.rectfill(64, 0, 128, 128, 6);
+
+        let start_x = 64 + 1;
+        let start_y = 64;
+
+        for x_index in 0..5 {
+            for y_index in 0..5 {
+                let x = start_x + x_index * 12;
+                let y = start_y + y_index * 12;
+                draw_context.rectfill(x, y, x + 9, y + 9, 7);
+                draw_context.rectfill(x + 1, y + 1, x + 8, y + 8, 5);
+
+                let index = (x_index + y_index * 5) as usize;
+                if let Some(item) = self.items.get(index) {
+                    draw_context.print(item.name, x, y, 8);
+                    draw_context.spr(item.sprite as usize, x + 1, y + 1);
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Item {
+    name: &'static str,
+    sprite: u8,
 }
