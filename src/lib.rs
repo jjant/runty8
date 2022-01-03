@@ -3,6 +3,8 @@ mod editor;
 mod font;
 mod screen;
 
+use std::{fs::File, io::Read};
+
 pub use app::App;
 use editor::SpriteEditor;
 use itertools::Itertools;
@@ -96,6 +98,7 @@ impl SpriteSheet {
 
 pub struct DrawContext {
     buffer: Buffer,
+    pub(crate) sprite_sheet: SpriteSheet,
 }
 
 // Add _FF at the end for alpha
@@ -120,10 +123,26 @@ const COLORS: [u32; 16] = [
 
 pub type Color = u8; // Actually a u4
 
+// TODO: Make a more reliable version of this.
+// TODO: Improve capacity calculation? It's kinda flakey
+fn deserialize() -> SpriteSheet {
+    let capacity = 128 * 128 + 128;
+    let mut file = String::with_capacity(capacity);
+    File::open("sprite_sheet.txt")
+        .expect("Couldn't OPEN file")
+        .read_to_string(&mut file)
+        .expect("Couldn't READ file");
+
+    SpriteSheet::deserialize(&file)
+}
+
 impl DrawContext {
     fn new() -> Self {
+        let sprite_sheet = deserialize();
+
         Self {
             buffer: BLACK_BUFFER,
+            sprite_sheet,
         }
     }
 
@@ -173,6 +192,19 @@ impl DrawContext {
         self.line(x1, y0, x1, y1, color);
     }
 
+    pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
+        let sprite = self.sprite_sheet.get_sprite(sprite);
+        let buffer = &sprite.sprite;
+
+        for i in 0..8 {
+            for j in 0..8 {
+                if let Some(index) = self.index(x + i, y + j) {
+                    Self::set_pixel(&mut self.buffer, index, buffer[(i + j * 8) as usize])
+                }
+            }
+        }
+    }
+
     pub fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
         let buffer = &sprite.sprite;
 
@@ -205,26 +237,28 @@ impl DrawContext {
         }
     }
 
-    // pub fn spr(&mut self, n: u8, x: usize, y: usize) {
-    //     let sprite = self.get_sprite(n);
+    fn set_pixel(buffer: &mut [Color], index: usize, color: Color) {
+        let c = get_color(color);
+        let r = ((c >> 16) & 0x0000FF) as u8;
+        let g = ((c >> 8) & 0x0000FF) as u8;
+        let b = ((c >> 0) & 0x0000FF) as u8;
 
-    //     for i in 0..8 {
-    //         for j in 0..8 {
-    //             self.pset(x, y, sprite[i + j * 8]);
-    //         }
-    //     }
-    // }
+        buffer[NUM_COMPONENTS * index + 0] = r;
+        buffer[NUM_COMPONENTS * index + 1] = g;
+        buffer[NUM_COMPONENTS * index + 2] = b;
+    }
 
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
         if let Some(index) = self.index(x, y) {
-            let c = get_color(color);
-            let r = ((c >> 16) & 0x0000FF) as u8;
-            let g = ((c >> 8) & 0x0000FF) as u8;
-            let b = ((c >> 0) & 0x0000FF) as u8;
+            Self::set_pixel(&mut self.buffer, index, color);
+            // let c = get_color(color);
+            // let r = ((c >> 16) & 0x0000FF) as u8;
+            // let g = ((c >> 8) & 0x0000FF) as u8;
+            // let b = ((c >> 0) & 0x0000FF) as u8;
 
-            self.buffer[NUM_COMPONENTS * index + 0] = r;
-            self.buffer[NUM_COMPONENTS * index + 1] = g;
-            self.buffer[NUM_COMPONENTS * index + 2] = b;
+            // self.buffer[NUM_COMPONENTS * index + 0] = r;
+            // self.buffer[NUM_COMPONENTS * index + 1] = g;
+            // self.buffer[NUM_COMPONENTS * index + 2] = b;
         }
     }
 

@@ -1,11 +1,6 @@
-use std::{
-    fs::File,
-    io::{Read, Write},
-};
+use std::{fs::File, io::Write};
 
-use crate::{
-    App, Button, Color, DrawContext, Sprite, SpriteSheet, State, SPRITE_HEIGHT, SPRITE_WIDTH,
-};
+use crate::{App, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH};
 
 pub struct SpriteEditor {
     mouse_x: i32,
@@ -13,7 +8,6 @@ pub struct SpriteEditor {
     mouse_pressed: bool,
     highlighted_color: Color,
     bottom_text: String,
-    sprite_sheet: SpriteSheet,
     selected_sprite: u8,
     cursor_sprite: &'static Sprite,
 }
@@ -33,10 +27,9 @@ impl SpriteEditor {
         for sprite_y in 0..4 {
             for sprite_x in 0..16 {
                 let sprite_index = sprite_x + sprite_y * 16;
-                let sprite = self.sprite_sheet.get_sprite(sprite_index);
 
-                draw_context.raw_spr(
-                    sprite,
+                draw_context.spr(
+                    sprite_index,
                     (sprite_x * SPRITE_WIDTH) as i32,
                     y_start + BORDER as i32 + (sprite_y * SPRITE_WIDTH) as i32,
                 )
@@ -64,27 +57,16 @@ impl SpriteEditor {
         .highlight(draw_context, false, 7);
     }
 
-    fn selected_sprite(&self) -> &Sprite {
-        self.sprite_sheet.get_sprite(self.selected_sprite.into())
+    fn selected_sprite<'a>(&self, draw_context: &'a DrawContext) -> &'a Sprite {
+        draw_context
+            .sprite_sheet
+            .get_sprite(self.selected_sprite.into())
     }
 }
 
 fn serialize(bytes: &[u8]) {
     let mut file = File::create("sprite_sheet.txt").unwrap();
     file.write_all(bytes).unwrap();
-}
-
-// TODO: Make a more reliable version of this.
-// TODO: Improve capacity calculation? It's kinda flakey
-fn deserialize() -> SpriteSheet {
-    let capacity = 128 * 128 + 128;
-    let mut file = String::with_capacity(capacity);
-    File::open("sprite_sheet.txt")
-        .expect("Couldn't OPEN file")
-        .read_to_string(&mut file)
-        .expect("Couldn't READ file");
-
-    SpriteSheet::deserialize(&file)
 }
 
 static MOUSE_SPRITE: &'static [Color] = &[
@@ -112,7 +94,6 @@ static MOUSE_TARGET_SPRITE: &'static [Color] = &[
 impl App for SpriteEditor {
     fn init() -> Self {
         // let mut sprite_sheet = vec![11; SPRITE_AREA * SPRITE_COUNT];
-        let sprite_sheet = deserialize();
 
         Self {
             mouse_x: 64,
@@ -120,13 +101,12 @@ impl App for SpriteEditor {
             mouse_pressed: false,
             highlighted_color: 7,
             bottom_text: String::new(),
-            sprite_sheet,
             selected_sprite: 0,
             cursor_sprite: Sprite::new(MOUSE_SPRITE),
         }
     }
 
-    fn update(&mut self, state: &State) {
+    fn update(&mut self, state: &State, draw_context: &mut DrawContext) {
         self.mouse_x = state.mouse_x;
         self.mouse_y = state.mouse_y;
         self.mouse_pressed = state.mouse_pressed;
@@ -148,7 +128,7 @@ impl App for SpriteEditor {
         if canvas_position().contains(self.mouse_x, self.mouse_y) {
             self.cursor_sprite = Sprite::new(MOUSE_TARGET_SPRITE);
 
-            let sprite = &mut self
+            let sprite = &mut draw_context
                 .sprite_sheet
                 .get_sprite_mut(self.selected_sprite.into())
                 .sprite;
@@ -193,7 +173,7 @@ impl App for SpriteEditor {
         }
 
         if state.btn(Button::X) {
-            serialize(self.sprite_sheet.serialize().as_bytes());
+            serialize(draw_context.sprite_sheet.serialize().as_bytes());
 
             std::process::exit(1);
         }
@@ -213,10 +193,12 @@ impl App for SpriteEditor {
         // draw canvas
         canvas_position().fill(draw_context, 0);
 
-        let sprite = self.selected_sprite();
         for x in 0..8 {
             for y in 0..8 {
-                canvas_pixel_rect(x, y).fill(draw_context, sprite.pget(x as isize, y as isize))
+                let color = self
+                    .selected_sprite(draw_context)
+                    .pget(x as isize, y as isize);
+                canvas_pixel_rect(x, y).fill(draw_context, color);
             }
         }
 
@@ -236,7 +218,11 @@ impl App for SpriteEditor {
         };
 
         thumbnail_area.fill(draw_context, 9);
-        draw_context.raw_spr(self.selected_sprite(), thumbnail_area.x, thumbnail_area.y);
+        draw_context.spr(
+            self.selected_sprite as usize,
+            thumbnail_area.x,
+            thumbnail_area.y,
+        );
 
         Rect {
             x: thumbnail_area.right() + 2,

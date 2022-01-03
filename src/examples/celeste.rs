@@ -148,24 +148,24 @@ struct GameState {
 // k_dash: i32,
 }
 
-impl runty8::App for GameState {
-    // function _init()
-    //     title_screen()
-    // end
-    fn init() -> Self {
-        // title_screen()
+// impl runty8::App for GameState {
+//     // function _init()
+//     //     title_screen()
+//     // end
+//     fn init() -> Self {
+//         // title_screen()
 
-        Self {}
-    }
+//         Self {}
+//     }
 
-    fn draw(&self, draw_context: &mut runty8::DrawContext) {
-        todo!()
-    }
+//     fn draw(&self, draw_context: &mut runty8::DrawContext) {
+//         todo!()
+//     }
 
-    fn update(&mut self, state: &runty8::State) {
-        todo!()
-    }
-}
+//     fn update(&mut self, state: &runty8::State) {
+//         todo!()
+//     }
+// }
 
 // fn title_screen(gs: &mut GameState) {
 //     gs.got_fruit = vec![];

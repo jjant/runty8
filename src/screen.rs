@@ -122,7 +122,7 @@ pub fn do_something<T: App + 'static>(mut state: State, mut draw_context: DrawCo
 
         {
             app.draw(&mut draw_context);
-            app.update(&state);
+            app.update(&state, &mut draw_context);
         }
 
         let image = glium::texture::RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
