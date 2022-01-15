@@ -1,16 +1,27 @@
 use rand::Rng;
 use runty8::{App, DrawContext, State};
 
-pub struct Confetti {
+fn main() {
+    runty8::run_app::<Confetti>();
+}
+struct Confetti {
     particles: Vec<Particle>,
+    mouse_x: i32,
+    mouse_y: i32,
 }
 
 impl App for Confetti {
     fn init() -> Self {
-        Self { particles: vec![] }
+        Self {
+            particles: vec![],
+            mouse_x: 64,
+            mouse_y: 64,
+        }
     }
 
     fn update(&mut self, state: &State) {
+        self.mouse_x = state.mouse_x;
+        self.mouse_y = state.mouse_y;
         if state.mouse_pressed {
             for _ in 0..10 {
                 self.particles
@@ -33,9 +44,26 @@ impl App for Confetti {
     fn draw(&self, draw_context: &mut runty8::DrawContext) {
         draw_context.cls();
 
+        let text_x = 3;
+        let text_y = 3;
+        draw_context.print(
+            &"click and drag to ".to_ascii_uppercase(),
+            text_x,
+            text_y,
+            7,
+        );
+        draw_context.print(
+            &"throw confetti".to_ascii_uppercase(),
+            text_x,
+            text_y + 7,
+            7,
+        );
+
         for particle in self.particles.iter() {
             particle.draw(draw_context)
         }
+
+        draw_context.spr(8, self.mouse_x - 4, self.mouse_y - 3);
     }
 }
 
@@ -76,8 +104,6 @@ impl Particle {
     }
 
     fn draw(&self, draw_context: &mut DrawContext) {
-        let x = self.x as i32;
-        let y = self.y as i32;
-        draw_context.pset(x, y, self.color);
+        draw_context.pset(self.x as i32, self.y as i32, self.color);
     }
 }

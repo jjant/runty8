@@ -171,6 +171,7 @@ impl DevApp for SpriteEditor {
         }
 
         if state.btn(Button::X) {
+            println!("[Editor] Serializing sprite sheet");
             serialize(state.sprite_sheet.serialize().as_bytes());
 
             std::process::exit(1);
