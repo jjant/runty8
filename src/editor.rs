@@ -176,6 +176,13 @@ impl DevApp for SpriteEditor {
 
             std::process::exit(1);
         }
+
+        if state.btnp(Button::Down) {
+            state
+                .sprite_sheet
+                .get_sprite_mut(self.selected_sprite.into())
+                .shift_down();
+        }
     }
 
     fn draw(&self, draw_context: &mut DrawContext) {

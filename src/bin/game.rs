@@ -20,7 +20,6 @@ impl App for GameState {
     }
 
     fn update(&mut self, state: &State) {
-        // println!(state.btnp(Button::escape))
         let dx = state.btn(Button::Right) as i32 - state.btn(Button::Left) as i32;
         let dy = state.btn(Button::Down) as i32 - state.btn(Button::Up) as i32;
 

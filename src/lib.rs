@@ -38,10 +38,23 @@ impl Sprite {
     fn index(x: isize, y: isize) -> Option<usize> {
         (x + y * (SPRITE_WIDTH as isize)).try_into().ok()
     }
+
+    pub(crate) fn shift_down(&mut self) {
+        let tmp_row: [_; 8] = self.sprite[0..8].try_into().unwrap();
+
+        for row_index in 1..8 {
+            let slice = &mut self.sprite;
+            let prev_index = (row_index as i32 - 1).rem_euclid(8) * 8;
+            let index = row_index * 8;
+            slice.copy_within(index..index + 8, prev_index as usize)
+        }
+
+        (&mut self.sprite[8 * 7..8 * 8]).copy_from_slice(&tmp_row);
+    }
 }
 
 #[derive(Debug)]
-pub struct SpriteSheet {
+pub(crate) struct SpriteSheet {
     sprite_sheet: Vec<Color>,
 }
 
@@ -51,6 +64,7 @@ pub const SPRITE_HEIGHT: usize = 8;
 impl SpriteSheet {
     pub const SPRITE_COUNT: usize = 256;
 
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             sprite_sheet: vec![0; Self::SPRITE_COUNT * SPRITE_WIDTH * SPRITE_HEIGHT],
@@ -63,7 +77,7 @@ impl SpriteSheet {
         Sprite::new(&self.sprite_sheet[index..(index + SPRITE_WIDTH * SPRITE_HEIGHT)])
     }
 
-    pub fn get_sprite_mut(&mut self, sprite: usize) -> &mut Sprite {
+    pub(crate) fn get_sprite_mut(&mut self, sprite: usize) -> &mut Sprite {
         let index = self.sprite_index(sprite);
 
         Sprite::new_mut(&mut self.sprite_sheet[index..(index + SPRITE_WIDTH * SPRITE_HEIGHT)])
