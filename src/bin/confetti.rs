@@ -1,5 +1,5 @@
 use rand::Rng;
-use runty8::{App, DrawContext, State};
+use runty8::{App, Button, DrawContext, State};
 
 fn main() {
     runty8::run_app::<Confetti>();
@@ -22,7 +22,8 @@ impl App for Confetti {
     fn update(&mut self, state: &State) {
         self.mouse_x = state.mouse_x;
         self.mouse_y = state.mouse_y;
-        if state.mouse_pressed {
+
+        if state.btn(Button::Mouse) {
             for _ in 0..10 {
                 self.particles
                     .push(Particle::new(state.mouse_x as f32, state.mouse_y as f32));

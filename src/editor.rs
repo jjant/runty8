@@ -107,7 +107,7 @@ impl DevApp for SpriteEditor {
     fn update(&mut self, state: &mut State) {
         self.mouse_x = state.mouse_x;
         self.mouse_y = state.mouse_y;
-        self.mouse_pressed = state.mouse_pressed;
+        self.mouse_pressed = state.btn(Button::Mouse);
         self.bottom_text = String::new();
         self.cursor_sprite = Sprite::new(MOUSE_SPRITE);
 

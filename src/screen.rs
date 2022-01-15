@@ -33,23 +33,27 @@ pub fn do_something<T: App + 'static>(mut draw_context: DrawContext) {
 
     let mut editor = SpriteEditor::init();
 
-    let mut cooldown = 0;
+    let mut keys = Keys::new();
 
     event_loop.run(move |event, _, control_flow| {
-        let should_return = handle_event(event, scale_factor, logical_size, control_flow, &mut draw_context.state);
+        let should_return = handle_event(event, scale_factor, logical_size, control_flow, &mut draw_context.state, &mut keys);
 
         if let ShouldReturn::Yes = should_return {
             return;
         }
 
-        let next_frame_time = std::time::Instant::now() + std::time::Duration::from_nanos(16_666_667);
+        let next_frame_time = std::time::Instant::now()
+        + std::time::Duration::from_nanos(16_666_667);
+
         *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
-    
+
         let mut target = display.draw();
         target.clear_color(1.0, 0.0, 0.0, 1.0);
 
 
+
         {
+            draw_context.state.update_keys(&keys);
             match draw_context.state.scene {
                 Scene::Editor => {
                     editor.draw(&mut draw_context);
@@ -60,11 +64,11 @@ pub fn do_something<T: App + 'static>(mut draw_context: DrawContext) {
                     app.update(&draw_context.state);
                 }
             }
-            if draw_context.state.escape.btn() && cooldown == 0 {
+            if draw_context.state.escape.btnp()  {
                 draw_context.state.scene.flip();
-                cooldown = 30;
             }
-            cooldown  = if cooldown > 0 { cooldown - 1} else { cooldown };
+
+            keys.reset();
         }
 
         let image = glium::texture::RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
@@ -99,6 +103,7 @@ fn handle_event(
     window_size: LogicalSize<f64>,
     control_flow: &mut ControlFlow,
     state: &mut State,
+    keys: &mut Keys,
 ) -> ShouldReturn {
     match event {
         Event::WindowEvent { event, .. } => match event {
@@ -121,12 +126,12 @@ fn handle_event(
                 state: input_state,
                 ..
             } => {
-                state.mouse_pressed = input_state == ElementState::Pressed;
+                keys.mouse = Some(input_state == ElementState::Pressed);
 
                 return ShouldReturn::Yes;
             }
             glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                handle_key(input, state);
+                handle_key(input, keys);
                 return ShouldReturn::Yes;
             }
             _ => return ShouldReturn::Yes,
@@ -140,27 +145,21 @@ fn handle_event(
     }
 }
 
-fn handle_key(input: KeyboardInput, state: &mut State) {
+fn handle_key(input: KeyboardInput, keys: &mut Keys) {
     if let Some(key) = input.virtual_keycode {
-        if let VirtualKeyCode::Escape = key {
-            state.escape = state.escape.update(Some(input.state == ElementState::Pressed));
-        }
-         else {
-            state.escape = state.escape.update(None);
-        }
-        
         let key_ref = match key {
-            VirtualKeyCode::X => &mut state.x,
-            VirtualKeyCode::C => &mut state.c,
-            VirtualKeyCode::Left => &mut state.left,
-            VirtualKeyCode::Up => &mut state.up,
-            VirtualKeyCode::Right => &mut state.right,
-            VirtualKeyCode::Down => &mut state.down,
+            VirtualKeyCode::X => &mut keys.x,
+            VirtualKeyCode::C => &mut keys.c,
+            VirtualKeyCode::Left => &mut keys.left,
+            VirtualKeyCode::Up => &mut keys.up,
+            VirtualKeyCode::Right => &mut keys.right,
+            VirtualKeyCode::Down => &mut keys.down,
+            VirtualKeyCode::Escape => &mut keys.escape,
 
             _ => return,
         };
 
-        *key_ref = input.state == ElementState::Pressed;
+        *key_ref = Some(input.state == ElementState::Pressed);
     }
 }
 
@@ -234,3 +233,33 @@ void main() {
     color = texture(tex, vec2(v_tex_coords.x, y));
 }
 "#;
+
+pub(crate) struct Keys {
+    pub(crate) left: Option<bool>,
+    pub(crate) right: Option<bool>,
+    pub(crate) up: Option<bool>,
+    pub(crate) down: Option<bool>,
+    pub(crate) x: Option<bool>,
+    pub(crate) c: Option<bool>,
+    pub(crate) escape: Option<bool>,
+    pub(crate) mouse: Option<bool>,
+}
+
+impl Keys {
+    fn new() -> Self {
+        Self {
+            left: None,
+            right: None,
+            up: None,
+            down: None,
+            x: None,
+            c: None,
+            escape: None,
+            mouse: None,
+        }
+    }
+
+    fn reset(&mut self) {
+        *self = Self::new()
+    }
+}

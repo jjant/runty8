@@ -308,16 +308,16 @@ impl Scene {
 
 #[derive(Debug)]
 pub struct State {
-    left: bool,
-    right: bool,
-    up: bool,
-    down: bool,
-    x: bool,
-    c: bool,
+    left: ButtonState,
+    right: ButtonState,
+    up: ButtonState,
+    down: ButtonState,
+    x: ButtonState,
+    c: ButtonState,
     pub(crate) escape: ButtonState,
     pub mouse_x: i32,
     pub mouse_y: i32,
-    pub mouse_pressed: bool,
+    mouse_pressed: ButtonState,
     pub(crate) scene: Scene,
     pub(crate) sprite_sheet: SpriteSheet,
 }
@@ -327,29 +327,49 @@ impl State {
         let sprite_sheet = deserialize();
 
         Self {
-            left: false,
-            right: false,
-            up: false,
-            down: false,
-            x: false,
-            c: false,
-            escape: ButtonState::new(),
+            left: NotPressed,
+            right: NotPressed,
+            up: NotPressed,
+            down: NotPressed,
+            x: NotPressed,
+            c: NotPressed,
+            escape: NotPressed,
             mouse_x: 64,
             mouse_y: 64,
-            mouse_pressed: false,
+            mouse_pressed: NotPressed,
             scene: Scene::App,
             sprite_sheet,
         }
     }
 
     pub fn btn(&self, button: Button) -> bool {
+        self.button(button).btn()
+    }
+
+    pub fn btnp(&self, button: Button) -> bool {
+        self.button(button).btnp()
+    }
+
+    pub(crate) fn update_keys(&mut self, keys: &Keys) {
+        self.left.update(keys.left);
+        self.right.update(keys.right);
+        self.up.update(keys.up);
+        self.down.update(keys.down);
+        self.x.update(keys.x);
+        self.c.update(keys.c);
+        self.escape.update(keys.escape);
+        self.mouse_pressed.update(keys.mouse);
+    }
+
+    fn button(&self, button: Button) -> &ButtonState {
         match button {
-            Button::Left => self.left,
-            Button::Right => self.right,
-            Button::Up => self.up,
-            Button::Down => self.down,
-            Button::X => self.x,
-            Button::C => self.c,
+            Button::Left => &self.left,
+            Button::Right => &self.right,
+            Button::Up => &self.up,
+            Button::Down => &self.down,
+            Button::X => &self.x,
+            Button::C => &self.c,
+            Button::Mouse => &self.mouse_pressed,
         }
     }
 }
@@ -361,6 +381,7 @@ pub enum Button {
     Down,
     X,
     C,
+    Mouse,
 }
 
 pub fn run_app<T: App + 'static>() {
@@ -371,55 +392,68 @@ pub fn run_app<T: App + 'static>() {
 }
 
 // TODO: Implement properly
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct ButtonState {
-    pressed: bool,
-    pressed_last_frame: bool,
+// TODO2: I think this is fine, now?
+#[derive(Debug)]
+pub(crate) enum ButtonState {
+    JustPressed,
+    Held,
+    NotPressed,
 }
 
+use screen::Keys;
+use ButtonState::*;
+
 impl ButtonState {
-    fn new() -> Self {
-        Self {
-            pressed: false,
-            pressed_last_frame: false,
+    fn update(&mut self, is_pressed: Option<bool>) {
+        match is_pressed {
+            Some(is_pressed) => {
+                if is_pressed {
+                    self.press()
+                } else {
+                    self.unpress()
+                }
+            }
+            None => self.no_change(),
         }
     }
 
-    fn update(self, new_pressed: Option<bool>) -> Self {
-        Self {
-            pressed: match new_pressed {
-                Some(pressed) => pressed,
-                None => self.pressed,
-            },
-            pressed_last_frame: self.pressed,
-        }
-    }
-    fn press(self) -> Self {
-        Self {
-            pressed: true,
-            pressed_last_frame: self.pressed,
+    // A frame has passed but we've registered no event related to this key.
+    fn no_change(&mut self) {
+        *self = match self {
+            JustPressed => Held,
+            Held => Held,
+            NotPressed => NotPressed,
         }
     }
 
-    fn unpress(self) -> Self {
-        Self {
-            pressed: false,
-            pressed_last_frame: self.pressed,
+    // Caution: This may come either from a "first" press or a "repeated" press.
+    fn press(&mut self) {
+        *self = match self {
+            JustPressed => Held,
+            Held => Held,
+            NotPressed => JustPressed,
         }
+    }
+
+    fn unpress(&mut self) {
+        *self = NotPressed;
     }
 
     pub fn btn(&self) -> bool {
-        self.pressed
+        match *self {
+            JustPressed => true,
+            Held => true,
+            NotPressed => false,
+        }
     }
 
     pub fn btnp(&self) -> bool {
-        self.pressed && !self.pressed_last_frame
+        match *self {
+            JustPressed => true,
+            _ => false,
+        }
     }
 }
-
-// pub fn run_editor() {
-//     run_app::<SpriteEditor>();
-// }
 
 #[cfg(test)]
 mod tests {
