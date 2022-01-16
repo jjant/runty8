@@ -39,17 +39,24 @@ impl Sprite {
         (x + y * (SPRITE_WIDTH as isize)).try_into().ok()
     }
 
+    pub(crate) fn shift_up(&mut self) {
+        self.sprite.rotate_left(8);
+    }
+
     pub(crate) fn shift_down(&mut self) {
-        let tmp_row: [_; 8] = self.sprite[0..8].try_into().unwrap();
+        self.sprite.rotate_right(8);
+    }
 
-        for row_index in 1..8 {
-            let slice = &mut self.sprite;
-            let prev_index = (row_index as i32 - 1).rem_euclid(8) * 8;
-            let index = row_index * 8;
-            slice.copy_within(index..index + 8, prev_index as usize)
-        }
+    pub(crate) fn shift_left(&mut self) {
+        self.sprite
+            .chunks_mut(SPRITE_WIDTH)
+            .for_each(|row| row.rotate_left(1));
+    }
 
-        (&mut self.sprite[8 * 7..8 * 8]).copy_from_slice(&tmp_row);
+    pub(crate) fn shift_right(&mut self) {
+        self.sprite
+            .chunks_mut(SPRITE_WIDTH)
+            .for_each(|row| row.rotate_right(1));
     }
 }
 

@@ -183,6 +183,27 @@ impl DevApp for SpriteEditor {
                 .get_sprite_mut(self.selected_sprite.into())
                 .shift_down();
         }
+
+        if state.btnp(Button::Up) {
+            state
+                .sprite_sheet
+                .get_sprite_mut(self.selected_sprite.into())
+                .shift_up();
+        }
+
+        if state.btnp(Button::Left) {
+            state
+                .sprite_sheet
+                .get_sprite_mut(self.selected_sprite.into())
+                .shift_left();
+        }
+
+        if state.btnp(Button::Right) {
+            state
+                .sprite_sheet
+                .get_sprite_mut(self.selected_sprite.into())
+                .shift_right();
+        }
     }
 
     fn draw(&self, draw_context: &mut DrawContext) {

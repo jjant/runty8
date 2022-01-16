@@ -8,11 +8,15 @@ struct GameState {
     player: Player,
     inventory_open: bool,
     inventory: Inventory,
+    mouse_x: i32,
+    mouse_y: i32,
 }
 
 impl App for GameState {
     fn init() -> Self {
         Self {
+            mouse_x: 64,
+            mouse_y: 64,
             player: Player::new(),
             inventory_open: true,
             inventory: Inventory::new(),
@@ -22,6 +26,9 @@ impl App for GameState {
     fn update(&mut self, state: &State) {
         let dx = state.btn(Button::Right) as i32 - state.btn(Button::Left) as i32;
         let dy = state.btn(Button::Down) as i32 - state.btn(Button::Up) as i32;
+
+        self.mouse_x = state.mouse_x;
+        self.mouse_y = state.mouse_y;
 
         self.player.x += dx;
         self.player.y += dy;
@@ -35,6 +42,8 @@ impl App for GameState {
         if self.inventory_open {
             self.inventory.draw(draw_context);
         }
+
+        draw_context.spr(56, self.mouse_x, self.mouse_y);
     }
 }
 struct Player {
