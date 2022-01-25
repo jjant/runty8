@@ -319,6 +319,10 @@ pub enum Scene {
 }
 
 impl Scene {
+    fn initial() -> Self {
+        Scene::Editor
+    }
+
     pub fn flip(&mut self) {
         *self = match self {
             Scene::Editor => Scene::App,
@@ -358,7 +362,7 @@ impl State {
             mouse_x: 64,
             mouse_y: 64,
             mouse_pressed: NotPressed,
-            scene: Scene::App,
+            scene: Scene::initial(),
             sprite_sheet,
         }
     }
