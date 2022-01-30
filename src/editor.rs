@@ -1,6 +1,10 @@
+use crate::{
+    app::DevApp, draw, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH,
+};
 use std::{fs::File, io::Write};
 
-use crate::{app::DevApp, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH};
+use self::canvas::Canvas;
+mod canvas;
 
 pub struct SpriteEditor {
     mouse_x: i32,
@@ -29,34 +33,39 @@ const CANVAS_Y: i32 = 10;
 const SPRITES_PER_ROW: u8 = 16;
 
 impl SpriteEditor {
-    fn handle_draw_intent(&mut self, sprite: &mut Sprite) {
-        let sprite = &mut sprite.sprite;
+    fn handle_draw_intent(&mut self, state: &mut State) {
+        let sprite = &mut state
+            .sprite_sheet
+            .get_sprite_mut(self.selected_sprite.into())
+            .sprite;
 
         match &mut self.draw_mode {
             DrawMode::Pencil => {
-                for x in 0..(SPRITE_WIDTH as i32) {
-                    for y in 0..(SPRITE_WIDTH as i32) {
-                        if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
-                            self.bottom_text = format!("X:{} Y:{}", x, y);
+                if let Some((x, y)) = Canvas::lookup(self.mouse_x, self.mouse_y) {
+                    self.bottom_text = format!("X:{} Y:{}", x, y);
 
-                            if self.mouse_pressed {
-                                sprite[(x + y * 8) as usize] = self.highlighted_color;
-                            }
-                        }
+                    if self.mouse_pressed {
+                        sprite[(x + y * 8) as usize] = self.highlighted_color;
                     }
                 }
             }
             DrawMode::Line(line_state) => {
-                // let line_state = line_state.as_mut().unwrap();
+                if self.mouse_pressed {
+                    let LineState { start, end } = line_state.as_ref().unwrap();
 
-                // for x in 0..(SPRITE_WIDTH as i32) {
-                //     for y in 0..(SPRITE_WIDTH as i32) {
-                //         if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
-                //             self.bottom_text = format!("X:{} Y:{}", x, y);
-                //             line_state.end = (x as usize, y as usize);
-                //         }
-                //     }
-                // }
+                    for (x, y) in
+                        draw::line(start.0 as i32, start.1 as i32, end.0 as i32, end.1 as i32)
+                    {
+                        sprite[(x + y * SPRITE_WIDTH as i32) as usize] = self.highlighted_color;
+                    }
+                } else {
+                    let line_state = line_state.as_mut().unwrap();
+
+                    if let Some((x, y)) = Canvas::lookup(self.mouse_x, self.mouse_y) {
+                        self.bottom_text = format!("X:{} Y:{}", x, y);
+                        line_state.end = (x as usize, y as usize);
+                    };
+                }
             }
         }
     }
@@ -65,7 +74,7 @@ impl SpriteEditor {
         const BORDER: i32 = 1;
         const HEIGHT: i32 = 32;
 
-        draw_context.line(0, y_start, 128, y_start, 10);
+        draw_context.line(0, y_start, 128, y_start, 0);
 
         for sprite_y in 0..4 {
             for sprite_x in 0..16 {
@@ -83,7 +92,7 @@ impl SpriteEditor {
             y_start + HEIGHT + BORDER,
             128,
             y_start + HEIGHT + BORDER,
-            10,
+            0,
         );
 
         // Draw highlight of selected sprite
@@ -170,14 +179,11 @@ impl DevApp for SpriteEditor {
         }
 
         // Handle mouse over canvas
-        if canvas_position().contains(self.mouse_x, self.mouse_y) {
+        // TODO: This might be bad (consider dragging mouse outside the canvas while drawing lines)
+        if Canvas::position().contains(self.mouse_x, self.mouse_y) {
             self.cursor_sprite = Sprite::new(MOUSE_TARGET_SPRITE);
 
-            let sprite = &mut state
-                .sprite_sheet
-                .get_sprite_mut(self.selected_sprite.into());
-
-            self.handle_draw_intent(sprite);
+            self.handle_draw_intent(state);
         }
 
         // Handle mouse over sprite sheet
@@ -256,14 +262,15 @@ impl DevApp for SpriteEditor {
         draw_context.rectfill(0, 121, 127, 127, 8);
 
         // draw canvas
-        canvas_position().fill(draw_context, 0);
+        Canvas::position().fill(draw_context, 0);
 
         for x in 0..8 {
             for y in 0..8 {
                 let color = self
                     .selected_sprite(&draw_context.state)
                     .pget(x as isize, y as isize);
-                canvas_pixel_rect(x, y).fill(draw_context, color);
+
+                Canvas::pixel_rect(x, y).fill(draw_context, color);
             }
         }
 
@@ -282,11 +289,9 @@ impl DevApp for SpriteEditor {
                 let start = line_state.start;
                 let end = line_state.end;
 
-                let mut y = start.1 as f64;
-                let slope = (end.0 - start.0) as f64 / (end.1 - start.1) as f64;
-                for x in (start.0)..(end.0) {
-                    canvas_pixel_rect(x as i32, y as i32).fill(draw_context, 7);
-                    y += slope;
+                for (x, y) in draw::line(start.0 as i32, start.1 as i32, end.0 as i32, end.1 as i32)
+                {
+                    Canvas::pixel_rect(x as i32, y as i32).fill(draw_context, 7);
                 }
             }
         }
@@ -300,8 +305,8 @@ impl DevApp for SpriteEditor {
         // tools_area.fill(draw_context, 12);
 
         let thumbnail_area = Rect {
-            x: canvas_position().right() - 2,
-            y: canvas_position().bottom() + 3,
+            x: Canvas::position().right() - 2,
+            y: Canvas::position().bottom() + 3,
             width: 8,
             height: 8,
         };
@@ -375,30 +380,6 @@ const SPRITE_SHEET_AREA: Rect = Rect {
     height: 34,
 };
 
-const CANVAS_BORDER: i32 = 1;
-fn canvas_position() -> Rect {
-    Rect {
-        x: 8,
-        y: 10,
-        width: 8 * 8 + CANVAS_BORDER * 2,
-        height: 8 * 8 + CANVAS_BORDER * 2,
-    }
-}
-
-fn canvas_pixel_rect(x: i32, y: i32) -> Rect {
-    let canvas = canvas_position();
-
-    Rect {
-        x: canvas.x + CANVAS_BORDER + 8 * x,
-        y: canvas.y + CANVAS_BORDER + 8 * y,
-        width: 8,
-        height: 8,
-    }
-}
-
-// fn canvas_pixel_from_coords(pixel_x: i32, pixel_y:i32) -> {
-
-// }
 const SIZE: i32 = 10;
 const BOX_SIZE: i32 = 4 * SIZE + 2;
 
