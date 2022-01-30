@@ -47,16 +47,16 @@ impl SpriteEditor {
                 }
             }
             DrawMode::Line(line_state) => {
-                let line_state = line_state.as_mut().unwrap();
+                // let line_state = line_state.as_mut().unwrap();
 
-                for x in 0..(SPRITE_WIDTH as i32) {
-                    for y in 0..(SPRITE_WIDTH as i32) {
-                        if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
-                            self.bottom_text = format!("X:{} Y:{}", x, y);
-                            line_state.end = (x as usize, y as usize);
-                        }
-                    }
-                }
+                // for x in 0..(SPRITE_WIDTH as i32) {
+                //     for y in 0..(SPRITE_WIDTH as i32) {
+                //         if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
+                //             self.bottom_text = format!("X:{} Y:{}", x, y);
+                //             line_state.end = (x as usize, y as usize);
+                //         }
+                //     }
+                // }
             }
         }
     }
@@ -65,7 +65,7 @@ impl SpriteEditor {
         const BORDER: i32 = 1;
         const HEIGHT: i32 = 32;
 
-        draw_context.line(0, y_start, 128, y_start, 0);
+        draw_context.line(0, y_start, 128, y_start, 10);
 
         for sprite_y in 0..4 {
             for sprite_x in 0..16 {
@@ -83,7 +83,7 @@ impl SpriteEditor {
             y_start + HEIGHT + BORDER,
             128,
             y_start + HEIGHT + BORDER,
-            0,
+            10,
         );
 
         // Draw highlight of selected sprite
