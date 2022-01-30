@@ -23,8 +23,7 @@ enum DrawMode {
 }
 
 struct LineState {
-    start: (usize, usize),
-    end: (usize, usize),
+    start: (i32, i32),
 }
 
 const CANVAS_X: i32 = 79; // end = 120
@@ -49,21 +48,26 @@ impl SpriteEditor {
                     }
                 }
             }
-            DrawMode::Line(line_state) => {
+            DrawMode::Line(None) => {
                 if self.mouse_pressed {
-                    let LineState { start, end } = line_state.as_ref().unwrap();
+                    self.draw_mode = DrawMode::Line(Some(LineState {
+                        start: (self.mouse_x, self.mouse_y),
+                    }));
+                }
+            }
+            DrawMode::Line(Some(LineState { start })) => {
+                if !self.mouse_pressed {
+                    let (start_x, start_y) = Canvas::lookup(start.0, start.1).unwrap();
+                    let (end_x, end_y) = Canvas::lookup(self.mouse_x, self.mouse_y).unwrap();
 
-                    for (x, y) in
-                        draw::line(start.0 as i32, start.1 as i32, end.0 as i32, end.1 as i32)
-                    {
+                    for (x, y) in draw::line(start_x, start_y, end_x, end_y) {
                         sprite[(x + y * SPRITE_WIDTH as i32) as usize] = self.highlighted_color;
                     }
-                } else {
-                    let line_state = line_state.as_mut().unwrap();
 
+                    self.draw_mode = DrawMode::Line(None);
+                } else {
                     if let Some((x, y)) = Canvas::lookup(self.mouse_x, self.mouse_y) {
                         self.bottom_text = format!("X:{} Y:{}", x, y);
-                        line_state.end = (x as usize, y as usize);
                     };
                 }
             }
@@ -153,10 +157,7 @@ impl DevApp for SpriteEditor {
             bottom_text: String::new(),
             selected_sprite: 0,
             cursor_sprite: Sprite::new(MOUSE_SPRITE),
-            draw_mode: DrawMode::Line(Some(LineState {
-                start: (2, 2),
-                end: (8, 8),
-            })),
+            draw_mode: DrawMode::Line(None),
         }
     }
 
@@ -281,16 +282,19 @@ impl DevApp for SpriteEditor {
                 draw_context.spr(14, 12, 78);
                 draw_context.spr(31, 22, 78);
             }
-            DrawMode::Line(line_state) => {
+            DrawMode::Line(None) => {
+                println!("not drawing a line")
+            }
+            DrawMode::Line(Some(line_state)) => {
                 draw_context.spr(15, 12, 78);
                 draw_context.spr(30, 22, 78);
 
-                let line_state = line_state.as_ref().unwrap();
                 let start = line_state.start;
-                let end = line_state.end;
 
-                for (x, y) in draw::line(start.0 as i32, start.1 as i32, end.0 as i32, end.1 as i32)
-                {
+                let (start_x, start_y) = Canvas::lookup(start.0, start.1).unwrap();
+                let (end_x, end_y) = Canvas::lookup(self.mouse_x, self.mouse_y).unwrap();
+
+                for (x, y) in draw::line(start_x, start_y, end_x, end_y) {
                     Canvas::pixel_rect(x as i32, y as i32).fill(draw_context, 7);
                 }
             }
