@@ -3,11 +3,13 @@ use lib::DrawContext;
 use lib::State;
 
 pub trait App {
+    type Action;
+
     fn init() -> Self;
 
-    fn update(&mut self, state: &State);
+    fn update(&mut self, state: &State, actions: &[Self::Action]);
 
-    fn draw(&self, draw_context: &mut DrawContext);
+    fn draw(&mut self, draw_context: &mut DrawContext) -> Vec<Self::Action>;
 }
 
 pub(crate) trait DevApp {

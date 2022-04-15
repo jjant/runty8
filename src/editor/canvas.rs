@@ -9,7 +9,7 @@ impl Canvas {
 
     // From a position in pixels in the screen (like (64, 64) for the middle of the screen)
     // returns the index (x,y in 0..8) of the corresponding "pixel" in the canvas.
-    pub(super) fn lookup(screen_x: i32, screen_y: i32) -> Option<(i32, i32)> {
+    pub(super) fn try_lookup(screen_x: i32, screen_y: i32) -> Option<(i32, i32)> {
         for x in 0..(SPRITE_WIDTH as i32) {
             for y in 0..(SPRITE_WIDTH as i32) {
                 if Self::pixel_rect(x, y).contains(screen_x, screen_y) {
@@ -17,8 +17,24 @@ impl Canvas {
                 }
             }
         }
-
         None
+    }
+
+    // Like try_lookup but returns the "closest" canvas slot to the argument position.
+    pub(super) fn lookup(screen_x: i32, screen_y: i32) -> (i32, i32) {
+        (0..(SPRITE_WIDTH as i32))
+            .zip(0..(SPRITE_WIDTH as i32))
+            .min_by_key(|(x, y)| Self::pixel_rect(*x, *y).distance_squared(screen_x, screen_y))
+            .unwrap()
+    }
+
+    pub(super) fn to_local(screen_x: i32, screen_y: i32) -> (i32, i32) {
+        let pos = Self::position();
+
+        let local_x = (screen_x - pos.x + Self::BORDER) / 8;
+        let local_y = (screen_y - pos.y + Self::BORDER) / 8;
+
+        (local_x, local_y)
     }
 
     pub(super) fn position() -> Rect {

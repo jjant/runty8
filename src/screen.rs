@@ -60,8 +60,8 @@ pub fn do_something<T: App + 'static>(mut draw_context: DrawContext) {
                     editor.update(&mut draw_context.state);
                 },
                 Scene::App => {
-                    app.draw(&mut draw_context);
-                    app.update(&draw_context.state);
+                    let actions = app.draw(&mut draw_context);
+                    app.update(&draw_context.state, &actions);
                 }
             }
             if draw_context.state.escape.btnp()  {

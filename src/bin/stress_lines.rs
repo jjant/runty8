@@ -39,17 +39,17 @@ impl MouseState {
     }
 
     fn start_position(&self) -> (i32, i32) {
-        match self {
-            &MouseState::NotPressed { x, y } => (x, y),
-            &MouseState::Pressed {
+        match *self {
+            MouseState::NotPressed { x, y } => (x, y),
+            MouseState::Pressed {
                 start_x, start_y, ..
             } => (start_x, start_y),
         }
     }
     fn position(&self) -> (i32, i32) {
-        match self {
-            &MouseState::NotPressed { x, y } => (x, y),
-            &MouseState::Pressed {
+        match *self {
+            MouseState::NotPressed { x, y } => (x, y),
+            MouseState::Pressed {
                 current_x,
                 current_y,
                 ..
@@ -59,13 +59,15 @@ impl MouseState {
 }
 
 impl App for StressLines {
+    type Action = ();
+
     fn init() -> Self {
         Self {
             mouse: MouseState::new(64, 64),
         }
     }
 
-    fn update(&mut self, state: &State) {
+    fn update(&mut self, state: &State, _: &[Self::Action]) {
         self.mouse
             .update(state.btn(Button::Mouse), state.mouse_x, state.mouse_y);
         // let mut i = 0;
@@ -80,7 +82,7 @@ impl App for StressLines {
         // }
     }
 
-    fn draw(&self, draw_context: &mut runty8::DrawContext) {
+    fn draw(&mut self, draw_context: &mut runty8::DrawContext) -> Vec<Self::Action> {
         draw_context.cls();
 
         // Diagonal line
@@ -112,5 +114,7 @@ impl App for StressLines {
 
         let (x, y) = self.mouse.position();
         draw_context.spr(8, x - 4, y - 3);
+
+        vec![]
     }
 }

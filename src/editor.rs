@@ -17,11 +17,13 @@ pub struct SpriteEditor {
     draw_mode: DrawMode,
 }
 
+#[derive(Debug)]
 enum DrawMode {
     Pencil,
     Line(Option<LineState>),
 }
 
+#[derive(Debug)]
 struct LineState {
     start: (i32, i32),
 }
@@ -32,6 +34,21 @@ const CANVAS_Y: i32 = 10;
 const SPRITES_PER_ROW: u8 = 16;
 
 impl SpriteEditor {
+    fn draw_tools(&self, draw_context: &mut DrawContext) {
+        draw_context.palt(Some(0));
+
+        match &self.draw_mode {
+            DrawMode::Pencil => {
+                draw_context.spr(14, 12, 78);
+                draw_context.spr(31, 22, 78);
+            }
+            DrawMode::Line(_) => {
+                draw_context.spr(15, 12, 78);
+                draw_context.spr(30, 22, 78);
+            }
+        }
+    }
+
     fn handle_draw_intent(&mut self, state: &mut State) {
         let sprite = &mut state
             .sprite_sheet
@@ -40,7 +57,7 @@ impl SpriteEditor {
 
         match &mut self.draw_mode {
             DrawMode::Pencil => {
-                if let Some((x, y)) = Canvas::lookup(self.mouse_x, self.mouse_y) {
+                if let Some((x, y)) = Canvas::try_lookup(self.mouse_x, self.mouse_y) {
                     self.bottom_text = format!("X:{} Y:{}", x, y);
 
                     if self.mouse_pressed {
@@ -57,8 +74,9 @@ impl SpriteEditor {
             }
             DrawMode::Line(Some(LineState { start })) => {
                 if !self.mouse_pressed {
-                    let (start_x, start_y) = Canvas::lookup(start.0, start.1).unwrap();
-                    let (end_x, end_y) = Canvas::lookup(self.mouse_x, self.mouse_y).unwrap();
+                    // Draw the line when the mouse is released
+                    let (start_x, start_y) = Canvas::to_local(start.0, start.1);
+                    let (end_x, end_y) = Canvas::to_local(self.mouse_x, self.mouse_y);
 
                     for (x, y) in draw::line(start_x, start_y, end_x, end_y) {
                         sprite[(x + y * SPRITE_WIDTH as i32) as usize] = self.highlighted_color;
@@ -66,7 +84,7 @@ impl SpriteEditor {
 
                     self.draw_mode = DrawMode::Line(None);
                 } else {
-                    if let Some((x, y)) = Canvas::lookup(self.mouse_x, self.mouse_y) {
+                    if let Some((x, y)) = Canvas::try_lookup(self.mouse_x, self.mouse_y) {
                         self.bottom_text = format!("X:{} Y:{}", x, y);
                     };
                 }
@@ -247,10 +265,15 @@ impl DevApp for SpriteEditor {
                 .get_sprite_mut(self.selected_sprite.into())
                 .shift_right();
         }
+
+        self.bottom_text = format!("{:?}", Canvas::to_local(self.mouse_x, self.mouse_y));
+
+        if let DrawMode::Line(Some(LineState { start })) = self.draw_mode {
+            self.bottom_text = format!("{:?}", start);
+        }
     }
 
     fn draw(&self, draw_context: &mut DrawContext) {
-        #[allow(dead_code)]
         draw_context.cls();
 
         draw_context.palt(None);
@@ -275,30 +298,28 @@ impl DevApp for SpriteEditor {
             }
         }
 
+        self.draw_tools(draw_context);
+
         // TODO: Look up correct positions
         draw_context.palt(Some(0));
         match &self.draw_mode {
-            DrawMode::Pencil => {
-                draw_context.spr(14, 12, 78);
-                draw_context.spr(31, 22, 78);
-            }
+            DrawMode::Pencil => {}
             DrawMode::Line(None) => {
                 println!("not drawing a line")
             }
             DrawMode::Line(Some(line_state)) => {
-                draw_context.spr(15, 12, 78);
-                draw_context.spr(30, 22, 78);
-
                 let start = line_state.start;
 
-                let (start_x, start_y) = Canvas::lookup(start.0, start.1).unwrap();
-                let (end_x, end_y) = Canvas::lookup(self.mouse_x, self.mouse_y).unwrap();
+                let (start_x, start_y) = Canvas::to_local(start.0, start.1);
+                let (end_x, end_y) = Canvas::to_local(self.mouse_x, self.mouse_y);
 
                 for (x, y) in draw::line(start_x, start_y, end_x, end_y) {
-                    Canvas::pixel_rect(x as i32, y as i32).fill(draw_context, 7);
+                    Canvas::pixel_rect(x as i32, y as i32)
+                        .fill(draw_context, self.highlighted_color);
                 }
             }
         }
+
         draw_context.palt(None);
         // let tools_area = Rect {
         //     x: 0,
@@ -401,6 +422,19 @@ impl Rect {
         let contains_y = y >= self.y && y < self.y + self.height;
 
         contains_x && contains_y
+    }
+
+    pub fn distance_squared(&self, x: i32, y: i32) -> i32 {
+        let dx = [self.x - x, 0, x - (self.x + self.width)]
+            .into_iter()
+            .max()
+            .unwrap();
+        let dy = [self.y - y, 0, y - (self.y + self.height)]
+            .into_iter()
+            .max()
+            .unwrap();
+
+        dx * dx + dy * dy
     }
 
     pub fn fill(&self, draw_context: &mut DrawContext, color: Color) {

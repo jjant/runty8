@@ -11,6 +11,8 @@ struct Confetti {
 }
 
 impl App for Confetti {
+    type Action = ();
+
     fn init() -> Self {
         Self {
             particles: vec![],
@@ -19,7 +21,7 @@ impl App for Confetti {
         }
     }
 
-    fn update(&mut self, state: &State) {
+    fn update(&mut self, state: &State, _: &[Self::Action]) {
         self.mouse_x = state.mouse_x;
         self.mouse_y = state.mouse_y;
 
@@ -42,7 +44,7 @@ impl App for Confetti {
         }
     }
 
-    fn draw(&self, draw_context: &mut runty8::DrawContext) {
+    fn draw(&mut self, draw_context: &mut runty8::DrawContext) -> Vec<Self::Action> {
         draw_context.cls();
 
         let text_x = 3;
@@ -65,6 +67,8 @@ impl App for Confetti {
         }
 
         draw_context.spr(8, self.mouse_x - 4, self.mouse_y - 3);
+
+        vec![]
     }
 }
 

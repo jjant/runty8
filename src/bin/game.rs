@@ -12,8 +12,15 @@ struct GameState {
     mouse_y: i32,
     highlighted_item: Option<usize>,
 }
+enum Action {
+    HighlightItem(usize),
+}
+
+use Action::*;
 
 impl App for GameState {
+    type Action = Action;
+
     fn init() -> Self {
         Self {
             mouse_x: 64,
@@ -25,7 +32,7 @@ impl App for GameState {
         }
     }
 
-    fn update(&mut self, state: &State) {
+    fn update(&mut self, state: &State, actions: &[Action]) {
         let dx = state.btn(Button::Right) as i32 - state.btn(Button::Left) as i32;
         let dy = state.btn(Button::Down) as i32 - state.btn(Button::Up) as i32;
 
@@ -40,34 +47,37 @@ impl App for GameState {
         }
 
         self.highlighted_item = None;
-        for x in 0..5 {
-            for y in 0..5 {
-                if self
-                    .inventory
-                    .item_rect(x, y)
-                    .contains(self.mouse_x, self.mouse_y)
-                {
-                    self.highlighted_item = Some(x + y * 5);
-                    break;
-                }
+        for action in actions {
+            match action {
+                &HighlightItem(index) => self.highlighted_item = Some(index),
             }
         }
     }
 
-    fn draw(&self, draw_context: &mut DrawContext) {
+    fn draw(&mut self, draw_context: &mut DrawContext) -> Vec<Action> {
+        let mut actions = vec![];
         draw_context.palt(Some(0));
         draw_context.cls();
         self.player.draw(draw_context);
 
         if self.inventory_open {
-            self.inventory.draw(draw_context);
+            actions.append(&mut self.inventory.draw(
+                draw_context,
+                (self.mouse_x, self.mouse_y),
+                HighlightItem,
+            ));
         }
 
-        self.highlighted_item
+        if let Some(item) = self
+            .highlighted_item
             .and_then(|index| self.inventory.items.get(index))
-            .map(|item| item.draw_tooltip(draw_context));
+        {
+            item.draw_tooltip(draw_context)
+        }
 
         draw_context.spr(56, self.mouse_x, self.mouse_y);
+
+        actions
     }
 }
 struct Player {
@@ -109,7 +119,13 @@ impl Inventory {
         }
     }
 
-    fn draw(&self, draw_context: &mut DrawContext) {
+    fn draw(
+        &self,
+        draw_context: &mut DrawContext,
+        mouse_pos: (i32, i32),
+        on_hover: impl Fn(usize) -> Action,
+    ) -> Vec<Action> {
+        let mut actions = vec![];
         draw_context.rectfill(64, 0, 128, 128, 6);
 
         for x_index in 0..5 {
@@ -118,19 +134,22 @@ impl Inventory {
                 let y = Self::START_Y + y_index * 12;
                 draw_context.rectfill(x, y, x + 9, y + 9, 7);
 
-                self.item_rect(x_index as usize, y_index as usize)
-                    .fill(draw_context, 5);
+                Self::item_rect(x_index as usize, y_index as usize).fill(draw_context, 5);
 
                 let index = (x_index + y_index * 5) as usize;
                 if let Some(item) = self.items.get(index) {
-                    draw_context.print(item.name, x, y, 8);
-                    draw_context.spr(item.sprite as usize, x + 1, y + 1);
+                    if let Some(action) =
+                        item.draw_slot(draw_context, x, y, mouse_pos, on_hover(index))
+                    {
+                        actions.push(action);
+                    }
                 }
             }
         }
+        actions
     }
 
-    fn item_rect(&self, x: usize, y: usize) -> Rect {
+    pub fn item_rect(x: usize, y: usize) -> Rect {
         let x = Self::START_X + x as i32 * 12;
         let y = Self::START_Y + y as i32 * 12;
 
@@ -151,6 +170,31 @@ struct Item {
 }
 
 impl Item {
+    fn draw_slot(
+        &self,
+        draw_context: &mut DrawContext,
+        x: i32,
+        y: i32,
+        mouse_pos: (i32, i32),
+        on_hover: Action,
+    ) -> Option<Action> {
+        draw_context.print(self.name, x, y, 8);
+        draw_context.spr(self.sprite as usize, x + 1, y + 1);
+
+        let sprite_rect = Rect {
+            x: x + 1,
+            y: y + 1,
+            width: 8,
+            height: 8,
+        };
+
+        if sprite_rect.contains(mouse_pos.0, mouse_pos.1) {
+            Some(on_hover)
+        } else {
+            None
+        }
+    }
+
     fn draw_tooltip(&self, draw_context: &mut DrawContext) {
         let x = 64;
         let y = 30;
