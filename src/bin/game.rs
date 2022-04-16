@@ -159,23 +159,29 @@ impl Inventory {
     fn new() -> Self {
         use Attribute::*;
 
-        let mut items = vec![ItemSlot { item: None }; Self::ROWS * Self::COLS].into_boxed_slice();
-        items[0] = ItemSlot {
-            item: Some(Item {
-                name: "SWORD",
-                description: "MELEE ATTACK",
-                attributes: vec![Attack(1)],
-                sprite: 48,
-            }),
-        };
-        items[1] = ItemSlot {
-            item: Some(Item {
-                name: "STAFF",
-                description: "CASTS SPELLS",
-                attributes: vec![AttackSpeed(-1)],
-                sprite: 51,
-            }),
-        };
+        let mut items = vec![ItemSlot::empty(); Self::ROWS * Self::COLS].into_boxed_slice();
+        items[0] = ItemSlot::new(Item {
+            name: "SWORD",
+            description: "MELEE ATTACK",
+            attributes: vec![Attack(1)],
+            tags: vec![],
+            sprite: 48,
+        });
+        items[1] = ItemSlot::new(Item {
+            name: "STAFF",
+            description: "CASTS SPELLS",
+            attributes: vec![AttackSpeed(-1)],
+            tags: vec![],
+            sprite: 51,
+        });
+
+        items[14] = ItemSlot::new(Item {
+            name: "POWER GEM",
+            description: "RND ATTRS",
+            attributes: vec![],
+            tags: vec![Tag::RightClickable],
+            sprite: 32,
+        });
 
         Self { items }
     }
@@ -234,6 +240,14 @@ struct ItemSlot {
 }
 
 impl ItemSlot {
+    fn empty() -> Self {
+        Self { item: None }
+    }
+
+    fn new(item: Item) -> Self {
+        Self { item: Some(item) }
+    }
+
     fn draw(
         &self,
         game_state: &GameState,
@@ -278,7 +292,13 @@ struct Item {
     name: &'static str,
     description: &'static str,
     attributes: Vec<Attribute>,
+    tags: Vec<Tag>,
     sprite: u8,
+}
+
+#[derive(Debug, Clone)]
+enum Tag {
+    RightClickable,
 }
 
 impl Item {
