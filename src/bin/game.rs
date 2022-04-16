@@ -1,4 +1,5 @@
 use runty8::{self, App, Button, Color, DrawContext, State};
+use std::fmt;
 
 fn main() {
     runty8::run_app::<GameState>();
@@ -75,7 +76,7 @@ impl App for GameState {
 
         if self.inventory_open {
             actions.append(&mut self.inventory.draw(
-                &self,
+                self,
                 draw_context,
                 HighlightItem,
                 SelectedItem,
@@ -134,18 +135,36 @@ struct Inventory {
     items: Box<[ItemSlot]>,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum Attribute {
+    Attack(i32),
+    AttackSpeed(i32),
+}
+impl fmt::Display for Attribute {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Attribute::Attack(attack) => write!(f, "{:+} ATTACK", attack),
+            Attribute::AttackSpeed(attack_speed) => write!(f, "{:+} ATTACK SPEED", attack_speed),
+        }
+    }
+}
+
 impl Inventory {
     const START_X: i32 = 64 + 1;
     const START_Y: i32 = 64;
 
     const ROWS: usize = 5;
     const COLS: usize = 5;
+
     fn new() -> Self {
+        use Attribute::*;
+
         let mut items = vec![ItemSlot { item: None }; Self::ROWS * Self::COLS].into_boxed_slice();
         items[0] = ItemSlot {
             item: Some(Item {
                 name: "SWORD",
                 description: "MELEE ATTACK",
+                attributes: vec![Attack(1)],
                 sprite: 48,
             }),
         };
@@ -153,6 +172,7 @@ impl Inventory {
             item: Some(Item {
                 name: "STAFF",
                 description: "CASTS SPELLS",
+                attributes: vec![AttackSpeed(-1)],
                 sprite: 51,
             }),
         };
@@ -257,6 +277,7 @@ impl ItemSlot {
 struct Item {
     name: &'static str,
     description: &'static str,
+    attributes: Vec<Attribute>,
     sprite: u8,
 }
 
@@ -298,7 +319,7 @@ impl Item {
         let h = 20;
 
         let text_x = 40;
-        let text_y = 20;
+        let text_y = 16;
         let sprite_x = 64;
         let sprite_y = 38;
 
@@ -307,6 +328,12 @@ impl Item {
         draw_context.rectfill(x + 2 - w, y + 2 - h, x - 2 + w, y - 2 + h, 5);
         draw_context.print(self.name, text_x, text_y, 7);
         draw_context.print(self.description, text_x, text_y + 8, 7);
+
+        for (index, attribute) in self.attributes.iter().enumerate() {
+            let x = text_x;
+            let y = text_y + 8 + (index + 1) as i32 * 8;
+            draw_context.print(dbg!(&attribute.to_string()), x, y, 7);
+        }
         draw_context.spr(self.sprite as usize, sprite_x, sprite_y);
     }
 }

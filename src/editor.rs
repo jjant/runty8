@@ -305,7 +305,7 @@ impl DevApp for SpriteEditor {
         match &self.draw_mode {
             DrawMode::Pencil => {}
             DrawMode::Line(None) => {
-                println!("not drawing a line")
+                // println!("not drawing a line")
             }
             DrawMode::Line(Some(line_state)) => {
                 let start = line_state.start;
