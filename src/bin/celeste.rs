@@ -8,9 +8,10 @@ struct Cloud {
     w: i32,
 }
 
-struct Vec2 {
-    x: i32,
-    y: i32,
+#[derive(Clone, Copy)]
+struct Vec2<T> {
+    x: T,
+    y: T,
 }
 
 fn rnd(max: i32) -> i32 {
@@ -108,7 +109,8 @@ impl App for GameState {
 
         // Update each object
         for object in self.objects.iter_mut() {
-            object.move_(self.room);
+            // TODO: Fuck
+            // object.move_(self.room);
             // object.update();
         }
     }
@@ -322,7 +324,7 @@ fn main() {
 }
 
 struct GameState {
-    room: Vec2,
+    room: Vec2<i32>,
     frames: i32,
     deaths: i32,
     max_djump: i32,
@@ -1235,40 +1237,87 @@ struct Object {
     y: i32,
     hitbox: Hitbox,
     type_: ObjectType,
-    spd: Vec2,
-    rem: Vec2,
+    spr: f32, // hack they use
+    spd: Vec2<f32>,
+    rem: Vec2<f32>,
+    last: i32,
+    dir: i32, // not sure if all objects use this?
     // obj.solids in original source
     is_solid: bool,
+    collideable: bool,
 }
 
 impl Object {
-    fn move_(&mut self, room: Vec2) {
+    fn init(type_: ObjectType, x: i32, y: i32) -> Self {
+        // What this means: If the fruit has been already
+        // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
+        //
+        // if type.if_not_fruit~=nil and got_fruit[1+level_index()] then
+        //   return
+        // end
+
+        let object = Self {
+            x,
+            y,
+            type_,
+            collideable: true,
+            // flip = {x = false, y = false},
+            is_solid: true,
+            spr: todo!(),
+            hitbox: Hitbox {
+                x: 0,
+                y: 0,
+                w: 8,
+                h: 8,
+            },
+            spd: Vec2 { x: 0., y: 0. },
+            rem: Vec2 { x: 0., y: 0. },
+            last: 0,
+            dir: 0,
+        };
+
+        object
+    }
+    fn draw(&self, draw: &mut DrawContext) {
+        match self.type_ {
+            ObjectType::Platform => todo!(),
+            ObjectType::BigChest => todo!(),
+            ObjectType::Player => todo!(),
+            ObjectType::Smoke => todo!(),
+            ObjectType::LifeUp => todo!(),
+            ObjectType::Fruit => todo!(),
+            ObjectType::Orb => todo!(),
+            ObjectType::FakeWall => todo!(),
+            ObjectType::FallFloor => todo!(),
+        }
+    }
+    fn move_(&mut self, objects: &[Object], room: Vec2<i32>) {
         let ox = self.spd.x;
         let oy = self.spd.y;
 
         // [x] get move amount
         self.rem.x += ox;
-        let amount_x = (self.rem.x as f32 + 0.5).floor() as i32;
+        let amount_x = (self.rem.x as f32 + 0.5).floor();
         self.rem.x -= amount_x;
-        self.move_x(room, amount_x, 0);
+        self.move_x(objects, room, amount_x as i32, 0);
 
         // [y] get move amount
         self.rem.y += oy;
-        let amount_y = (self.rem.y as f32 + 0.5).floor() as i32;
+        let amount_y = (self.rem.y as f32 + 0.5).floor();
         self.rem.y -= amount_y;
-        self.move_y(room, amount_y);
+        self.move_y(objects, room, amount_y as i32);
     }
 
-    fn move_x(&mut self, room: Vec2, amount: i32, start: i32) {
+    fn move_x(&mut self, objects: &[Object], room: Vec2<i32>, amount: i32, start: i32) {
         if self.is_solid {
             let step = amount.signum();
 
             for i in start..=amount.abs() {
-                if !self.is_solid(room, step, 0) {
+                if !self.is_solid(objects, room, step, 0) {
                     self.x += step;
                 } else {
-                    self.spd.x = 0;
-                    self.rem.x = 0;
+                    self.spd.x = 0.;
+                    self.rem.x = 0.;
                     break;
                 }
             }
@@ -1277,16 +1326,16 @@ impl Object {
         }
     }
 
-    fn move_y(&mut self, room: Vec2, amount: i32) {
+    fn move_y(&mut self, objects: &[Object], room: Vec2<i32>, amount: i32) {
         if self.is_solid {
             let step = amount.signum();
 
             for i in 0..=amount.abs() {
-                if !self.is_solid(room, 0, step) {
+                if !self.is_solid(objects, room, 0, step) {
                     self.y += step;
                 } else {
-                    self.spd.y = 0;
-                    self.rem.y = 0;
+                    self.spd.y = 0.;
+                    self.rem.y = 0.;
                     break;
                 }
             }
@@ -1295,8 +1344,11 @@ impl Object {
         }
     }
 
-    fn is_solid(&self, room: Vec2, ox: i32, oy: i32) -> bool {
-        if oy > 0 && !self.check(platform, ox, 0) && self.check(platform, ox, oy) {
+    fn is_solid(&self, objects: &[Object], room: Vec2<i32>, ox: i32, oy: i32) -> bool {
+        if oy > 0
+            && !self.check(objects, &ObjectType::Platform, ox, 0)
+            && self.check(objects, &ObjectType::Platform, ox, oy)
+        {
             return true;
         }
 
@@ -1306,30 +1358,33 @@ impl Object {
             self.y + self.hitbox.y + oy,
             self.hitbox.w,
             self.hitbox.h,
-        ) || self.check(fall_floor, ox, oy)
-            || self.check(fake_wall, ox, oy);
+        ) || self.check(objects, &ObjectType::FallFloor, ox, oy)
+            || self.check(objects, &ObjectType::FakeWall, ox, oy);
     }
 
-    fn check(&self, type_: &ObjectType, ox: i32, oy: i32) -> bool {
-        self.collide(type_, ox, oy).is_some()
+    fn check(&self, objects: &[Object], type_: &ObjectType, ox: i32, oy: i32) -> bool {
+        self.collide(objects, type_, ox, oy).is_some()
     }
 
-    //     obj.collide=function(type,ox,oy)
-    //         local other
-    //         for i=1,count(objects) do
-    //             other=objects[i]
-    //             if other ~=nil and other.type == type and other != obj and other.collideable and
-    //                 other.x+other.hitbox.x+other.hitbox.w > obj.x+obj.hitbox.x+ox and
-    //                 other.y+other.hitbox.y+other.hitbox.h > obj.y+obj.hitbox.y+oy and
-    //                 other.x+other.hitbox.x < obj.x+obj.hitbox.x+obj.hitbox.w+ox and
-    //                 other.y+other.hitbox.y < obj.y+obj.hitbox.y+obj.hitbox.h+oy then
-    //                 return other
-    //             end
-    //         end
-    //         return nil
-    //     end
-    fn collide(&self, type_: &ObjectType, ox: i32, oy: i32) -> Option<Object> {
-        // TODO
+    fn collide<'a>(
+        &self,
+        objects: &'a [Object],
+        type_: &ObjectType,
+        ox: i32,
+        oy: i32,
+    ) -> Option<&'a Object> {
+        for other in objects {
+            if !std::ptr::eq(other, self)
+                && other.type_ == self.type_
+                && other.collideable
+                && other.x + other.hitbox.x + other.hitbox.w > self.x + self.hitbox.x + ox
+                && other.y + other.hitbox.y + other.hitbox.h > self.y + self.hitbox.y + oy
+                && other.x + other.hitbox.x < self.x + self.hitbox.x + self.hitbox.w + ox
+                && other.y + other.hitbox.y < self.y + self.hitbox.y + self.hitbox.h + oy
+            {
+                return Some(other);
+            }
+        }
         None
     }
 }
@@ -1344,7 +1399,7 @@ impl Object {
 //  end
 //     return false
 // end
-fn tile_flag_at(room: Vec2, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
+fn tile_flag_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
     for i in 0.max(x / 8)..=(15.min((x + w - 1) / 8)) {
         for j in 0.max(y / 8)..=(15.min((y + h - 1) / 8)) {
             // TODO: Implement api: `fget`
@@ -1359,11 +1414,11 @@ fn tile_flag_at(room: Vec2, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
 // function tile_at(x,y)
 //  return mget(room.x * 16 + x, room.y * 16 + y)
 // end
-fn tile_at(room: Vec2, x: i32, y: i32) -> i32 {
+fn tile_at(room: Vec2<i32>, x: i32, y: i32) -> i32 {
     mget(room.x * 16 + x, room.y * 16 + y)
 }
 
-fn solid_at(room: Vec2, x: i32, y: i32, w: i32, h: i32) -> bool {
+fn solid_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
     tile_flag_at(room, x, y, w, h, 0)
 }
 
@@ -1376,6 +1431,8 @@ enum ObjectType {
     LifeUp,
     Fruit,
     Orb,
+    FakeWall,
+    FallFloor,
 }
 
 fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
@@ -1860,25 +1917,26 @@ impl Platform {
         todo!()
     }
 
-    fn update(&mut self) {
-        self.spd.x = self.dir * 0.65;
-        if self.x < -16 {
-            self.x = 128;
-        } else if self.x > 128 {
-            self.x = -16;
+    fn update(self_: &mut Object, objects: &[Object], room: Vec2<i32>) {
+        self_.spd.x = self_.dir as f32 * 0.65;
+        if self_.x < -16 {
+            self_.x = 128;
+        } else if self_.x > 128 {
+            self_.x = -16;
         }
 
-        if !self.check(player, 0, 0) {
-            if let Some(hit) = this.collide(player, 0, -1) {
-                hit.move_x(self.x - self.last, 1);
+        if !self_.check(objects, &ObjectType::Player, 0, 0) {
+            if let Some(hit) = self_.collide(objects, &ObjectType::Player, 0, -1) {
+                // TODO: Fuck, borrowcheck issues
+                // hit.move_x(objects, room, self_.x - self_.last, 1);
             }
         }
-        self.last = self.x;
+        self_.last = self_.x;
     }
 
-    fn draw(&self, draw: &mut DrawContext) {
-        draw.spr(11, self.x, self.y - 1);
-        draw.spr(12, this.x + 8, this.y - 1)
+    fn draw(self_: &Object, draw: &mut DrawContext) {
+        draw.spr(11, self_.x, self_.y - 1);
+        draw.spr(12, self_.x + 8, self_.y - 1)
     }
 }
 
@@ -1904,7 +1962,7 @@ impl Platform {
 struct Smoke {}
 
 impl Smoke {
-    fn update(&mut self) {
-        self.spr += 0.2;
+    fn update(self_: &mut Object) {
+        self_.spr += 0.2;
     }
 }
