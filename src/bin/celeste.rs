@@ -2,10 +2,19 @@ use rand::Rng;
 use runty8::{App, DrawContext};
 
 struct Cloud {
-    x: i32,
-    y: i32,
-    spd: i32,
-    w: i32,
+    x: f32,
+    y: f32,
+    spd: f32,
+    w: f32,
+}
+
+struct Particle {
+    x: f32,
+    y: f32,
+    s: i32,
+    spd: f32,
+    off: f32,
+    c: i32,
 }
 
 #[derive(Clone, Copy)]
@@ -14,8 +23,8 @@ struct Vec2<T> {
     y: T,
 }
 
-fn rnd(max: i32) -> i32 {
-    rand::thread_rng().gen_range(0..max)
+fn rnd(max: f32) -> f32 {
+    rand::thread_rng().gen_range(0.0..max)
 }
 
 impl App for GameState {
@@ -23,10 +32,22 @@ impl App for GameState {
         let clouds = (0..=16)
             .into_iter()
             .map(|_| Cloud {
-                x: rnd(128),
-                y: rnd(128),
-                spd: 1 + rnd(4),
-                w: 32 + rnd(32),
+                x: rnd(128.),
+                y: rnd(128.),
+                spd: 1. + rnd(4.),
+                w: 32. + rnd(32.),
+            })
+            .collect();
+
+        let particles = (0..=24)
+            .into_iter()
+            .map(|_| Particle {
+                x: rnd(128.),
+                y: rnd(128.),
+                s: (rnd(5.) / 4.).floor() as i32,
+                spd: 0.25 + rnd(5.),
+                off: rnd(1.),
+                c: 6 + (0.5 + rnd(1.)).floor() as i32,
             })
             .collect();
 
@@ -54,6 +75,7 @@ impl App for GameState {
             clouds,
             seconds: 0,
             minutes: 0,
+            particles,
         };
 
         title_screen(&mut gs);
@@ -161,15 +183,15 @@ impl App for GameState {
         draw.rectfill(0, 0, 128, 128, bg_col);
 
         // Clouds
-        if !is_title(&self) {
+        if !is_title(self) {
             for cloud in self.clouds.iter() {
                 // TODO
                 // cloud.x += cloud.spd;
                 draw.rectfill(
-                    cloud.x,
-                    cloud.y,
-                    cloud.x + cloud.w,
-                    cloud.y + 4 + (1 - cloud.w / 64) * 12,
+                    cloud.x.floor() as i32,
+                    cloud.y.floor() as i32,
+                    (cloud.x + cloud.w).floor() as i32,
+                    (cloud.y + 4. + (1. - cloud.w / 64.) * 12.).floor() as i32,
                     if self.new_bg { 14 } else { 1 },
                 );
 
@@ -191,6 +213,44 @@ impl App for GameState {
                 object.draw(draw);
             }
         }
+
+        // draw terrain
+        let off = if is_title(self) { -4 } else { 0 };
+        // TODO
+        // map(self.room.x * 16, self.room.y * 16, off, 0, 16, 16, 2);
+
+        // Draw objects
+        for object in &self.objects {
+            if object.type_ != ObjectType::Platform && object.type_ != ObjectType::BigChest {
+                object.draw(draw);
+            }
+        }
+
+        // Draw fg terrain
+        // TODO
+        // map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 8);
+
+        // Particles
+        for p in &self.particles {
+            // p.x += p.spd;
+
+            // p.y += p.off.sin();
+            // p.off += (0.05_f32).min(p.spd / 32.);
+            draw.rectfill(
+                p.x.floor() as i32,
+                p.y.floor() as i32,
+                (p.x + p.s as f32).floor() as i32,
+                (p.y + p.s as f32).floor() as i32,
+                p.c as u8,
+            );
+            // if p.x > 128. + 4. {
+            //     p.x = -4.;
+            //     p.y = rnd(128.);
+            // }
+        }
+
+        // Dead particles
+        // todo
     }
 }
 
@@ -360,6 +420,7 @@ struct GameState {
     clouds: Vec<Cloud>,
     seconds: i32,
     minutes: i32,
+    particles: Vec<Particle>,
 }
 
 fn title_screen(game_state: &mut GameState) {
