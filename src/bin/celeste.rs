@@ -51,6 +51,8 @@ impl App for GameState {
             new_bg: false,
             // music_timer=0,
             clouds,
+            seconds: 0,
+            minutes: 0,
         };
 
         title_screen(&mut gs);
@@ -178,7 +180,7 @@ impl App for GameState {
         // Platforms/big chest
         for object in self.objects.iter() {
             if object.type_ == ObjectType::Platform || object.type_ == ObjectType::BigChest {
-                draw_object(object);
+                object.draw(draw);
             }
         }
     }
@@ -866,25 +868,6 @@ fn is_title(game_state: &GameState) -> bool {
 //     end
 // end
 
-// smoke={
-//     init=function(this)
-//         this.spr=29
-//         this.spd.y=-0.1
-//         this.spd.x=0.3+rnd(0.2)
-//         this.x+=-1+rnd(2)
-//         this.y+=-1+rnd(2)
-//         this.flip.x=maybe()
-//         this.flip.y=maybe()
-//         this.solids=false
-//     end,
-//     update=function(this)
-//         this.spr+=0.2
-//         if this.spr>=32 then
-//             destroy_object(this)
-//         end
-//     end
-// }
-
 // fruit={
 //     tile=26,
 //     if_not_fruit=true,
@@ -1062,31 +1045,6 @@ fn is_title(game_state: &GameState) -> bool {
 //     end
 // }
 // add(types,chest)
-
-// platform={
-//     init=function(this)
-//         this.x-=4
-//         this.solids=false
-//         this.hitbox.w=16
-//         this.last=this.x
-//     end,
-//     update=function(this)
-//         this.spd.x=this.dir*0.65
-//         if this.x<-16 then this.x=128
-//         elseif this.x>128 then this.x=-16 end
-//         if not this.check(player,0,0) then
-//             local hit=this.collide(player,0,-1)
-//             if hit~=nil then
-//                 hit.move_x(this.x-this.last,1)
-//             end
-//         end
-//         this.last=this.x
-//     end,
-//     draw=function(this)
-//         spr(11,this.x,this.y-1)
-//         spr(12,this.x+8,this.y-1)
-//     end
-// }
 
 // message={
 //     tile=86,
@@ -1699,9 +1657,6 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
 //         spr(obj.spr,obj.x,obj.y,1,1,obj.flip.x,obj.flip.y)
 //     end
 // end
-fn draw_object(object: &Object) {
-    todo!()
-}
 
 fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
     // TODO
@@ -1873,3 +1828,83 @@ b302b211000000110092b100000000a3b1b1b1b1b1b10011111232110000b342000000a282125284
 62839321000000000000a3828282820152845262b261000093000082a300a3821000135252845222225252523201838200000000000000000000000000000000
 828382824252522222222232007100b352526282a38283820000000000838282320001828200000083000082010000005252526271718283820000000000a382
 628201729300000000a282828382828252528462b20000a38300a382018283821222324252525252525284525222223200000000000000000000000000000000"#;
+
+// platform={
+//     init=function(this)
+//         this.x-=4
+//         this.solids=false
+//         this.hitbox.w=16
+//         this.last=this.x
+//     end,
+//     update=function(this)
+//         this.spd.x=this.dir*0.65
+//         if this.x<-16 then this.x=128
+//         elseif this.x>128 then this.x=-16 end
+//         if not this.check(player,0,0) then
+//             local hit=this.collide(player,0,-1)
+//             if hit~=nil then
+//                 hit.move_x(this.x-this.last,1)
+//             end
+//         end
+//         this.last=this.x
+//     end,
+//     draw=function(this)
+//         spr(11,this.x,this.y-1)
+//         spr(12,this.x+8,this.y-1)
+//     end
+// }
+struct Platform {}
+
+impl Platform {
+    fn init(x: i32, y: i32) -> Object {
+        todo!()
+    }
+
+    fn update(&mut self) {
+        self.spd.x = self.dir * 0.65;
+        if self.x < -16 {
+            self.x = 128;
+        } else if self.x > 128 {
+            self.x = -16;
+        }
+
+        if !self.check(player, 0, 0) {
+            if let Some(hit) = this.collide(player, 0, -1) {
+                hit.move_x(self.x - self.last, 1);
+            }
+        }
+        self.last = self.x;
+    }
+
+    fn draw(&self, draw: &mut DrawContext) {
+        draw.spr(11, self.x, self.y - 1);
+        draw.spr(12, this.x + 8, this.y - 1)
+    }
+}
+
+// smoke={
+//     init=function(this)
+//         this.spr=29
+//         this.spd.y=-0.1
+//         this.spd.x=0.3+rnd(0.2)
+//         this.x+=-1+rnd(2)
+//         this.y+=-1+rnd(2)
+//         this.flip.x=maybe()
+//         this.flip.y=maybe()
+//         this.solids=false
+//     end,
+//     update=function(this)
+//         this.spr+=0.2
+//         if this.spr>=32 then
+//             destroy_object(this)
+//         end
+//     end
+// }
+
+struct Smoke {}
+
+impl Smoke {
+    fn update(&mut self) {
+        self.spr += 0.2;
+    }
+}
