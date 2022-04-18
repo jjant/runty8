@@ -1,4 +1,4 @@
-use crate::app::{App, DevApp};
+use crate::app::{DevApp, ElmApp};
 use crate::editor::SpriteEditor;
 use crate::{DrawContext, Scene, State};
 use glium::backend::Facade;
@@ -9,7 +9,7 @@ use glium::uniforms::MagnifySamplerFilter;
 use glium::{glutin, Surface, VertexBuffer};
 use glium::{implement_vertex, uniform};
 
-pub fn do_something<T: App + 'static>(mut draw_context: DrawContext) {
+pub fn do_something<T: ElmApp + 'static>(mut draw_context: DrawContext) {
     let mut app = T::init();
 
     let event_loop = glutin::event_loop::EventLoop::new();
@@ -60,8 +60,8 @@ pub fn do_something<T: App + 'static>(mut draw_context: DrawContext) {
                     editor.update(&mut draw_context.state);
                 },
                 Scene::App => {
-                    app.draw(&mut draw_context);
-                    app.update(&draw_context.state);
+                    let actions = app.draw(&mut draw_context);
+                    app.update(&draw_context.state, &actions);
                 }
             }
             if draw_context.state.escape.btnp()  {

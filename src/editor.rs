@@ -1,6 +1,10 @@
+use crate::{
+    app::DevApp, draw, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH,
+};
 use std::{fs::File, io::Write};
 
-use crate::{app::DevApp, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH};
+use self::canvas::Canvas;
+mod canvas;
 
 pub struct SpriteEditor {
     mouse_x: i32,
@@ -10,6 +14,18 @@ pub struct SpriteEditor {
     bottom_text: String,
     selected_sprite: u8,
     cursor_sprite: &'static Sprite,
+    draw_mode: DrawMode,
+}
+
+#[derive(Debug)]
+enum DrawMode {
+    Pencil,
+    Line(Option<LineState>),
+}
+
+#[derive(Debug)]
+struct LineState {
+    start: (i32, i32),
 }
 
 const CANVAS_X: i32 = 79; // end = 120
@@ -18,6 +34,64 @@ const CANVAS_Y: i32 = 10;
 const SPRITES_PER_ROW: u8 = 16;
 
 impl SpriteEditor {
+    fn draw_tools(&self, draw_context: &mut DrawContext) {
+        draw_context.palt(Some(0));
+
+        match &self.draw_mode {
+            DrawMode::Pencil => {
+                draw_context.spr(14, 12, 78);
+                draw_context.spr(31, 22, 78);
+            }
+            DrawMode::Line(_) => {
+                draw_context.spr(15, 12, 78);
+                draw_context.spr(30, 22, 78);
+            }
+        }
+    }
+
+    fn handle_draw_intent(&mut self, state: &mut State) {
+        let sprite = &mut state
+            .sprite_sheet
+            .get_sprite_mut(self.selected_sprite.into())
+            .sprite;
+
+        match &mut self.draw_mode {
+            DrawMode::Pencil => {
+                if let Some((x, y)) = Canvas::try_lookup(self.mouse_x, self.mouse_y) {
+                    self.bottom_text = format!("X:{} Y:{}", x, y);
+
+                    if self.mouse_pressed {
+                        sprite[(x + y * 8) as usize] = self.highlighted_color;
+                    }
+                }
+            }
+            DrawMode::Line(None) => {
+                if self.mouse_pressed {
+                    self.draw_mode = DrawMode::Line(Some(LineState {
+                        start: (self.mouse_x, self.mouse_y),
+                    }));
+                }
+            }
+            DrawMode::Line(Some(LineState { start })) => {
+                if !self.mouse_pressed {
+                    // Draw the line when the mouse is released
+                    let (start_x, start_y) = Canvas::to_local(start.0, start.1);
+                    let (end_x, end_y) = Canvas::to_local(self.mouse_x, self.mouse_y);
+
+                    for (x, y) in draw::line(start_x, start_y, end_x, end_y) {
+                        sprite[(x + y * SPRITE_WIDTH as i32) as usize] = self.highlighted_color;
+                    }
+
+                    self.draw_mode = DrawMode::Line(None);
+                } else {
+                    if let Some((x, y)) = Canvas::try_lookup(self.mouse_x, self.mouse_y) {
+                        self.bottom_text = format!("X:{} Y:{}", x, y);
+                    };
+                }
+            }
+        }
+    }
+
     fn draw_sprite_sheet(&self, y_start: i32, draw_context: &mut DrawContext) {
         const BORDER: i32 = 1;
         const HEIGHT: i32 = 32;
@@ -101,6 +175,7 @@ impl DevApp for SpriteEditor {
             bottom_text: String::new(),
             selected_sprite: 0,
             cursor_sprite: Sprite::new(MOUSE_SPRITE),
+            draw_mode: DrawMode::Line(None),
         }
     }
 
@@ -123,25 +198,11 @@ impl DevApp for SpriteEditor {
         }
 
         // Handle mouse over canvas
-        if canvas_position().contains(self.mouse_x, self.mouse_y) {
+        // TODO: This might be bad (consider dragging mouse outside the canvas while drawing lines)
+        if Canvas::position().contains(self.mouse_x, self.mouse_y) {
             self.cursor_sprite = Sprite::new(MOUSE_TARGET_SPRITE);
 
-            let sprite = &mut state
-                .sprite_sheet
-                .get_sprite_mut(self.selected_sprite.into())
-                .sprite;
-
-            for x in 0..(SPRITE_WIDTH as i32) {
-                for y in 0..(SPRITE_WIDTH as i32) {
-                    if canvas_pixel_rect(x, y).contains(self.mouse_x, self.mouse_y) {
-                        self.bottom_text = format!("X:{} Y:{}", x, y);
-
-                        if self.mouse_pressed {
-                            sprite[(x + y * 8) as usize] = self.highlighted_color;
-                        }
-                    }
-                }
-            }
+            self.handle_draw_intent(state);
         }
 
         // Handle mouse over sprite sheet
@@ -204,10 +265,15 @@ impl DevApp for SpriteEditor {
                 .get_sprite_mut(self.selected_sprite.into())
                 .shift_right();
         }
+
+        self.bottom_text = format!("{:?}", Canvas::to_local(self.mouse_x, self.mouse_y));
+
+        if let DrawMode::Line(Some(LineState { start })) = self.draw_mode {
+            self.bottom_text = format!("{:?}", start);
+        }
     }
 
     fn draw(&self, draw_context: &mut DrawContext) {
-        #[allow(dead_code)]
         draw_context.cls();
 
         draw_context.palt(None);
@@ -220,17 +286,41 @@ impl DevApp for SpriteEditor {
         draw_context.rectfill(0, 121, 127, 127, 8);
 
         // draw canvas
-        canvas_position().fill(draw_context, 0);
+        Canvas::position().fill(draw_context, 0);
 
         for x in 0..8 {
             for y in 0..8 {
                 let color = self
                     .selected_sprite(&draw_context.state)
                     .pget(x as isize, y as isize);
-                canvas_pixel_rect(x, y).fill(draw_context, color);
+
+                Canvas::pixel_rect(x, y).fill(draw_context, color);
             }
         }
 
+        self.draw_tools(draw_context);
+
+        // TODO: Look up correct positions
+        draw_context.palt(Some(0));
+        match &self.draw_mode {
+            DrawMode::Pencil => {}
+            DrawMode::Line(None) => {
+                // println!("not drawing a line")
+            }
+            DrawMode::Line(Some(line_state)) => {
+                let start = line_state.start;
+
+                let (start_x, start_y) = Canvas::to_local(start.0, start.1);
+                let (end_x, end_y) = Canvas::to_local(self.mouse_x, self.mouse_y);
+
+                for (x, y) in draw::line(start_x, start_y, end_x, end_y) {
+                    Canvas::pixel_rect(x as i32, y as i32)
+                        .fill(draw_context, self.highlighted_color);
+                }
+            }
+        }
+
+        draw_context.palt(None);
         // let tools_area = Rect {
         //     x: 0,
         //     y: canvas_position().bottom() + 1,
@@ -240,8 +330,8 @@ impl DevApp for SpriteEditor {
         // tools_area.fill(draw_context, 12);
 
         let thumbnail_area = Rect {
-            x: canvas_position().right() - 2,
-            y: canvas_position().bottom() + 3,
+            x: Canvas::position().right() - 2,
+            y: Canvas::position().bottom() + 3,
             width: 8,
             height: 8,
         };
@@ -315,26 +405,6 @@ const SPRITE_SHEET_AREA: Rect = Rect {
     height: 34,
 };
 
-const CANVAS_BORDER: i32 = 1;
-fn canvas_position() -> Rect {
-    Rect {
-        x: 8,
-        y: 10,
-        width: 8 * 8 + CANVAS_BORDER * 2,
-        height: 8 * 8 + CANVAS_BORDER * 2,
-    }
-}
-
-fn canvas_pixel_rect(x: i32, y: i32) -> Rect {
-    let canvas = canvas_position();
-
-    Rect {
-        x: canvas.x + CANVAS_BORDER + 8 * x,
-        y: canvas.y + CANVAS_BORDER + 8 * y,
-        width: 8,
-        height: 8,
-    }
-}
 const SIZE: i32 = 10;
 const BOX_SIZE: i32 = 4 * SIZE + 2;
 
@@ -352,6 +422,19 @@ impl Rect {
         let contains_y = y >= self.y && y < self.y + self.height;
 
         contains_x && contains_y
+    }
+
+    pub fn distance_squared(&self, x: i32, y: i32) -> i32 {
+        let dx = [self.x - x, 0, x - (self.x + self.width)]
+            .into_iter()
+            .max()
+            .unwrap();
+        let dy = [self.y - y, 0, y - (self.y + self.height)]
+            .into_iter()
+            .max()
+            .unwrap();
+
+        dx * dx + dy * dy
     }
 
     pub fn fill(&self, draw_context: &mut DrawContext, color: Color) {
