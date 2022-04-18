@@ -1,3 +1,4 @@
+use rand::Rng;
 use runty8::{self, App, Button, Color, DrawContext, State};
 use std::fmt;
 
@@ -20,6 +21,7 @@ enum Action {
     HighlightItem(usize),
     SelectedItem(usize),
     MovedSelectedItem { new_index: usize },
+    AppliedOrb { orb_index: usize, item_index: usize },
 }
 
 use Action::*;
@@ -63,6 +65,18 @@ impl App for GameState {
                 MovedSelectedItem { new_index } => {
                     if let Some(selected_item) = self.selected_item {
                         self.inventory.items.swap(selected_item, new_index);
+                    }
+                }
+                AppliedOrb {
+                    orb_index,
+                    item_index,
+                } => {
+                    let orb_was_present = self.inventory.remove(orb_index).is_some();
+
+                    if orb_was_present {
+                        if let Some(item) = &mut self.inventory.items[item_index].item {
+                            item.apply_power_orb()
+                        }
                     }
                 }
             }
@@ -113,8 +127,11 @@ impl GameState {
         draw_selected_item();
     }
 
-    fn selected_item(&self) -> Option<&Item> {
-        self.inventory.items[self.selected_item?].item.as_ref()
+    fn selected_item(&self) -> Option<(usize, &Item)> {
+        let index = self.selected_item?;
+        let item = self.inventory.items[index].item.as_ref()?;
+
+        Some((index, item))
     }
 }
 struct Player {
@@ -132,10 +149,6 @@ impl Player {
     }
 }
 
-struct Inventory {
-    items: Box<[ItemSlot]>,
-}
-
 #[derive(Debug, Clone, Copy)]
 enum Attribute {
     Attack(i32),
@@ -148,6 +161,10 @@ impl fmt::Display for Attribute {
             Attribute::AttackSpeed(attack_speed) => write!(f, "{:+} ATTACK SPEED", attack_speed),
         }
     }
+}
+
+struct Inventory {
+    items: Box<[ItemSlot]>,
 }
 
 impl Inventory {
@@ -183,6 +200,10 @@ impl Inventory {
             tags: vec![Tag::RightClickable],
             sprite: 32,
         });
+
+        for i in 15..25 {
+            items[i] = items[14].clone();
+        }
 
         Self { items }
     }
@@ -233,6 +254,10 @@ impl Inventory {
     pub fn index(x_index: usize, y_index: usize) -> usize {
         x_index + y_index * 5
     }
+
+    fn remove(&mut self, index: usize) -> Option<Item> {
+        self.items[index].take()
+    }
 }
 
 #[derive(Clone)]
@@ -271,7 +296,22 @@ impl ItemSlot {
             game_state.mouse_clicked && slot_rect.contains(game_state.mouse_x, game_state.mouse_y);
 
         match &self.item {
-            Some(item) => item.draw_slot(game_state, draw_context, x, y, on_hover, on_click),
+            Some(item) => {
+                let e = item.draw_slot(game_state, draw_context, x, y, on_hover, on_click);
+
+                if slot_clicked {
+                    if let Some((orb_index, selected_item)) = game_state.selected_item() {
+                        if selected_item.tags.contains(&Tag::RightClickable) {
+                            return Some(Action::AppliedOrb {
+                                orb_index,
+                                item_index: Inventory::index(x_index, y_index),
+                            });
+                        }
+                    }
+                }
+
+                e
+            }
             None => {
                 // move item to this slot
                 if slot_clicked {
@@ -286,6 +326,10 @@ impl ItemSlot {
             }
         }
     }
+
+    pub fn take(&mut self) -> Option<Item> {
+        self.item.take()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -297,12 +341,29 @@ struct Item {
     sprite: u8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum Tag {
     RightClickable,
 }
 
 impl Item {
+    fn apply_power_orb(&mut self) {
+        for modifier in self.attributes.iter_mut() {
+            let new_modifier = match modifier {
+                Attribute::Attack(_) => {
+                    let v = rand::thread_rng().gen_range(-2..=2);
+                    Attribute::Attack(v)
+                }
+                Attribute::AttackSpeed(_) => {
+                    let v = rand::thread_rng().gen_range(-2..=2);
+                    Attribute::AttackSpeed(v)
+                }
+            };
+
+            *modifier = dbg!(new_modifier);
+        }
+    }
+
     fn draw_slot(
         &self,
         game_state: &GameState,
