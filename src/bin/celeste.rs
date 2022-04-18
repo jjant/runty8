@@ -17,6 +17,16 @@ struct Particle {
     c: i32,
 }
 
+struct DeadParticle {
+    x: f32,
+    y: f32,
+    s: i32,
+    spd: Vec2<f32>,
+    off: f32,
+    c: i32,
+    t: i32,
+}
+
 #[derive(Clone, Copy)]
 struct Vec2<T> {
     x: T,
@@ -76,6 +86,7 @@ impl App for GameState {
             seconds: 0,
             minutes: 0,
             particles,
+            dead_particles: vec![],
         };
 
         title_screen(&mut gs);
@@ -135,6 +146,44 @@ impl App for GameState {
             // object.move_(self.room);
             // object.update();
         }
+
+        if !is_title(self) {
+            for cloud in self.clouds.iter_mut() {
+                cloud.x += cloud.spd;
+
+                if cloud.x > 128. {
+                    cloud.x = -cloud.w;
+                    cloud.y = rnd(128. - 8.);
+                }
+            }
+        }
+
+        for p in self.particles.iter_mut() {
+            p.x += p.spd;
+
+            p.y += p.off.sin();
+            p.off += (0.05_f32).min(p.spd / 32.);
+            if p.x > 128. + 4. {
+                p.x = -4.;
+                p.y = rnd(128.);
+            }
+        }
+
+        // Update and remove dead dead_particles
+        let mut i = 0;
+        while i < self.dead_particles.len() {
+            {
+                let p = &mut self.dead_particles[i];
+                p.x += p.spd.x;
+                p.y += p.spd.y;
+                p.t -= 1;
+            }
+            if self.dead_particles[i].t <= 0 {
+                self.dead_particles.remove(i);
+            } else {
+                i += 1;
+            }
+        }
     }
 
     fn draw(&self, draw: &mut runty8::DrawContext) {
@@ -174,7 +223,12 @@ impl App for GameState {
         }
 
         // Clear screen
-        let mut bg_col = 0;
+        // TODO: Change this after implementing pal();
+        // currently 0 (i.e, black) is transparent and won't "clear"
+        // the screen
+        //
+        // let mut bg_col = 0;
+        let mut bg_col = 1;
         if self.flash_bg {
             bg_col = (self.frames / 5) as u8;
         } else if self.new_bg {
@@ -250,7 +304,29 @@ impl App for GameState {
         }
 
         // Dead particles
-        // todo
+        for p in &self.dead_particles {
+            let t = p.t as f32;
+            draw.rectfill(
+                (p.x - t / 5.) as i32,
+                (p.y - t / 5.) as i32,
+                (p.x + t / 5.) as i32,
+                (p.y + t / 5.) as i32,
+                (14 + p.t % 2) as u8,
+            );
+        }
+
+        // Draw outside of the screen for screenshake
+        draw.rectfill(-5, -5, -1, 133, 0);
+        draw.rectfill(-5, -5, 133, -1, 0);
+        draw.rectfill(-5, 128, 133, 133, 0);
+        draw.rectfill(128, -5, 133, 133, 0);
+
+        // Credits
+        if is_title(self) {
+            draw.print("X+C", 58, 80, 5);
+            draw.print("MATT THORSON", 42, 96, 5);
+            draw.print("NOEL BERRY", 46, 102, 5);
+        }
     }
 }
 
@@ -421,6 +497,8 @@ struct GameState {
     seconds: i32,
     minutes: i32,
     particles: Vec<Particle>,
+    // Particles created when the player dies
+    dead_particles: Vec<DeadParticle>,
 }
 
 fn title_screen(game_state: &mut GameState) {
