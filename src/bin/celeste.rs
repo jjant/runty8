@@ -1,12 +1,34 @@
+use rand::Rng;
 use runty8::{App, DrawContext};
+
+struct Cloud {
+    x: i32,
+    y: i32,
+    spd: i32,
+    w: i32,
+}
 
 struct Vec2 {
     x: i32,
     y: i32,
 }
 
+fn rnd(max: i32) -> i32 {
+    rand::thread_rng().gen_range(0..max)
+}
+
 impl App for GameState {
     fn init() -> Self {
+        let clouds = (0..=16)
+            .into_iter()
+            .map(|_| Cloud {
+                x: rnd(128),
+                y: rnd(128),
+                spd: 1 + rnd(4),
+                w: 32 + rnd(32),
+            })
+            .collect();
+
         let mut gs = Self {
             room: Vec2 { x: 0, y: 0 },
             objects: vec![],
@@ -25,8 +47,10 @@ impl App for GameState {
             max_djump: 1,
             start_game: false,
             start_game_flash: 0,
-            // flash_bg=false,
+            flash_bg: false,
+            new_bg: false,
             // music_timer=0,
+            clouds,
         };
 
         title_screen(&mut gs);
@@ -35,13 +59,206 @@ impl App for GameState {
     }
 
     fn update(&mut self, state: &runty8::State) {
-        todo!()
+        // todo!()
     }
 
-    fn draw(&self, draw_context: &mut runty8::DrawContext) {
-        todo!()
+    fn draw(&self, draw: &mut runty8::DrawContext) {
+        if self.freeze > 0 {
+            return;
+        }
+
+        // Reset all palette values
+        // TODO: Implement api
+        // draw.pal()
+
+        // Start game flash
+        if self.start_game {
+            let mut c = 10;
+
+            if self.start_game_flash > 10 {
+                if self.frames % 10 < 5 {
+                    c = 7;
+                }
+            } else if self.start_game_flash > 5 {
+                c = 2;
+            } else if self.start_game_flash > 0 {
+                c = 1;
+            } else {
+                c = 0
+            }
+
+            if c < 10 {
+                // TODO: Implement API
+                // draw.pal(6, c);
+                // draw.pal(12, c);
+                // draw.pal(13, c);
+                // draw.pal(5, c);
+                // draw.pal(1, c);
+                // draw.pal(7, c);
+            }
+        }
+
+        // Clear screen
+        let mut bg_col = 0;
+        if self.flash_bg {
+            bg_col = (self.frames / 5) as u8;
+        } else if self.new_bg {
+            bg_col = 2;
+        }
+        draw.rectfill(0, 0, 128, 128, bg_col);
+
+        // Clouds
+        if !is_title(&self) {
+            for cloud in self.clouds.iter() {
+                // TODO
+                // cloud.x += cloud.spd;
+                draw.rectfill(
+                    cloud.x,
+                    cloud.y,
+                    cloud.x + cloud.w,
+                    cloud.y + 4 + (1 - cloud.w / 64) * 12,
+                    if self.new_bg { 14 } else { 1 },
+                )
+            }
+        }
+
+        // Draw bg terrain
+        // TODO: Implement `map` api
+        // draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 4);
+
+        // Platforms/big chest
+        for object in self.objects.iter() {
+            if object.type_ == ObjectType::Platform || object.type_ == ObjectType::BigChest {
+                draw_object(object);
+            }
+        }
     }
 }
+
+// function _draw()
+//     if freeze>0 then return end
+//
+//     -- reset all palette values
+//     pal()
+//
+//     -- start game flash
+//     if start_game then
+//         local c=10
+//         if start_game_flash>10 then
+//             if frames%10<5 then
+//                 c=7
+//             end
+//         elseif start_game_flash>5 then
+//             c=2
+//         elseif start_game_flash>0 then
+//             c=1
+//         else
+//             c=0
+//         end
+//         if c<10 then
+//             pal(6,c)
+//             pal(12,c)
+//             pal(13,c)
+//             pal(5,c)
+//             pal(1,c)
+//             pal(7,c)
+//         end
+//     end
+//
+//     -- clear screen
+//     local bg_col = 0
+//     if flash_bg then
+//         bg_col = frames/5
+//     elseif new_bg~=nil then
+//         bg_col=2
+//     end
+//     rectfill(0,0,128,128,bg_col)
+//
+//     -- clouds
+//     if not is_title() then
+//         foreach(clouds, function(c)
+//             c.x += c.spd
+//             rectfill(c.x,c.y,c.x+c.w,c.y+4+(1-c.w/64)*12,new_bg~=nil and 14 or 1)
+//             if c.x > 128 then
+//                 c.x = -c.w
+//                 c.y=rnd(128-8)
+//             end
+//         end)
+//     end
+//
+//     -- draw bg terrain
+//     map(room.x * 16,room.y * 16,0,0,16,16,4)
+//
+//     -- platforms/big chest
+//     foreach(objects, function(o)
+//         if o.type==platform or o.type==big_chest then
+//             draw_object(o)
+//         end
+//     end)
+//
+//     -- draw terrain
+//     local off=is_title() and -4 or 0
+//     map(room.x*16,room.y * 16,off,0,16,16,2)
+//
+//     -- draw objects
+//     foreach(objects, function(o)
+//         if o.type~=platform and o.type~=big_chest then
+//             draw_object(o)
+//         end
+//     end)
+//
+//     -- draw fg terrain
+//     map(room.x * 16,room.y * 16,0,0,16,16,8)
+//
+//     -- particles
+//     foreach(particles, function(p)
+//         p.x += p.spd
+//         p.y += sin(p.off)
+//         p.off+= min(0.05,p.spd/32)
+//         rectfill(p.x,p.y,p.x+p.s,p.y+p.s,p.c)
+//         if p.x>128+4 then
+//             p.x=-4
+//             p.y=rnd(128)
+//         end
+//     end)
+//
+//     -- dead particles
+//     foreach(dead_particles, function(p)
+//         p.x += p.spd.x
+//         p.y += p.spd.y
+//         p.t -=1
+//         if p.t <= 0 then del(dead_particles,p) end
+//         rectfill(p.x-p.t/5,p.y-p.t/5,p.x+p.t/5,p.y+p.t/5,14+p.t%2)
+//     end)
+//
+//     -- draw outside of the screen for screenshake
+//     rectfill(-5,-5,-1,133,0)
+//     rectfill(-5,-5,133,-1,0)
+//     rectfill(-5,128,133,133,0)
+//     rectfill(128,-5,133,133,0)
+//
+//     -- credits
+//     if is_title() then
+//         print("x+c",58,80,5)
+//         print("matt thorson",42,96,5)
+//         print("noel berry",46,102,5)
+//     end
+//
+//     if level_index()==30 then
+//         local p
+//         for i=1,count(objects) do
+//             if objects[i].type==player then
+//                 p = objects[i]
+//                 break
+//             end
+//         end
+//         if p~=nil then
+//             local diff=min(24,40-abs(p.x+4-64))
+//             rectfill(0,0,diff,128,0)
+//             rectfill(128-diff,0,128,128,0)
+//         end
+//     end
+// end
 
 // k_left=0
 // k_right=1
@@ -72,7 +289,8 @@ struct GameState {
     has_key: bool,
     has_dashed: bool,
     pause_player: bool,
-    // flash_bg: bool,
+    flash_bg: bool,
+    new_bg: bool,
     // music_timer: i32,
     // k_left: i32,
     // k_right: i32,
@@ -80,40 +298,9 @@ struct GameState {
     // k_down: i32,
     // k_jump: i32,
     // k_dash: i32,
+    clouds: Vec<Cloud>,
 }
 
-// impl runty8::App for GameState {
-//     // function _init()
-//     //     title_screen()
-//     // end
-//     fn init() -> Self {
-//         // title_screen()
-
-//         Self {}
-//     }
-
-//     fn draw(&self, draw_context: &mut runty8::DrawContext) {
-//         todo!()
-//     }
-
-//     fn update(&mut self, state: &runty8::State) {
-//         todo!()
-//     }
-// }
-
-// function title_screen()
-//     got_fruit = {}
-//     for i=0,29 do
-//         add(got_fruit,false) end
-//     frames=0
-//     deaths=0
-//     max_djump=1
-//     start_game=false
-//     start_game_flash=0
-//     music(40,0,7)
-
-//     load_room(7,3)
-// end
 fn title_screen(game_state: &mut GameState) {
     game_state.got_fruit = vec![false; 30];
     game_state.frames = 0;
@@ -148,16 +335,6 @@ fn is_title(game_state: &GameState) -> bool {
 
 // -- effects --
 // -------------
-
-// clouds = {}
-// for i=0,16 do
-//     add(clouds,{
-//         x=rnd(128),
-//         y=rnd(128),
-//         spd=1+rnd(4),
-//         w=32+rnd(32)
-//     })
-// end
 
 // particles = {}
 // for i=0,24 do
@@ -1038,10 +1215,24 @@ impl RoomTitle {
 // -- object functions --
 // -----------------------
 
-struct Object;
-struct ObjectType;
+struct Object {
+    type_: ObjectType,
+}
+
+#[derive(PartialEq)]
+enum ObjectType {
+    Platform,
+    BigChest,
+    Player,
+    Smoke,
+    LifeUp,
+    Fruit,
+    Orb,
+}
+
 fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
-    todo!()
+    // todo!()
+    Object { type_ }
 }
 // function init_object(type,x,y)
 //     if type.if_not_fruit~=nil and got_fruit[1+level_index()] then
@@ -1203,7 +1394,8 @@ fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
 // end
 
 fn mget(x: i32, y: i32) -> i32 {
-    todo!()
+    // todo!()
+    0
 }
 
 fn load_room(game_state: &mut GameState, x: i32, y: i32) {
@@ -1318,141 +1510,17 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
 
 // -- drawing functions --
 // -----------------------
-// function _draw()
-//     if freeze>0 then return end
-
-//     -- reset all palette values
-//     pal()
-
-//     -- start game flash
-//     if start_game then
-//         local c=10
-//         if start_game_flash>10 then
-//             if frames%10<5 then
-//                 c=7
-//             end
-//         elseif start_game_flash>5 then
-//             c=2
-//         elseif start_game_flash>0 then
-//             c=1
-//         else
-//             c=0
-//         end
-//         if c<10 then
-//             pal(6,c)
-//             pal(12,c)
-//             pal(13,c)
-//             pal(5,c)
-//             pal(1,c)
-//             pal(7,c)
-//         end
-//     end
-
-//     -- clear screen
-//     local bg_col = 0
-//     if flash_bg then
-//         bg_col = frames/5
-//     elseif new_bg~=nil then
-//         bg_col=2
-//     end
-//     rectfill(0,0,128,128,bg_col)
-
-//     -- clouds
-//     if not is_title() then
-//         foreach(clouds, function(c)
-//             c.x += c.spd
-//             rectfill(c.x,c.y,c.x+c.w,c.y+4+(1-c.w/64)*12,new_bg~=nil and 14 or 1)
-//             if c.x > 128 then
-//                 c.x = -c.w
-//                 c.y=rnd(128-8)
-//             end
-//         end)
-//     end
-
-//     -- draw bg terrain
-//     map(room.x * 16,room.y * 16,0,0,16,16,4)
-
-//     -- platforms/big chest
-//     foreach(objects, function(o)
-//         if o.type==platform or o.type==big_chest then
-//             draw_object(o)
-//         end
-//     end)
-
-//     -- draw terrain
-//     local off=is_title() and -4 or 0
-//     map(room.x*16,room.y * 16,off,0,16,16,2)
-
-//     -- draw objects
-//     foreach(objects, function(o)
-//         if o.type~=platform and o.type~=big_chest then
-//             draw_object(o)
-//         end
-//     end)
-
-//     -- draw fg terrain
-//     map(room.x * 16,room.y * 16,0,0,16,16,8)
-
-//     -- particles
-//     foreach(particles, function(p)
-//         p.x += p.spd
-//         p.y += sin(p.off)
-//         p.off+= min(0.05,p.spd/32)
-//         rectfill(p.x,p.y,p.x+p.s,p.y+p.s,p.c)
-//         if p.x>128+4 then
-//             p.x=-4
-//             p.y=rnd(128)
-//         end
-//     end)
-
-//     -- dead particles
-//     foreach(dead_particles, function(p)
-//         p.x += p.spd.x
-//         p.y += p.spd.y
-//         p.t -=1
-//         if p.t <= 0 then del(dead_particles,p) end
-//         rectfill(p.x-p.t/5,p.y-p.t/5,p.x+p.t/5,p.y+p.t/5,14+p.t%2)
-//     end)
-
-//     -- draw outside of the screen for screenshake
-//     rectfill(-5,-5,-1,133,0)
-//     rectfill(-5,-5,133,-1,0)
-//     rectfill(-5,128,133,133,0)
-//     rectfill(128,-5,133,133,0)
-
-//     -- credits
-//     if is_title() then
-//         print("x+c",58,80,5)
-//         print("matt thorson",42,96,5)
-//         print("noel berry",46,102,5)
-//     end
-
-//     if level_index()==30 then
-//         local p
-//         for i=1,count(objects) do
-//             if objects[i].type==player then
-//                 p = objects[i]
-//                 break
-//             end
-//         end
-//         if p~=nil then
-//             local diff=min(24,40-abs(p.x+4-64))
-//             rectfill(0,0,diff,128,0)
-//             rectfill(128-diff,0,128,128,0)
-//         end
-//     end
-
-// end
 
 // function draw_object(obj)
-
 //     if obj.type.draw ~=nil then
 //         obj.type.draw(obj)
 //     elseif obj.spr > 0 then
 //         spr(obj.spr,obj.x,obj.y,1,1,obj.flip.x,obj.flip.y)
 //     end
-
 // end
+fn draw_object(object: &Object) {
+    todo!()
+}
 
 fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
     // TODO
