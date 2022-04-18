@@ -1,5 +1,5 @@
 use rand::Rng;
-use runty8::{self, App, Button, Color, DrawContext, State};
+use runty8::{self, app::ElmApp, Button, Color, DrawContext, State};
 use std::fmt;
 
 fn main() {
@@ -26,7 +26,7 @@ enum Action {
 
 use Action::*;
 
-impl App for GameState {
+impl ElmApp for GameState {
     type Action = Action;
 
     fn init() -> Self {

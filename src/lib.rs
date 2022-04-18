@@ -7,6 +7,7 @@ mod screen;
 use std::{fs::File, io::Read};
 
 pub use app::App;
+use app::ElmApp;
 use itertools::Itertools;
 
 const WIDTH: usize = 128;
@@ -387,7 +388,7 @@ pub enum Button {
     Mouse,
 }
 
-pub fn run_app<T: App + 'static>() {
+pub fn run_app<T: ElmApp + 'static>() {
     let state = State::new();
     let draw_context = DrawContext::new(state);
 
