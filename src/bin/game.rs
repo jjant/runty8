@@ -15,6 +15,7 @@ struct GameState {
     highlighted_item: Option<usize>,
     selected_item: Option<usize>,
 }
+
 enum Action {
     HighlightItem(usize),
     SelectedItem(usize),
@@ -259,7 +260,6 @@ impl ItemSlot {
     ) -> Option<Action> {
         let border = 1;
         let spacing = 1;
-        // 12 = 8 (sprite) + 2 (border) + 2 (spacing)
         let x = Inventory::START_X + x_index as i32 * (8 + border * 2 + spacing * 2);
         let y = Inventory::START_Y + y_index as i32 * (8 + border * 2 + spacing * 2);
         draw_context.rectfill(x, y, x + 9, y + 9, 7);
@@ -267,13 +267,14 @@ impl ItemSlot {
         let slot_rect = Inventory::item_rect(x_index, y_index);
         slot_rect.fill(draw_context, 5);
 
+        let slot_clicked =
+            game_state.mouse_clicked && slot_rect.contains(game_state.mouse_x, game_state.mouse_y);
+
         match &self.item {
             Some(item) => item.draw_slot(game_state, draw_context, x, y, on_hover, on_click),
             None => {
-                let clicked = game_state.mouse_clicked
-                    && slot_rect.contains(game_state.mouse_x, game_state.mouse_y);
                 // move item to this slot
-                if clicked {
+                if slot_clicked {
                     let _ = game_state.selected_item?;
 
                     Some(MovedSelectedItem {
