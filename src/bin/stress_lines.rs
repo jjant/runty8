@@ -59,15 +59,13 @@ impl MouseState {
 }
 
 impl App for StressLines {
-    type Action = ();
-
     fn init() -> Self {
         Self {
             mouse: MouseState::new(64, 64),
         }
     }
 
-    fn update(&mut self, state: &State, _: &[Self::Action]) {
+    fn update(&mut self, state: &State) {
         self.mouse
             .update(state.btn(Button::Mouse), state.mouse_x, state.mouse_y);
         // let mut i = 0;
@@ -82,7 +80,7 @@ impl App for StressLines {
         // }
     }
 
-    fn draw(&mut self, draw_context: &mut runty8::DrawContext) -> Vec<Self::Action> {
+    fn draw(&self, draw_context: &mut runty8::DrawContext) {
         draw_context.cls();
 
         // Diagonal line
@@ -114,7 +112,5 @@ impl App for StressLines {
 
         let (x, y) = self.mouse.position();
         draw_context.spr(8, x - 4, y - 3);
-
-        vec![]
     }
 }
