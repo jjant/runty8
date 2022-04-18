@@ -59,7 +59,56 @@ impl App for GameState {
     }
 
     fn update(&mut self, state: &runty8::State) {
-        // todo!()
+        self.frames = (self.frames + 1) % 30;
+
+        if self.frames == 0 && level_index(self) < 30 {
+            self.seconds = self.seconds + 1 % 60;
+            if self.seconds == 0 {
+                self.minutes += 1;
+            }
+        }
+
+        // TODO: Implement `music` api
+        // if self.music_timer > 0 {
+        //     self.music_timer -= 1;
+
+        //     if music_timer <= 0 {
+        //         music(10, 0, 7);
+        //     }
+        // }
+        // if self.sfx_timer > 0 {
+        //     self.sfx_timer -= 1;
+        // }
+
+        if self.freeze > 0 {
+            self.freeze -= 1;
+            return;
+        }
+
+        if self.shake > 0 {
+            self.shake -= 1;
+            // TODO: Implement `camera` api
+            //
+            // camera()
+            // if self.shake > 0 {
+            //     camera(-2 + rnd(5), -2 + rnd(5));
+            // }
+        }
+
+        // Restart (soon)
+        if self.will_restart && self.delay_restart > 0 {
+            self.delay_restart -= 1;
+            if self.delay_restart <= 0 {
+                self.will_restart = false;
+                load_room(self, self.room.x, self.room.y);
+            }
+        }
+
+        // Update each object
+        for object in self.objects.iter_mut() {
+            object.move_(self.room);
+            // object.update();
+        }
     }
 
     fn draw(&self, draw: &mut runty8::DrawContext) {
@@ -299,6 +348,8 @@ struct GameState {
     // k_jump: i32,
     // k_dash: i32,
     clouds: Vec<Cloud>,
+    seconds: i32,
+    minutes: i32,
 }
 
 fn title_screen(game_state: &mut GameState) {
@@ -1215,8 +1266,147 @@ impl RoomTitle {
 // -- object functions --
 // -----------------------
 
+struct Hitbox {
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+}
 struct Object {
+    x: i32,
+    y: i32,
+    hitbox: Hitbox,
     type_: ObjectType,
+    spd: Vec2,
+    rem: Vec2,
+    // obj.solids in original source
+    is_solid: bool,
+}
+
+impl Object {
+    fn move_(&mut self, room: Vec2) {
+        let ox = self.spd.x;
+        let oy = self.spd.y;
+
+        // [x] get move amount
+        self.rem.x += ox;
+        let amount_x = (self.rem.x as f32 + 0.5).floor() as i32;
+        self.rem.x -= amount_x;
+        self.move_x(room, amount_x, 0);
+
+        // [y] get move amount
+        self.rem.y += oy;
+        let amount_y = (self.rem.y as f32 + 0.5).floor() as i32;
+        self.rem.y -= amount_y;
+        self.move_y(room, amount_y);
+    }
+
+    fn move_x(&mut self, room: Vec2, amount: i32, start: i32) {
+        if self.is_solid {
+            let step = amount.signum();
+
+            for i in start..=amount.abs() {
+                if !self.is_solid(room, step, 0) {
+                    self.x += step;
+                } else {
+                    self.spd.x = 0;
+                    self.rem.x = 0;
+                    break;
+                }
+            }
+        } else {
+            self.x += amount;
+        }
+    }
+
+    fn move_y(&mut self, room: Vec2, amount: i32) {
+        if self.is_solid {
+            let step = amount.signum();
+
+            for i in 0..=amount.abs() {
+                if !self.is_solid(room, 0, step) {
+                    self.y += step;
+                } else {
+                    self.spd.y = 0;
+                    self.rem.y = 0;
+                    break;
+                }
+            }
+        } else {
+            self.y += amount;
+        }
+    }
+
+    fn is_solid(&self, room: Vec2, ox: i32, oy: i32) -> bool {
+        if oy > 0 && !self.check(platform, ox, 0) && self.check(platform, ox, oy) {
+            return true;
+        }
+
+        return solid_at(
+            room,
+            self.x + self.hitbox.x + ox,
+            self.y + self.hitbox.y + oy,
+            self.hitbox.w,
+            self.hitbox.h,
+        ) || self.check(fall_floor, ox, oy)
+            || self.check(fake_wall, ox, oy);
+    }
+
+    fn check(&self, type_: &ObjectType, ox: i32, oy: i32) -> bool {
+        self.collide(type_, ox, oy).is_some()
+    }
+
+    //     obj.collide=function(type,ox,oy)
+    //         local other
+    //         for i=1,count(objects) do
+    //             other=objects[i]
+    //             if other ~=nil and other.type == type and other != obj and other.collideable and
+    //                 other.x+other.hitbox.x+other.hitbox.w > obj.x+obj.hitbox.x+ox and
+    //                 other.y+other.hitbox.y+other.hitbox.h > obj.y+obj.hitbox.y+oy and
+    //                 other.x+other.hitbox.x < obj.x+obj.hitbox.x+obj.hitbox.w+ox and
+    //                 other.y+other.hitbox.y < obj.y+obj.hitbox.y+obj.hitbox.h+oy then
+    //                 return other
+    //             end
+    //         end
+    //         return nil
+    //     end
+    fn collide(&self, type_: &ObjectType, ox: i32, oy: i32) -> Option<Object> {
+        // TODO
+        None
+    }
+}
+
+// function tile_flag_at(x,y,w,h,flag)
+//  for i=max(0,flr(x/8)),min(15,(x+w-1)/8) do
+//      for j=max(0,flr(y/8)),min(15,(y+h-1)/8) do
+//          if fget(tile_at(i,j),flag) then
+//              return true
+//          end
+//      end
+//  end
+//     return false
+// end
+fn tile_flag_at(room: Vec2, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
+    for i in 0.max(x / 8)..=(15.min((x + w - 1) / 8)) {
+        for j in 0.max(y / 8)..=(15.min((y + h - 1) / 8)) {
+            // TODO: Implement api: `fget`
+            if fget(tile_at(room, i, j), flag) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// function tile_at(x,y)
+//  return mget(room.x * 16 + x, room.y * 16 + y)
+// end
+fn tile_at(room: Vec2, x: i32, y: i32) -> i32 {
+    mget(room.x * 16 + x, room.y * 16 + y)
+}
+
+fn solid_at(room: Vec2, x: i32, y: i32, w: i32, h: i32) -> bool {
+    tile_flag_at(room, x, y, w, h, 0)
 }
 
 #[derive(PartialEq)]
@@ -1231,8 +1421,8 @@ enum ObjectType {
 }
 
 fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
-    // todo!()
-    Object { type_ }
+    // Object { type_ }
+    todo!()
 }
 // function init_object(type,x,y)
 //     if type.if_not_fruit~=nil and got_fruit[1+level_index()] then
@@ -1264,21 +1454,6 @@ fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
 
 //     obj.is_ice=function(ox,oy)
 //         return ice_at(obj.x+obj.hitbox.x+ox,obj.y+obj.hitbox.y+oy,obj.hitbox.w,obj.hitbox.h)
-//     end
-
-//     obj.collide=function(type,ox,oy)
-//         local other
-//         for i=1,count(objects) do
-//             other=objects[i]
-//             if other ~=nil and other.type == type and other != obj and other.collideable and
-//                 other.x+other.hitbox.x+other.hitbox.w > obj.x+obj.hitbox.x+ox and
-//                 other.y+other.hitbox.y+other.hitbox.h > obj.y+obj.hitbox.y+oy and
-//                 other.x+other.hitbox.x < obj.x+obj.hitbox.x+obj.hitbox.w+ox and
-//                 other.y+other.hitbox.y < obj.y+obj.hitbox.y+obj.hitbox.h+oy then
-//                 return other
-//             end
-//         end
-//         return nil
 //     end
 
 //     obj.check=function(type,ox,oy)
@@ -1396,6 +1571,12 @@ fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
 fn mget(x: i32, y: i32) -> i32 {
     // todo!()
     0
+}
+
+fn fget(tile: i32, flag: i32) -> bool {
+    // TODO :Implement api
+    // todo!()
+    false
 }
 
 fn load_room(game_state: &mut GameState, x: i32, y: i32) {
@@ -1574,27 +1755,8 @@ fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
 //     return rnd(1)<0.5
 // end
 
-// function solid_at(x,y,w,h)
-//  return tile_flag_at(x,y,w,h,0)
-// end
-
 // function ice_at(x,y,w,h)
 //  return tile_flag_at(x,y,w,h,4)
-// end
-
-// function tile_flag_at(x,y,w,h,flag)
-//  for i=max(0,flr(x/8)),min(15,(x+w-1)/8) do
-//      for j=max(0,flr(y/8)),min(15,(y+h-1)/8) do
-//          if fget(tile_at(i,j),flag) then
-//              return true
-//          end
-//      end
-//  end
-//     return false
-// end
-
-// function tile_at(x,y)
-//  return mget(room.x * 16 + x, room.y * 16 + y)
 // end
 
 // function spikes_at(x,y,w,h,xspd,yspd)
