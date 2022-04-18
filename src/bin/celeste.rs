@@ -171,7 +171,13 @@ impl App for GameState {
                     cloud.x + cloud.w,
                     cloud.y + 4 + (1 - cloud.w / 64) * 12,
                     if self.new_bg { 14 } else { 1 },
-                )
+                );
+
+                // TODO
+                // if cloud.x > 128 {
+                //     cloud.x = -cloud.w;
+                //     cloud.y = rnd(128 - 8);
+                // }
             }
         }
 
@@ -1289,6 +1295,7 @@ impl Object {
             ObjectType::Orb => todo!(),
             ObjectType::FakeWall => todo!(),
             ObjectType::FallFloor => todo!(),
+            ObjectType::Key => todo!(),
         }
     }
     fn move_(&mut self, objects: &[Object], room: Vec2<i32>) {
@@ -1422,7 +1429,7 @@ fn solid_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
     tile_flag_at(room, x, y, w, h, 0)
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 enum ObjectType {
     Platform,
     BigChest,
@@ -1433,8 +1440,28 @@ enum ObjectType {
     Orb,
     FakeWall,
     FallFloor,
+    Key,
 }
 
+impl ObjectType {
+    // TODO: Figure out what exactly needs to go here
+    const TYPES: &'static [ObjectType] = &[Self::BigChest];
+
+    fn tile(&self) -> i32 {
+        match self {
+            ObjectType::Platform => todo!(),
+            ObjectType::BigChest => 96,
+            ObjectType::Player => todo!(),
+            ObjectType::Smoke => todo!(),
+            ObjectType::LifeUp => todo!(),
+            ObjectType::Fruit => 26,
+            ObjectType::Orb => todo!(),
+            ObjectType::FakeWall => 64,
+            ObjectType::FallFloor => 23,
+            ObjectType::Key => 8,
+        }
+    }
+}
 fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
     // Object { type_ }
     todo!()
@@ -1626,6 +1653,21 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
             //         end
             //     end
             let tile = mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
+            if tile == 11 {
+                let mut platform = Object::init(ObjectType::Platform, tx * 8, ty * 8);
+                platform.dir = -1;
+                game_state.objects.push(platform);
+            } else if tile == 12 {
+                let mut platform = Object::init(ObjectType::Platform, tx * 8, ty * 8);
+                platform.dir = 1;
+                game_state.objects.push(platform);
+            } else {
+                for type_ in ObjectType::TYPES.iter().copied() {
+                    if type_.tile() == tile {
+                        game_state.objects.push(Object::init(type_, tx * 8, ty * 8));
+                    }
+                }
+            }
         }
     }
 
