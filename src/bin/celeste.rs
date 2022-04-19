@@ -44,14 +44,22 @@ impl Particle {
 struct DeadParticle {
     x: f32,
     y: f32,
-    s: i32,
     spd: Vec2<f32>,
-    off: f32,
-    c: i32,
     t: i32,
 }
 
-#[derive(Clone, Copy)]
+impl DeadParticle {
+    fn update(&mut self) -> bool {
+        self.x += self.spd.x;
+        self.y += self.spd.y;
+        self.t -= 1;
+
+        // Remove if
+        self.t <= 0
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
 struct Vec2<T> {
     x: T,
     y: T,
@@ -95,7 +103,7 @@ impl App for GameState {
             delay_restart: 0,
             got_fruit: vec![],
             has_dashed: false,
-            // sfx_timer:0,
+            sfx_timer: 0,
             has_key: false,
             pause_player: false,
             frames: 0,
@@ -196,13 +204,7 @@ impl App for GameState {
         self.particles.iter_mut().for_each(Particle::update);
 
         // Update and remove dead dead_particles
-        self.dead_particles.drain_filter(|dead_particle| {
-            dead_particle.x += dead_particle.spd.x;
-            dead_particle.y += dead_particle.spd.y;
-            dead_particle.t -= 1;
-
-            dead_particle.t <= 0
-        });
+        self.dead_particles.drain_filter(DeadParticle::update);
 
         // start game
 
@@ -351,7 +353,7 @@ impl App for GameState {
 
         if level_index(self) == 30 {
             if let Some(p) = self.objects.iter().find(|o| o.type_ == ObjectType::Player) {
-                let diff = i32::min(24, 40 - i32::abs(p.x + 4 - 64));
+                let diff = f32::min(24., 40. - f32::abs(p.x + 4. - 64.)).floor() as i32;
                 draw.rectfill(0, 0, diff, 128, 0);
                 draw.rectfill(128 - diff, 0, 128, 128, 0);
             }
@@ -396,20 +398,16 @@ struct GameState {
     will_restart: bool,
     delay_restart: i32,
     got_fruit: Vec<bool>,
-    // has_dashed: bool,
-    // sfx_timer: i32,
+    #[allow(dead_code)]
+    sfx_timer: i32,
     has_key: bool,
+    #[allow(dead_code)]
     has_dashed: bool,
+    #[allow(dead_code)]
     pause_player: bool,
     flash_bg: bool,
     new_bg: bool,
     music_timer: i32,
-    // k_left: i32,
-    // k_right: i32,
-    // k_up: i32,
-    // k_down: i32,
-    // k_jump: i32,
-    // k_dash: i32,
     clouds: Vec<Cloud>,
     seconds: i32,
     minutes: i32,
@@ -1293,32 +1291,33 @@ impl RoomTitle {
 
 // -----------------------
 
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 struct Hitbox {
-    x: i32,
-    y: i32,
+    x: f32,
+    y: f32,
     w: i32,
     h: i32,
 }
 
-#[derive(Clone, Copy)]
+#[derive(PartialEq, Clone, Copy)]
 struct Object {
-    x: i32,
-    y: i32,
+    x: f32,
+    y: f32,
     hitbox: Hitbox,
     type_: ObjectType,
     spr: f32, // hack they use
     spd: Vec2<f32>,
     rem: Vec2<f32>,
-    last: i32,
+    last: f32,
     dir: i32, // not sure if all objects use this?
     // obj.solids in original source
     is_solid: bool,
     collideable: bool,
+    flip: Vec2<bool>,
 }
 
 impl Object {
-    fn init(type_: ObjectType, x: i32, y: i32) -> Self {
+    fn init(type_: ObjectType, x: f32, y: f32) -> Self {
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
         //
@@ -1335,15 +1334,16 @@ impl Object {
             is_solid: true,
             spr: type_.tile().unwrap_or(-42) as f32,
             hitbox: Hitbox {
-                x: 0,
-                y: 0,
+                x: 0.,
+                y: 0.,
                 w: 8,
                 h: 8,
             },
             spd: Vec2 { x: 0., y: 0. },
             rem: Vec2 { x: 0., y: 0. },
-            last: 0,
+            last: 0.,
             dir: 0,
+            flip: Vec2 { x: false, y: false },
         };
 
         object
@@ -1362,8 +1362,20 @@ impl Object {
             ObjectType::FallFloor => todo!(),
             ObjectType::Key => todo!(),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state),
+            _ => {
+                if self.spr > 0. {
+                    // TODO: Implement version with many arguments
+                    // draw.spr(self.spr, self.x, self.y, 1, 1, self.flip.x, self.flip.y);
+                    draw.spr(
+                        self.spr.floor() as usize,
+                        self.x.floor() as i32,
+                        self.y.floor() as i32,
+                    );
+                }
+            }
         }
     }
+
     fn move_(&mut self, objects: &[Object], room: Vec2<i32>) {
         let ox = self.spd.x;
         let oy = self.spd.y;
@@ -1387,7 +1399,7 @@ impl Object {
 
             for _ in start..=amount.abs() {
                 if !self.is_solid(objects, room, step, 0) {
-                    self.x += step;
+                    self.x += step as f32;
                 } else {
                     self.spd.x = 0.;
                     self.rem.x = 0.;
@@ -1395,7 +1407,7 @@ impl Object {
                 }
             }
         } else {
-            self.x += amount;
+            self.x += amount as f32;
         }
     }
 
@@ -1405,7 +1417,7 @@ impl Object {
 
             for _ in 0..=amount.abs() {
                 if !self.is_solid(objects, room, 0, step) {
-                    self.y += step;
+                    self.y += step as f32;
                 } else {
                     self.spd.y = 0.;
                     self.rem.y = 0.;
@@ -1413,7 +1425,7 @@ impl Object {
                 }
             }
         } else {
-            self.y += amount;
+            self.y += amount as f32;
         }
     }
 
@@ -1427,8 +1439,8 @@ impl Object {
 
         return solid_at(
             room,
-            self.x + self.hitbox.x + ox,
-            self.y + self.hitbox.y + oy,
+            (self.x + self.hitbox.x + ox as f32).floor() as i32,
+            (self.y + self.hitbox.y + oy as f32).floor() as i32,
             self.hitbox.w,
             self.hitbox.h,
         ) || self.check(objects, &ObjectType::FallFloor, ox, oy)
@@ -1445,33 +1457,27 @@ impl Object {
         type_: &ObjectType,
         ox: i32,
         oy: i32,
-    ) -> Option<&'a Object> {
-        for other in objects {
+    ) -> Option<(usize, &'a Object)> {
+        for (index, other) in objects.iter().enumerate() {
             if !std::ptr::eq(other, self)
                 && other.type_ == self.type_
                 && other.collideable
-                && other.x + other.hitbox.x + other.hitbox.w > self.x + self.hitbox.x + ox
-                && other.y + other.hitbox.y + other.hitbox.h > self.y + self.hitbox.y + oy
-                && other.x + other.hitbox.x < self.x + self.hitbox.x + self.hitbox.w + ox
-                && other.y + other.hitbox.y < self.y + self.hitbox.y + self.hitbox.h + oy
+                && other.x + other.hitbox.x + other.hitbox.w as f32
+                    > self.x + self.hitbox.x + ox as f32
+                && other.y + other.hitbox.y + other.hitbox.h as f32
+                    > self.y + self.hitbox.y + oy as f32
+                && other.x + other.hitbox.x
+                    < self.x + self.hitbox.x + self.hitbox.w as f32 + ox as f32
+                && other.y + other.hitbox.y
+                    < self.y + self.hitbox.y + self.hitbox.h as f32 + oy as f32
             {
-                return Some(other);
+                return Some((index, other));
             }
         }
         None
     }
 }
 
-// function tile_flag_at(x,y,w,h,flag)
-//  for i=max(0,flr(x/8)),min(15,(x+w-1)/8) do
-//      for j=max(0,flr(y/8)),min(15,(y+h-1)/8) do
-//          if fget(tile_at(i,j),flag) then
-//              return true
-//          end
-//      end
-//  end
-//     return false
-// end
 fn tile_flag_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
     for i in 0.max(x / 8)..=(15.min((x + w - 1) / 8)) {
         for j in 0.max(y / 8)..=(15.min((y + h - 1) / 8)) {
@@ -1484,9 +1490,6 @@ fn tile_flag_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> b
     false
 }
 
-// function tile_at(x,y)
-//  return mget(room.x * 16 + x, room.y * 16 + y)
-// end
 fn tile_at(room: Vec2<i32>, x: i32, y: i32) -> i32 {
     mget(room.x * 16 + x, room.y * 16 + y)
 }
@@ -1618,81 +1621,68 @@ fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
 //         end
 //     end
 
-//     obj.move_y=function(amount)
-//         if obj.solids then
-//             local step = sign(amount)
-//             for i=0,abs(amount) do
-//              if not obj.is_solid(0,step) then
-//                     obj.y += step
-//                 else
-//                     obj.spd.y = 0
-//                     obj.rem.y = 0
-//                     break
-//                 end
-//             end
-//         else
-//             obj.y += amount
-//         end
-//     end
-
 //     add(objects,obj)
 //     if obj.type.init~=nil then
 //         obj.type.init(obj)
 //     end
 //     return obj
 // end
+//
+fn kill_player(obj: &Object, game_state: &mut GameState) {
+    game_state.sfx_timer = 12;
+    // sfx(0);
+    game_state.deaths += 1;
+    game_state.shake = 10;
+    destroy_object(game_state, obj);
 
-// function destroy_object(obj)
-//     del(objects,obj)
-// end
+    game_state.dead_particles.clear();
+    for dir in 0..=7 {
+        let dir = dir as f32;
+        let angle = dir / 8.;
 
-// function kill_player(obj)
-//     sfx_timer=12
-//     sfx(0)
-//     deaths+=1
-//     shake=10
-//     destroy_object(obj)
-//     dead_particles={}
-//     for dir=0,7 do
-//         local angle=(dir/8)
-//         add(dead_particles,{
-//             x=obj.x+4,
-//             y=obj.y+4,
-//             t=10,
-//             spd={
-//                 x=sin(angle)*3,
-//                 y=cos(angle)*3
-//             }
-//         })
-//         restart_room()
-//     end
-// end
+        game_state.dead_particles.push(DeadParticle {
+            x: obj.x + 4.,
+            y: obj.y + 4.,
+            t: 10,
+            spd: Vec2 {
+                x: (angle).sin() * 3.,
+                y: (angle).cos() * 3.,
+            },
+        });
+    }
+    restart_room(game_state)
+}
 
+fn destroy_object(game_state: &mut GameState, object: &Object) {
+    game_state.objects.retain(|o| o != object);
+}
 // -- room functions --
 // --------------------
 
-// function restart_room()
-//     will_restart=true
-//     delay_restart=15
-// end
+fn restart_room(game_state: &mut GameState) {
+    game_state.will_restart = true;
+    game_state.delay_restart = 15;
+}
 
-// function next_room()
-//  if room.x==2 and room.y==1 then
-//   music(30,500,7)
-//  elseif room.x==3 and room.y==1 then
-//   music(20,500,7)
-//  elseif room.x==4 and room.y==2 then
-//   music(30,500,7)
-//  elseif room.x==5 and room.y==3 then
-//   music(30,500,7)
-//  end
+fn next_room(game_state: &mut GameState) {
+    let room = game_state.room;
 
-//     if room.x==7 then
-//         load_room(0,room.y+1)
-//     else
-//         load_room(room.x+1,room.y)
-//     end
-// end
+    #[allow(clippy::if_same_then_else)]
+    if room.x == 2 && room.y == 1 {
+        // music(30, 500, 7)
+    } else if room.x == 3 && room.y == 1 {
+        // music(20, 500, 7)
+    } else if room.x == 4 && room.y == 2 {
+        // music(30, 500, 7)
+    } else if room.x == 5 && room.y == 3 {
+        // music(30, 500, 7)
+    }
+    if room.x == 7 {
+        load_room(game_state, 0, room.y + 1);
+    } else {
+        load_room(game_state, room.x + 1, room.y);
+    }
+}
 
 fn mget(x: i32, y: i32) -> i32 {
     // todo!()
@@ -1736,19 +1726,23 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
             //             end
             //         end
             //     end
+            let ftx = tx as f32;
+            let fty = ty as f32;
             let tile = mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
             if tile == 11 {
-                let mut platform = Object::init(ObjectType::Platform, tx * 8, ty * 8);
+                let mut platform = Object::init(ObjectType::Platform, ftx * 8., fty * 8.);
                 platform.dir = -1;
                 game_state.objects.push(platform);
             } else if tile == 12 {
-                let mut platform = Object::init(ObjectType::Platform, tx * 8, ty * 8);
+                let mut platform = Object::init(ObjectType::Platform, ftx * 8., fty * 8.);
                 platform.dir = 1;
                 game_state.objects.push(platform);
             } else {
                 for type_ in ObjectType::TYPES.iter().copied() {
                     if type_.tile() == Some(tile) {
-                        game_state.objects.push(Object::init(type_, tx * 8, ty * 8));
+                        game_state
+                            .objects
+                            .push(Object::init(type_, ftx * 8., fty * 8.));
                     }
                 }
             }
@@ -1756,22 +1750,13 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
     }
 
     if !is_title(game_state) {
-        game_state
-            .objects
-            .push(Object::init(ObjectType::RoomTitle(RoomTitle::init()), 0, 0));
+        game_state.objects.push(Object::init(
+            ObjectType::RoomTitle(RoomTitle::init()),
+            0.,
+            0.,
+        ));
     }
 }
-
-// -- drawing functions --
-// -----------------------
-//
-// function draw_object(obj)
-//     if obj.type.draw ~=nil then
-//         obj.type.draw(obj)
-//     elseif obj.spr > 0 then
-//         spr(obj.spr,obj.x,obj.y,1,1,obj.flip.x,obj.flip.y)
-//     end
-// end
 
 fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
     // TODO
@@ -1816,18 +1801,12 @@ fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
 //      or min(val + amount, target)
 // end
 
-// function sign(v)
-//     return v>0 and 1 or
-//                                 v<0 and -1 or 0
-// end
-
-// function maybe()
-//     return rnd(1)<0.5
-// end
-
-// function ice_at(x,y,w,h)
-//  return tile_flag_at(x,y,w,h,4)
-// end
+fn maybe() -> bool {
+    rand::thread_rng().gen()
+}
+fn ice_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
+    tile_flag_at(room, x, y, w, h, 4)
+}
 
 // function spikes_at(x,y,w,h,xspd,yspd)
 //  for i=max(0,flr(x/8)),min(15,(x+w-1)/8) do
@@ -1847,6 +1826,7 @@ fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
 //     return false
 // end
 
+#[allow(dead_code)]
 const MAP_DATA: &str = r#"2331252548252532323232323300002425262425252631323232252628282824252525252525323328382828312525253232323233000000313232323232323232330000002432323233313232322525252525482525252525252526282824252548252525262828282824254825252526282828283132323225482525252525
 252331323232332900002829000000242526313232332828002824262a102824254825252526002a2828292810244825282828290000000028282900000000002810000000372829000000002a2831482525252525482525323232332828242525254825323338282a283132252548252628382828282a2a2831323232322525
 252523201028380000002a0000003d24252523201028292900282426003a382425252548253300002900002a0031252528382900003a676838280000000000003828393e003a2800000000000028002425253232323232332122222328282425252532332828282900002a283132252526282828282900002a28282838282448
@@ -1944,83 +1924,61 @@ b302b211000000110092b100000000a3b1b1b1b1b1b10011111232110000b342000000a282125284
 828382824252522222222232007100b352526282a38283820000000000838282320001828200000083000082010000005252526271718283820000000000a382
 628201729300000000a282828382828252528462b20000a38300a382018283821222324252525252525284525222223200000000000000000000000000000000"#;
 
-// platform={
-//     init=function(this)
-//         this.x-=4
-//         this.solids=false
-//         this.hitbox.w=16
-//         this.last=this.x
-//     end,
-//     update=function(this)
-//         this.spd.x=this.dir*0.65
-//         if this.x<-16 then this.x=128
-//         elseif this.x>128 then this.x=-16 end
-//         if not this.check(player,0,0) then
-//             local hit=this.collide(player,0,-1)
-//             if hit~=nil then
-//                 hit.move_x(this.x-this.last,1)
-//             end
-//         end
-//         this.last=this.x
-//     end,
-//     draw=function(this)
-//         spr(11,this.x,this.y-1)
-//         spr(12,this.x+8,this.y-1)
-//     end
-// }
 struct Platform {}
 
 impl Platform {
-    fn init(x: i32, y: i32) -> Object {
-        todo!()
+    fn init(this: &mut Object) {
+        this.x -= 4.;
+        this.is_solid = false;
+        this.hitbox.w = 16;
+        this.last = this.x;
     }
 
-    fn update(self_: &mut Object, objects: &[Object], room: Vec2<i32>) {
+    fn update(self_: &mut Object, objects: &[Object], room: Vec2<i32>) -> Option<(usize, Object)> {
         self_.spd.x = self_.dir as f32 * 0.65;
-        if self_.x < -16 {
-            self_.x = 128;
-        } else if self_.x > 128 {
-            self_.x = -16;
-        }
-
-        if !self_.check(objects, &ObjectType::Player, 0, 0) {
-            if let Some(hit) = self_.collide(objects, &ObjectType::Player, 0, -1) {
-                // TODO: Fuck, borrowcheck issues
-                // hit.move_x(objects, room, self_.x - self_.last, 1);
-            }
+        if self_.x < -16. {
+            self_.x = 128.;
+        } else if self_.x > 128. {
+            self_.x = -16.;
         }
         self_.last = self_.x;
+
+        let ret = if !self_.check(objects, &ObjectType::Player, 0, 0) {
+            let (index, hit) = self_.collide(objects, &ObjectType::Player, 0, -1)?;
+            let mut hit = *hit;
+            hit.move_x(objects, room, (self_.x - self_.last).floor() as i32, 1);
+
+            Some((index, hit))
+        } else {
+            None
+        };
+
+        ret
     }
 
     fn draw(self_: &Object, draw: &mut DrawContext) {
-        draw.spr(11, self_.x, self_.y - 1);
-        draw.spr(12, self_.x + 8, self_.y - 1)
+        draw.spr(11, self_.x.floor() as i32, self_.y.floor() as i32 - 1);
+        draw.spr(12, self_.x.floor() as i32 + 8, self_.y.floor() as i32 - 1)
     }
 }
-
-// smoke={
-//     init=function(this)
-//         this.spr=29
-//         this.spd.y=-0.1
-//         this.spd.x=0.3+rnd(0.2)
-//         this.x+=-1+rnd(2)
-//         this.y+=-1+rnd(2)
-//         this.flip.x=maybe()
-//         this.flip.y=maybe()
-//         this.solids=false
-//     end,
-//     update=function(this)
-//         this.spr+=0.2
-//         if this.spr>=32 then
-//             destroy_object(this)
-//         end
-//     end
-// }
-
-struct Smoke {}
+struct Smoke;
 
 impl Smoke {
-    fn update(self_: &mut Object) {
+    fn init(this: &mut Object) {
+        this.spr = 29.;
+        this.spd.y = -0.1;
+        this.spd.x = 0.3 + rnd(0.2);
+        this.x += -1. + rnd(2.);
+        this.y += -1. + rnd(2.);
+        this.flip.x = maybe();
+        this.flip.y = maybe();
+        this.is_solid = false;
+    }
+
+    fn update(self_: &mut Object) -> bool {
         self_.spr += 0.2;
+
+        // destroy if
+        self_.spr >= 32.
     }
 }
