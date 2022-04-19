@@ -1,3 +1,4 @@
+#![feature(drain_filter)]
 use rand::Rng;
 use runty8::{App, DrawContext};
 
@@ -6,6 +7,17 @@ struct Cloud {
     y: f32,
     spd: f32,
     w: f32,
+}
+
+impl Cloud {
+    fn update(&mut self) {
+        self.x += self.spd;
+
+        if self.x > 128. {
+            self.x = -self.w;
+            self.y = rnd(128. - 8.);
+        }
+    }
 }
 
 struct Particle {
@@ -17,6 +29,18 @@ struct Particle {
     c: i32,
 }
 
+impl Particle {
+    fn update(&mut self) {
+        self.x += self.spd;
+
+        self.y += self.off.sin();
+        self.off += (0.05_f32).min(self.spd / 32.);
+        if self.x > 128. + 4. {
+            self.x = -4.;
+            self.y = rnd(128.);
+        }
+    }
+}
 struct DeadParticle {
     x: f32,
     y: f32,
@@ -98,7 +122,7 @@ impl App for GameState {
         self.frames = (self.frames + 1) % 30;
 
         if self.frames == 0 && level_index(self) < 30 {
-            self.seconds = self.seconds + 1 % 60;
+            self.seconds = (self.seconds + 1) % 60;
             if self.seconds == 0 {
                 self.minutes += 1;
             }
@@ -121,6 +145,7 @@ impl App for GameState {
             return;
         }
 
+        // screenshake
         if self.shake > 0 {
             self.shake -= 1;
             // TODO: Implement `camera` api
@@ -140,50 +165,44 @@ impl App for GameState {
             }
         }
 
+        // Update each object?
+        self.objects = self
+            .objects
+            .iter()
+            .copied()
+            .filter_map(|mut object| {
+                object.move_(&self.objects, self.room);
+                let should_destroy = object.type_.update();
+
+                if should_destroy {
+                    None
+                } else {
+                    Some(object)
+                }
+            })
+            .collect();
+
         // Update each object
-        for object in self.objects.iter_mut() {
-            // TODO: Fuck
-            // object.move_(self.room);
-            // object.update();
-        }
+        // for object in self.objects.iter_mut() {
+        //     // TODO: Fuck
+        //     object.move_(self.room);
+        //     let destroy = object.type_.update();
+        // }
 
         if !is_title(self) {
-            for cloud in self.clouds.iter_mut() {
-                cloud.x += cloud.spd;
-
-                if cloud.x > 128. {
-                    cloud.x = -cloud.w;
-                    cloud.y = rnd(128. - 8.);
-                }
-            }
+            self.clouds.iter_mut().for_each(Cloud::update);
         }
 
-        for p in self.particles.iter_mut() {
-            p.x += p.spd;
-
-            p.y += p.off.sin();
-            p.off += (0.05_f32).min(p.spd / 32.);
-            if p.x > 128. + 4. {
-                p.x = -4.;
-                p.y = rnd(128.);
-            }
-        }
+        self.particles.iter_mut().for_each(Particle::update);
 
         // Update and remove dead dead_particles
-        let mut i = 0;
-        while i < self.dead_particles.len() {
-            {
-                let p = &mut self.dead_particles[i];
-                p.x += p.spd.x;
-                p.y += p.spd.y;
-                p.t -= 1;
-            }
-            if self.dead_particles[i].t <= 0 {
-                self.dead_particles.remove(i);
-            } else {
-                i += 1;
-            }
-        }
+        self.dead_particles.drain_filter(|dead_particle| {
+            dead_particle.x += dead_particle.spd.x;
+            dead_particle.y += dead_particle.spd.y;
+            dead_particle.t -= 1;
+
+            dead_particle.t <= 0
+        });
     }
 
     fn draw(&self, draw: &mut runty8::DrawContext) {
@@ -228,7 +247,7 @@ impl App for GameState {
         // the screen
         //
         // let mut bg_col = 0;
-        let mut bg_col = 1;
+        let mut bg_col = 12;
         if self.flash_bg {
             bg_col = (self.frames / 5) as u8;
         } else if self.new_bg {
@@ -239,8 +258,6 @@ impl App for GameState {
         // Clouds
         if !is_title(self) {
             for cloud in self.clouds.iter() {
-                // TODO
-                // cloud.x += cloud.spd;
                 draw.rectfill(
                     cloud.x.floor() as i32,
                     cloud.y.floor() as i32,
@@ -248,12 +265,6 @@ impl App for GameState {
                     (cloud.y + 4. + (1. - cloud.w / 64.) * 12.).floor() as i32,
                     if self.new_bg { 14 } else { 1 },
                 );
-
-                // TODO
-                // if cloud.x > 128 {
-                //     cloud.x = -cloud.w;
-                //     cloud.y = rnd(128 - 8);
-                // }
             }
         }
 
@@ -264,7 +275,7 @@ impl App for GameState {
         // Platforms/big chest
         for object in self.objects.iter() {
             if object.type_ == ObjectType::Platform || object.type_ == ObjectType::BigChest {
-                object.draw(draw);
+                object.draw(draw, self);
             }
         }
 
@@ -276,7 +287,7 @@ impl App for GameState {
         // Draw objects
         for object in &self.objects {
             if object.type_ != ObjectType::Platform && object.type_ != ObjectType::BigChest {
-                object.draw(draw);
+                object.draw(draw, self);
             }
         }
 
@@ -326,6 +337,14 @@ impl App for GameState {
             draw.print("X+C", 58, 80, 5);
             draw.print("MATT THORSON", 42, 96, 5);
             draw.print("NOEL BERRY", 46, 102, 5);
+        }
+
+        if level_index(self) == 30 {
+            if let Some(p) = self.objects.iter().find(|o| o.type_ == ObjectType::Player) {
+                let diff = i32::min(24, 40 - i32::abs(p.x + 4 - 64));
+                draw.rectfill(0, 0, diff, 128, 0);
+                draw.rectfill(128 - diff, 0, 128, 128, 0);
+            }
         }
     }
 }
@@ -530,7 +549,9 @@ fn level_index(game_state: &GameState) -> i32 {
 }
 
 fn is_title(game_state: &GameState) -> bool {
-    level_index(game_state) == 31
+    // TODO
+    // level_index(game_state) == 31
+    false
 }
 
 // -- effects --
@@ -1336,6 +1357,7 @@ fn is_title(game_state: &GameState) -> bool {
 // }
 // add(types,flag)
 
+#[derive(PartialEq, Clone, Copy)]
 struct RoomTitle {
     delay: i32,
 }
@@ -1345,12 +1367,15 @@ impl RoomTitle {
         Self { delay: 5 }
     }
 
-    fn draw(&mut self, draw: &mut DrawContext, game_state: &GameState) {
+    fn update(&mut self) -> bool {
         self.delay -= 1;
 
-        if self.delay < -30 {
-            // destroy_object(this)
-        } else if self.delay < 0 {
+        // Destroy if
+        self.delay < -30
+    }
+
+    fn draw(&self, draw: &mut DrawContext, game_state: &GameState) {
+        if self.delay < 0 {
             draw.rectfill(24, 58, 104, 70, 0);
 
             if game_state.room.x == 3 && game_state.room.y == 1 {
@@ -1360,7 +1385,7 @@ impl RoomTitle {
             } else {
                 let level = (1 + level_index(game_state)) * 100;
                 let x = 52 + (if level < 1000 { 2 } else { 0 });
-                draw.print(&format!("{} m", level), x, 62, 7);
+                draw.print(&format!("{} M", level), x, 62, 7);
             }
 
             draw_time(draw, 4, 4);
@@ -1369,14 +1394,18 @@ impl RoomTitle {
 }
 
 // -- object functions --
+
 // -----------------------
 
+#[derive(Clone, Copy)]
 struct Hitbox {
     x: i32,
     y: i32,
     w: i32,
     h: i32,
 }
+
+#[derive(Clone, Copy)]
 struct Object {
     x: i32,
     y: i32,
@@ -1408,7 +1437,7 @@ impl Object {
             collideable: true,
             // flip = {x = false, y = false},
             is_solid: true,
-            spr: todo!(),
+            spr: type_.tile().unwrap_or(-42) as f32,
             hitbox: Hitbox {
                 x: 0,
                 y: 0,
@@ -1423,7 +1452,8 @@ impl Object {
 
         object
     }
-    fn draw(&self, draw: &mut DrawContext) {
+
+    fn draw(&self, draw: &mut DrawContext, game_state: &GameState) {
         match self.type_ {
             ObjectType::Platform => todo!(),
             ObjectType::BigChest => todo!(),
@@ -1435,6 +1465,7 @@ impl Object {
             ObjectType::FakeWall => todo!(),
             ObjectType::FallFloor => todo!(),
             ObjectType::Key => todo!(),
+            ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state),
         }
     }
     fn move_(&mut self, objects: &[Object], room: Vec2<i32>) {
@@ -1458,7 +1489,7 @@ impl Object {
         if self.is_solid {
             let step = amount.signum();
 
-            for i in start..=amount.abs() {
+            for _ in start..=amount.abs() {
                 if !self.is_solid(objects, room, step, 0) {
                     self.x += step;
                 } else {
@@ -1476,7 +1507,7 @@ impl Object {
         if self.is_solid {
             let step = amount.signum();
 
-            for i in 0..=amount.abs() {
+            for _ in 0..=amount.abs() {
                 if !self.is_solid(objects, room, 0, step) {
                     self.y += step;
                 } else {
@@ -1580,24 +1611,42 @@ enum ObjectType {
     FakeWall,
     FallFloor,
     Key,
+    RoomTitle(RoomTitle),
 }
 
 impl ObjectType {
     // TODO: Figure out what exactly needs to go here
     const TYPES: &'static [ObjectType] = &[Self::BigChest];
 
-    fn tile(&self) -> i32 {
+    fn tile(&self) -> Option<i32> {
         match self {
             ObjectType::Platform => todo!(),
-            ObjectType::BigChest => 96,
+            ObjectType::BigChest => Some(96),
             ObjectType::Player => todo!(),
             ObjectType::Smoke => todo!(),
             ObjectType::LifeUp => todo!(),
-            ObjectType::Fruit => 26,
+            ObjectType::Fruit => Some(26),
             ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => 64,
-            ObjectType::FallFloor => 23,
-            ObjectType::Key => 8,
+            ObjectType::FakeWall => Some(64),
+            ObjectType::FallFloor => Some(23),
+            ObjectType::Key => Some(8),
+            ObjectType::RoomTitle(_) => None,
+        }
+    }
+
+    fn update(&mut self) -> bool {
+        match self {
+            ObjectType::Platform => todo!(),
+            ObjectType::BigChest => todo!(),
+            ObjectType::Player => todo!(),
+            ObjectType::Smoke => todo!(),
+            ObjectType::LifeUp => todo!(),
+            ObjectType::Fruit => todo!(),
+            ObjectType::Orb => todo!(),
+            ObjectType::FakeWall => todo!(),
+            ObjectType::FallFloor => todo!(),
+            ObjectType::Key => todo!(),
+            ObjectType::RoomTitle(rt) => rt.update(),
         }
     }
 }
@@ -1802,7 +1851,7 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
                 game_state.objects.push(platform);
             } else {
                 for type_ in ObjectType::TYPES.iter().copied() {
-                    if type_.tile() == tile {
+                    if type_.tile() == Some(tile) {
                         game_state.objects.push(Object::init(type_, tx * 8, ty * 8));
                     }
                 }
@@ -1811,8 +1860,9 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
     }
 
     if !is_title(game_state) {
-        todo!()
-        // init_object(room_title, 0, 0)
+        game_state
+            .objects
+            .push(Object::init(ObjectType::RoomTitle(RoomTitle::init()), 0, 0));
     }
 }
 
