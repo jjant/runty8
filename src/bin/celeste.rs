@@ -1,6 +1,6 @@
 #![feature(drain_filter)]
 use rand::Rng;
-use runty8::{App, DrawContext};
+use runty8::{App, Button, DrawContext};
 
 struct Cloud {
     x: f32,
@@ -95,7 +95,7 @@ impl App for GameState {
             delay_restart: 0,
             got_fruit: vec![],
             has_dashed: false,
-            // sfx_timer=0,
+            // sfx_timer:0,
             has_key: false,
             pause_player: false,
             frames: 0,
@@ -105,7 +105,7 @@ impl App for GameState {
             start_game_flash: 0,
             flash_bg: false,
             new_bg: false,
-            // music_timer=0,
+            music_timer: 0,
             clouds,
             seconds: 0,
             minutes: 0,
@@ -203,6 +203,23 @@ impl App for GameState {
 
             dead_particle.t <= 0
         });
+
+        // start game
+
+        if is_title(self) {
+            if !self.start_game && (state.btn(K_JUMP) || state.btn(K_DASH)) {
+                // music(-1);
+                self.start_game_flash = 50;
+                self.start_game = true;
+                // sfx(38);
+            }
+            if self.start_game {
+                self.start_game_flash -= 1;
+                if self.start_game_flash <= -30 {
+                    self.begin_game();
+                }
+            }
+        }
     }
 
     fn draw(&self, draw: &mut runty8::DrawContext) {
@@ -349,6 +366,18 @@ impl App for GameState {
     }
 }
 
+impl GameState {
+    fn begin_game(&mut self) {
+        self.frames = 0;
+        self.seconds = 0;
+        self.minutes = 0;
+        self.music_timer = 0;
+        self.start_game = false;
+        // music(0, 0, 7);
+        load_room(self, 0, 0);
+    }
+}
+
 // function _draw()
 //     if freeze>0 then return end
 //
@@ -478,8 +507,9 @@ impl App for GameState {
 // k_right=1
 // k_up=2
 // k_down=3
-// k_jump=4
-// k_dash=5
+const K_JUMP: Button = Button::C;
+const K_DASH: Button = Button::X;
+
 fn main() {
     runty8::run_app::<GameState>();
 }
@@ -505,7 +535,7 @@ struct GameState {
     pause_player: bool,
     flash_bg: bool,
     new_bg: bool,
-    // music_timer: i32,
+    music_timer: i32,
     // k_left: i32,
     // k_right: i32,
     // k_up: i32,
@@ -549,9 +579,7 @@ fn level_index(game_state: &GameState) -> i32 {
 }
 
 fn is_title(game_state: &GameState) -> bool {
-    // TODO
-    // level_index(game_state) == 31
-    false
+    level_index(game_state) == 31
 }
 
 // -- effects --
@@ -1866,78 +1894,9 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
     }
 }
 
-// -- update function --
-// -----------------------
-
-// function _update()
-//     frames=((frames+1)%30)
-//     if frames==0 and level_index()<30 then
-//         seconds=((seconds+1)%60)
-//         if seconds==0 then
-//             minutes+=1
-//         end
-//     end
-
-//     if music_timer>0 then
-//      music_timer-=1
-//      if music_timer<=0 then
-//       music(10,0,7)
-//      end
-//     end
-
-//     if sfx_timer>0 then
-//      sfx_timer-=1
-//     end
-
-//     -- cancel if freeze
-//     if freeze>0 then freeze-=1 return end
-
-//     -- screenshake
-//     if shake>0 then
-//         shake-=1
-//         camera()
-//         if shake>0 then
-//             camera(-2+rnd(5),-2+rnd(5))
-//         end
-//     end
-
-//     -- restart (soon)
-//     if will_restart and delay_restart>0 then
-//         delay_restart-=1
-//         if delay_restart<=0 then
-//             will_restart=false
-//             load_room(room.x,room.y)
-//         end
-//     end
-
-//     -- update each object
-//     foreach(objects,function(obj)
-//         obj.move(obj.spd.x,obj.spd.y)
-//         if obj.type.update~=nil then
-//             obj.type.update(obj)
-//         end
-//     end)
-
-//     -- start game
-//     if is_title() then
-//         if not start_game and (btn(k_jump) or btn(k_dash)) then
-//             music(-1)
-//             start_game_flash=50
-//             start_game=true
-//             sfx(38)
-//         end
-//         if start_game then
-//             start_game_flash-=1
-//             if start_game_flash<=-30 then
-//                 begin_game()
-//             end
-//         end
-//     end
-// end
-
 // -- drawing functions --
 // -----------------------
-
+//
 // function draw_object(obj)
 //     if obj.type.draw ~=nil then
 //         obj.type.draw(obj)
