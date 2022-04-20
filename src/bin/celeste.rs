@@ -190,13 +190,6 @@ impl App for GameState {
             })
             .collect();
 
-        // Update each object
-        // for object in self.objects.iter_mut() {
-        //     // TODO: Fuck
-        //     object.move_(self.room);
-        //     let destroy = object.type_.update();
-        // }
-
         if !is_title(self) {
             self.clouds.iter_mut().for_each(Cloud::update);
         }
@@ -207,7 +200,6 @@ impl App for GameState {
         self.dead_particles.drain_filter(DeadParticle::update);
 
         // start game
-
         if is_title(self) {
             if !self.start_game && (state.btn(K_JUMP) || state.btn(K_DASH)) {
                 // music(-1);
@@ -292,6 +284,7 @@ impl App for GameState {
         }
 
         // draw terrain
+        #[allow(unused_variables)]
         let off = if is_title(self) { -4 } else { 0 };
         // TODO
         // map(self.room.x * 16, self.room.y * 16, off, 0, 16, 16, 2);
@@ -376,7 +369,7 @@ impl GameState {
 // k_left=0
 // k_right=1
 // k_up=2
-// k_down=3
+const K_DOWN: Button = Button::Down;
 const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
 
@@ -427,19 +420,6 @@ fn title_screen(game_state: &mut GameState) {
     load_room(game_state, 7, 3)
 }
 
-// -- entry point --
-// -----------------
-
-// function begin_game()
-//     frames=0
-//     seconds=0
-//     minutes=0
-//     music_timer=0
-//     start_game=false
-//     music(0,0,7)
-//     load_room(0,0)
-// end
-
 fn level_index(game_state: &GameState) -> i32 {
     game_state.room.x % 8 + game_state.room.y * 8
 }
@@ -448,43 +428,72 @@ fn is_title(game_state: &GameState) -> bool {
     level_index(game_state) == 31
 }
 
-// -- effects --
-// -------------
-
-// particles = {}
-// for i=0,24 do
-//     add(particles,{
-//         x=rnd(128),
-//         y=rnd(128),
-//         s=0+flr(rnd(5)/4),
-//         spd=0.25+rnd(5),
-//         off=rnd(1),
-//         c=6+flr(0.5+rnd(1))
-//     })
-// end
-
-// dead_particles = {}
-
 // -- player entity --
 // -------------------
 
+struct Player {
+    p_jump: bool,
+    p_dash: bool,
+    grace: i32,
+    jbuffer: i32,
+    djump: i32,
+    dash_time: i32,
+    dash_effect_time: i32,
+    dash_target: Vec2<f32>,
+    dash_accel: Vec2<f32>,
+    hitbox: Hitbox,
+    spr_off: f32,
+    was_on_ground: bool,
+    hair: Vec<HairElement>,
+}
+
+impl Player {
+    fn init(x: f32, y: f32, max_djump: i32) -> Self {
+        let hair = Self::create_hair(x, y);
+        Self {
+            p_jump: false,
+            p_dash: false,
+            grace: 0,
+            jbuffer: 0,
+            djump: max_djump,
+            dash_time: 0,
+            dash_effect_time: 0,
+            dash_target: Vec2 { x: 0., y: 0. },
+            dash_accel: Vec2 { x: 0., y: 0. },
+            hitbox: Hitbox {
+                x: 1.,
+                y: 3.,
+                w: 6,
+                h: 5,
+            },
+            spr_off: 0.,
+            was_on_ground: false,
+            hair,
+        }
+    }
+
+    fn create_hair(x: f32, y: f32) -> Vec<HairElement> {
+        let mut vec = Vec::with_capacity(5);
+
+        for i in 0..=4 {
+            vec.push(HairElement {
+                x,
+                y,
+                size: i32::max(1, i32::min(2, 3 - i)),
+            })
+        }
+
+        vec
+    }
+}
+
+struct HairElement {
+    x: f32,
+    y: f32,
+    size: i32,
+}
+
 // player =
-// {
-//     init=function(this)
-//         this.p_jump=false
-//         this.p_dash=false
-//         this.grace=0
-//         this.jbuffer=0
-//         this.djump=max_djump
-//         this.dash_time=0
-//         this.dash_effect_time=0
-//         this.dash_target={x=0,y=0}
-//         this.dash_accel={x=0,y=0}
-//         this.hitbox = {x=1,y=3,w=6,h=5}
-//         this.spr_off=0
-//         this.was_on_ground=false
-//         create_hair(this)
-//     end,
 //     update=function(this)
 //         if (pause_player) return
 
@@ -697,36 +706,63 @@ fn is_title(game_state: &GameState) -> bool {
 //     end
 // }
 
-// psfx=function(num)
-//  if sfx_timer<=0 then
-//   sfx(num)
-//  end
-// end
+#[allow(dead_code, unused_variables)]
+fn psfx(game_state: &GameState, num: i32) {
+    if game_state.sfx_timer <= 0 {
+        // TODO: Implement
+        // sfx(num)
+    }
+}
 
-// create_hair=function(obj)
-//     obj.hair={}
-//     for i=0,4 do
-//         add(obj.hair,{x=obj.x,y=obj.y,size=max(1,min(2,3-i))})
-//     end
-// end
+#[allow(dead_code)]
+fn set_hair_color(draw: &mut DrawContext, frames: i32, djump: i32) {
+    let c = if djump == 1 {
+        8
+    } else if djump == 2 {
+        7 + ((frames / 3) % 2) * 4
+    } else {
+        12
+    };
 
-// set_hair_color=function(djump)
-//     pal(8,(djump==1 and 8 or djump==2 and (7+flr((frames/3)%2)*4) or 12))
-// end
+    draw.pal(8, c as u8);
+}
 
-// draw_hair=function(obj,facing)
-//     local last={x=obj.x+4-facing*2,y=obj.y+(btn(k_down) and 4 or 3)}
-//     foreach(obj.hair,function(h)
-//         h.x+=(last.x-h.x)/1.5
-//         h.y+=(last.y+0.5-h.y)/1.5
-//         circfill(h.x,h.y,h.size,8)
-//         last=h
-//     end)
-// end
+#[allow(dead_code)]
+fn draw_hair(
+    state: &runty8::State,
+    draw: &mut DrawContext,
+    x: f32,
+    y: f32,
+    hair: &mut [HairElement],
+    facing: i32,
+) {
+    let mut last = Vec2 {
+        x: x + (4 - facing * 2) as f32,
+        y: y + (if state.btn(K_DOWN) { 4. } else { 3. }),
+    };
 
-// unset_hair_color=function()
-//     pal(8,8)
-// end
+    for hair_element in hair {
+        hair_element.x += (last.x - hair_element.x) / 1.5;
+        hair_element.y += (last.y + 0.5 - hair_element.y) / 1.5;
+
+        draw.circfill(
+            hair_element.x.floor() as i32,
+            hair_element.y.floor() as i32,
+            hair_element.size,
+            8,
+        );
+
+        last = Vec2 {
+            x: hair_element.x,
+            y: hair_element.y,
+        };
+    }
+}
+
+#[allow(dead_code)]
+fn unset_hair_color(draw: &mut DrawContext) {
+    draw.pal(8, 8);
+}
 
 // player_spawn = {
 //     tile=1,
@@ -783,59 +819,79 @@ fn is_title(game_state: &GameState) -> bool {
 // }
 // add(types,player_spawn)
 
-// spring = {
-//     tile=18,
-//     init=function(this)
-//         this.hide_in=0
-//         this.hide_for=0
-//     end,
-//     update=function(this)
-//         if this.hide_for>0 then
-//             this.hide_for-=1
-//             if this.hide_for<=0 then
-//                 this.spr=18
-//                 this.delay=0
-//             end
-//         elseif this.spr==18 then
-//             local hit = this.collide(player,0,0)
-//             if hit ~=nil and hit.spd.y>=0 then
-//                 this.spr=19
-//                 hit.y=this.y-4
-//                 hit.spd.x*=0.2
-//                 hit.spd.y=-3
-//                 hit.djump=max_djump
-//                 this.delay=10
-//                 init_object(smoke,this.x,this.y)
+struct Spring {
+    hide_in: i32,
+    hide_for: i32,
+}
 
-//                 -- breakable below us
-//                 local below=this.collide(fall_floor,0,1)
-//                 if below~=nil then
-//                     break_fall_floor(below)
-//                 end
+struct BaseObject {
+    x: f32,
+    y: f32,
+    spr: f32,
+    delay: i32,
+}
 
-//                 psfx(8)
-//             end
-//         elseif this.delay>0 then
-//             this.delay-=1
-//             if this.delay<=0 then
-//                 this.spr=18
-//             end
-//         end
-//         -- begin hiding
-//         if this.hide_in>0 then
-//             this.hide_in-=1
-//             if this.hide_in<=0 then
-//                 this.hide_for=60
-//                 this.spr=0
-//             end
-//         end
-//     end
-// }
-// add(types,spring)
+impl Spring {
+    fn init() -> Self {
+        Self {
+            hide_in: 0,
+            hide_for: 0,
+        }
+    }
 
-// function break_spring(obj)
-//     obj.hide_in=15
-// end
+    fn update(&mut self, object: &mut BaseObject) {
+        if self.hide_for > 0 {
+            self.hide_for -= 1;
+
+            if self.hide_for <= 0 {
+                object.spr = 18.;
+                object.delay = 0;
+            }
+        } else if object.spr == 18. {
+            // TODO: Borrowchecker madness
+            // let hit = object.collide(player);
+            //
+            // if let Some(hit) = hit.and_then(|hit| hit.spd.y >= 0) {
+            //     object.spr = 19.;
+            //     hit.y = object.y - 4.;
+            //     hit.spd.x *= 0.2;
+            //     hit.spd.y = -3;
+            // hit.djump = game_state.max_djump;
+            // object.delay = 10;
+            //
+            // init_object(smoke,this.x,this.y)
+            //
+            // -- breakable below us
+            // local below=this.collide(fall_floor,0,1)
+            // if below~=nil then
+            //     break_fall_floor(below)
+            // end
+            //
+            // psfx(8)
+            // }
+        } else if object.delay > 0 {
+            object.delay -= 1;
+
+            if object.delay <= 0 {
+                object.spr = 18.;
+            }
+        }
+
+        // begin hiding
+        if self.hide_in > 0 {
+            self.hide_in -= 1;
+
+            if self.hide_in <= 0 {
+                self.hide_for = 60;
+                object.spr = 0.;
+            }
+        }
+    }
+
+    fn break_spring(&mut self) {
+        self.hide_in = 15;
+    }
+}
 
 // balloon = {
 //     tile=22,
@@ -1317,22 +1373,28 @@ struct Object {
 }
 
 impl Object {
-    fn init(type_: ObjectType, x: f32, y: f32) -> Self {
+    fn init(
+        game_state: &GameState,
+        type_: ObjectType,
+        // TODO Figure this out:
+        kind: ObjectKind,
+        x: f32,
+        y: f32,
+    ) -> Option<Self> {
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
-        //
-        // if type.if_not_fruit~=nil and got_fruit[1+level_index()] then
-        //   return
-        // end
+        if kind.if_not_fruit() && game_state.got_fruit[1 + level_index(game_state) as usize] {
+            return None;
+        }
 
-        let object = Self {
+        let mut object = Self {
             x,
             y,
             type_,
             collideable: true,
             // flip = {x = false, y = false},
             is_solid: true,
-            spr: type_.tile().unwrap_or(-42) as f32,
+            spr: kind.tile() as f32,
             hitbox: Hitbox {
                 x: 0.,
                 y: 0.,
@@ -1346,7 +1408,9 @@ impl Object {
             flip: Vec2 { x: false, y: false },
         };
 
-        object
+        type_.init(&mut object);
+
+        Some(object)
     }
 
     fn draw(&self, draw: &mut DrawContext, game_state: &GameState) {
@@ -1437,14 +1501,14 @@ impl Object {
             return true;
         }
 
-        return solid_at(
+        solid_at(
             room,
             (self.x + self.hitbox.x + ox as f32).floor() as i32,
             (self.y + self.hitbox.y + oy as f32).floor() as i32,
             self.hitbox.w,
             self.hitbox.h,
         ) || self.check(objects, &ObjectType::FallFloor, ox, oy)
-            || self.check(objects, &ObjectType::FakeWall, ox, oy);
+            || self.check(objects, &ObjectType::FakeWall, ox, oy)
     }
 
     fn check(&self, objects: &[Object], type_: &ObjectType, ox: i32, oy: i32) -> bool {
@@ -1517,6 +1581,22 @@ impl ObjectType {
     // TODO: Figure out what exactly needs to go here
     const TYPES: &'static [ObjectType] = &[Self::BigChest];
 
+    fn init(&self, object: &mut Object) {
+        match self {
+            ObjectType::Platform => todo!(),
+            ObjectType::BigChest => todo!(),
+            ObjectType::Player => todo!(),
+            ObjectType::Smoke => Smoke::init(object),
+            ObjectType::LifeUp => todo!(),
+            ObjectType::Fruit => Fruit::init(object),
+            ObjectType::Orb => todo!(),
+            ObjectType::FakeWall => todo!(),
+            ObjectType::FallFloor => todo!(),
+            ObjectType::Key => todo!(),
+            ObjectType::RoomTitle(_) => todo!(),
+        }
+    }
+
     fn tile(&self) -> Option<i32> {
         match self {
             ObjectType::Platform => todo!(),
@@ -1549,85 +1629,19 @@ impl ObjectType {
         }
     }
 }
-fn init_object(type_: ObjectType, x: i32, y: i32) -> Object {
-    // Object { type_ }
-    todo!()
+
+impl Object {
+    fn is_ice(&self, room: Vec2<i32>, ox: f32, oy: f32) -> bool {
+        ice_at(
+            room,
+            (self.x + self.hitbox.x + ox).floor() as i32,
+            (self.y + self.hitbox.y + oy).floor() as i32,
+            self.hitbox.w,
+            self.hitbox.h,
+        )
+    }
 }
-// function init_object(type,x,y)
-//     if type.if_not_fruit~=nil and got_fruit[1+level_index()] then
-//         return
-//     end
-//     local obj = {}
-//     obj.type = type
-//     obj.collideable=true
-//     obj.solids=true
 
-//     obj.spr = type.tile
-//     obj.flip = {x=false,y=false}
-
-//     obj.x = x
-//     obj.y = y
-//     obj.hitbox = { x=0,y=0,w=8,h=8 }
-
-//     obj.spd = {x=0,y=0}
-//     obj.rem = {x=0,y=0}
-
-//     obj.is_solid=function(ox,oy)
-//         if oy>0 and not obj.check(platform,ox,0) and obj.check(platform,ox,oy) then
-//             return true
-//         end
-//         return solid_at(obj.x+obj.hitbox.x+ox,obj.y+obj.hitbox.y+oy,obj.hitbox.w,obj.hitbox.h)
-//          or obj.check(fall_floor,ox,oy)
-//          or obj.check(fake_wall,ox,oy)
-//     end
-
-//     obj.is_ice=function(ox,oy)
-//         return ice_at(obj.x+obj.hitbox.x+ox,obj.y+obj.hitbox.y+oy,obj.hitbox.w,obj.hitbox.h)
-//     end
-
-//     obj.check=function(type,ox,oy)
-//         return obj.collide(type,ox,oy) ~=nil
-//     end
-
-//     obj.move=function(ox,oy)
-//         local amount
-//         -- [x] get move amount
-//      obj.rem.x += ox
-//         amount = flr(obj.rem.x + 0.5)
-//         obj.rem.x -= amount
-//         obj.move_x(amount,0)
-
-//         -- [y] get move amount
-//         obj.rem.y += oy
-//         amount = flr(obj.rem.y + 0.5)
-//         obj.rem.y -= amount
-//         obj.move_y(amount)
-//     end
-
-//     obj.move_x=function(amount,start)
-//         if obj.solids then
-//             local step = sign(amount)
-//             for i=start,abs(amount) do
-//                 if not obj.is_solid(step,0) then
-//                     obj.x += step
-//                 else
-//                     obj.spd.x = 0
-//                     obj.rem.x = 0
-//                     break
-//                 end
-//             end
-//         else
-//             obj.x += amount
-//         end
-//     end
-
-//     add(objects,obj)
-//     if obj.type.init~=nil then
-//         obj.type.init(obj)
-//     end
-//     return obj
-// end
-//
 fn kill_player(obj: &Object, game_state: &mut GameState) {
     game_state.sfx_timer = 12;
     // sfx(0);
@@ -1708,41 +1722,26 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
 
     for tx in 0..=15 {
         for ty in 0..=15 {
-            //     -- entities
-            //     for tx=0,15 do
-            //         for ty=0,15 do
-            //             local tile = mget(room.x*16+tx,room.y*16+ty);
-            //             if tile==11 then
-            //                 init_object(platform,tx*8,ty*8).dir=-1
-            //             elseif tile==12 then
-            //                 init_object(platform,tx*8,ty*8).dir=1
-            //             else
-            //                 foreach(types,
-            //                 function(type)
-            //                     if type.tile == tile then
-            //                         init_object(type,tx*8,ty*8)
-            //                     end
-            //                 end)
-            //             end
-            //         end
-            //     end
+            // entities
             let ftx = tx as f32;
             let fty = ty as f32;
             let tile = mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
             if tile == 11 {
-                let mut platform = Object::init(ObjectType::Platform, ftx * 8., fty * 8.);
+                let mut platform =
+                    Object::init(game_state, ObjectType::Platform, ftx * 8., fty * 8.).unwrap();
                 platform.dir = -1;
                 game_state.objects.push(platform);
             } else if tile == 12 {
-                let mut platform = Object::init(ObjectType::Platform, ftx * 8., fty * 8.);
+                let mut platform =
+                    Object::init(game_state, ObjectType::Platform, ftx * 8., fty * 8.).unwrap();
                 platform.dir = 1;
                 game_state.objects.push(platform);
             } else {
                 for type_ in ObjectType::TYPES.iter().copied() {
                     if type_.tile() == Some(tile) {
-                        game_state
-                            .objects
-                            .push(Object::init(type_, ftx * 8., fty * 8.));
+                        if let Some(object) = Object::init(game_state, type_, ftx * 8., fty * 8.) {
+                            game_state.objects.push(object);
+                        }
                     }
                 }
             }
@@ -1750,11 +1749,15 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
     }
 
     if !is_title(game_state) {
-        game_state.objects.push(Object::init(
+        if let Some(object) = Object::init(
+            &game_state,
             ObjectType::RoomTitle(RoomTitle::init()),
+            ObjectKind::RoomTitle,
             0.,
             0.,
-        ));
+        ) {
+            game_state.objects.push(object);
+        }
     }
 }
 
@@ -1790,16 +1793,13 @@ fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
 
 // -- helper functions --
 // ----------------------
-
-// function clamp(val,a,b)
-//     return max(a, min(b, val))
-// end
-
-// function appr(val,target,amount)
-//  return val > target
-//      and max(val - amount, target)
-//      or min(val + amount, target)
-// end
+fn appr(val: f32, target: f32, amount: f32) -> f32 {
+    if val > target {
+        f32::max(val - amount, target)
+    } else {
+        f32::min(val + amount, target)
+    }
+}
 
 fn maybe() -> bool {
     rand::thread_rng().gen()
@@ -1980,5 +1980,79 @@ impl Smoke {
 
         // destroy if
         self_.spr >= 32.
+    }
+}
+
+struct Fruit;
+
+impl Fruit {
+    const TILE: i32 = 26;
+    const IF_NOT_FRUIT: bool = true;
+
+    fn init(object: &mut Object) {
+        // object.start
+    }
+}
+
+enum ObjectKind {
+    PlayerSpawn,
+    Spring,
+    Balloon,
+    FallFloor,
+    Fruit,
+    FlyFruit,
+    FakeWall,
+    Key,
+    Chest,
+    Message,
+    BigChest,
+    Flag,
+}
+
+// I think these are the "instantiable" objects
+// (you put a "marker" tile in the map and this creates the object for it)
+// see line 1135 of source.p8
+const TYPES: &[ObjectKind] = &[
+    ObjectKind::PlayerSpawn,
+    ObjectKind::Spring,
+    ObjectKind::Balloon,
+    ObjectKind::FallFloor,
+    ObjectKind::Fruit,
+    ObjectKind::FlyFruit,
+    ObjectKind::FakeWall,
+    ObjectKind::Key,
+    ObjectKind::Chest,
+    ObjectKind::Message,
+    ObjectKind::BigChest,
+    ObjectKind::Flag,
+];
+
+impl ObjectKind {
+    fn tile(&self) -> i32 {
+        match self {
+            ObjectKind::PlayerSpawn => 1,
+            ObjectKind::Spring => 18,
+            ObjectKind::Balloon => 22,
+            ObjectKind::FallFloor => 23,
+            ObjectKind::Fruit => 26,
+            ObjectKind::FlyFruit => 28,
+            ObjectKind::FakeWall => 64,
+            ObjectKind::Key => 8,
+            ObjectKind::Chest => 20,
+            ObjectKind::Message => 86,
+            ObjectKind::BigChest => 96,
+            ObjectKind::Flag => 118,
+        }
+    }
+
+    fn if_not_fruit(&self) -> bool {
+        match self {
+            ObjectKind::Fruit => true,
+            ObjectKind::FlyFruit => true,
+            ObjectKind::FakeWall => true,
+            ObjectKind::Key => true,
+            ObjectKind::Chest => true,
+            _ => false,
+        }
     }
 }

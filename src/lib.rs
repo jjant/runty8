@@ -194,6 +194,18 @@ impl DrawContext {
         }
     }
 
+    pub fn circfill(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
+        for x in (cx - radius)..=(cx + radius) {
+            for y in (cy - radius)..=(cy + radius) {
+                let dist_squared = (x - cx).pow(2) + (y - cy).pow(2);
+
+                if dist_squared <= radius.pow(2) {
+                    self.pset(x, y, color);
+                }
+            }
+        }
+    }
+
     pub fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
         for y in y0..=y1 {
             self.line(x0, y, x1, y, color);
