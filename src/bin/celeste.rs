@@ -1972,9 +1972,6 @@ impl Smoke {
 struct Fruit;
 
 impl Fruit {
-    const TILE: i32 = 26;
-    const IF_NOT_FRUIT: bool = true;
-
     fn init(object: &mut Object) {
         // object.start
     }
