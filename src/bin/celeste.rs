@@ -284,9 +284,8 @@ impl App for GameState {
         }
 
         // draw terrain
-        #[allow(unused_variables)]
-        let off = if is_title(self) { -4 } else { 0 };
-        // TODO
+        // TODO: Implement map API
+        // let off = if is_title(self) { -4 } else { 0 };
         // map(self.room.x * 16, self.room.y * 16, off, 0, 16, 16, 2);
 
         // Draw objects
@@ -1373,14 +1372,7 @@ struct Object {
 }
 
 impl Object {
-    fn init(
-        game_state: &GameState,
-        type_: ObjectType,
-        // TODO Figure this out:
-        kind: ObjectKind,
-        x: f32,
-        y: f32,
-    ) -> Option<Self> {
+    fn init(game_state: &GameState, kind: ObjectKind, x: f32, y: f32) -> Option<Self> {
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
         if kind.if_not_fruit() && game_state.got_fruit[1 + level_index(game_state) as usize] {
@@ -1390,11 +1382,11 @@ impl Object {
         let mut object = Self {
             x,
             y,
-            type_,
+            type_: todo!(),
             collideable: true,
-            // flip = {x = false, y = false},
             is_solid: true,
-            spr: kind.tile() as f32,
+            // TODO: figure out if we need an option here
+            spr: kind.tile().map(|t| t as f32).unwrap_or(-42.),
             hitbox: Hitbox {
                 x: 0.,
                 y: 0.,
@@ -1408,7 +1400,7 @@ impl Object {
             flip: Vec2 { x: false, y: false },
         };
 
-        type_.init(&mut object);
+        kind.init(&mut object);
 
         Some(object)
     }
@@ -1728,18 +1720,18 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
             let tile = mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
             if tile == 11 {
                 let mut platform =
-                    Object::init(game_state, ObjectType::Platform, ftx * 8., fty * 8.).unwrap();
+                    Object::init(game_state, ObjectKind::Platform, ftx * 8., fty * 8.).unwrap();
                 platform.dir = -1;
                 game_state.objects.push(platform);
             } else if tile == 12 {
                 let mut platform =
-                    Object::init(game_state, ObjectType::Platform, ftx * 8., fty * 8.).unwrap();
+                    Object::init(game_state, ObjectKind::Platform, ftx * 8., fty * 8.).unwrap();
                 platform.dir = 1;
                 game_state.objects.push(platform);
             } else {
-                for type_ in ObjectType::TYPES.iter().copied() {
-                    if type_.tile() == Some(tile) {
-                        if let Some(object) = Object::init(game_state, type_, ftx * 8., fty * 8.) {
+                for kind in ObjectKind::TYPES.iter().copied() {
+                    if kind.tile() == Some(tile) {
+                        if let Some(object) = Object::init(game_state, kind, ftx * 8., fty * 8.) {
                             game_state.objects.push(object);
                         }
                     }
@@ -1749,13 +1741,7 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
     }
 
     if !is_title(game_state) {
-        if let Some(object) = Object::init(
-            &game_state,
-            ObjectType::RoomTitle(RoomTitle::init()),
-            ObjectKind::RoomTitle,
-            0.,
-            0.,
-        ) {
+        if let Some(object) = Object::init(&game_state, ObjectKind::RoomTitle, 0., 0.) {
             game_state.objects.push(object);
         }
     }
@@ -1994,6 +1980,7 @@ impl Fruit {
     }
 }
 
+#[derive(Clone, Copy)]
 enum ObjectKind {
     PlayerSpawn,
     Spring,
@@ -2007,41 +1994,64 @@ enum ObjectKind {
     Message,
     BigChest,
     Flag,
+    // Non-tile-instantiable
+    RoomTitle,
+    Platform,
 }
 
-// I think these are the "instantiable" objects
-// (you put a "marker" tile in the map and this creates the object for it)
-// see line 1135 of source.p8
-const TYPES: &[ObjectKind] = &[
-    ObjectKind::PlayerSpawn,
-    ObjectKind::Spring,
-    ObjectKind::Balloon,
-    ObjectKind::FallFloor,
-    ObjectKind::Fruit,
-    ObjectKind::FlyFruit,
-    ObjectKind::FakeWall,
-    ObjectKind::Key,
-    ObjectKind::Chest,
-    ObjectKind::Message,
-    ObjectKind::BigChest,
-    ObjectKind::Flag,
-];
-
 impl ObjectKind {
-    fn tile(&self) -> i32 {
+    // I think these are the "instantiable" objects
+    // (you put a "marker" tile in the map and this creates the object for it)
+    // see line 1135 of source.p8
+    const TYPES: &'static [Self] = &[
+        ObjectKind::PlayerSpawn,
+        ObjectKind::Spring,
+        ObjectKind::Balloon,
+        ObjectKind::FallFloor,
+        ObjectKind::Fruit,
+        ObjectKind::FlyFruit,
+        ObjectKind::FakeWall,
+        ObjectKind::Key,
+        ObjectKind::Chest,
+        ObjectKind::Message,
+        ObjectKind::BigChest,
+        ObjectKind::Flag,
+    ];
+
+    fn init(&self, object: &mut Object) {
         match self {
-            ObjectKind::PlayerSpawn => 1,
-            ObjectKind::Spring => 18,
-            ObjectKind::Balloon => 22,
-            ObjectKind::FallFloor => 23,
-            ObjectKind::Fruit => 26,
-            ObjectKind::FlyFruit => 28,
-            ObjectKind::FakeWall => 64,
-            ObjectKind::Key => 8,
-            ObjectKind::Chest => 20,
-            ObjectKind::Message => 86,
-            ObjectKind::BigChest => 96,
-            ObjectKind::Flag => 118,
+            ObjectKind::PlayerSpawn => todo!(),
+            ObjectKind::Spring => todo!(),
+            ObjectKind::Balloon => todo!(),
+            ObjectKind::FallFloor => todo!(),
+            ObjectKind::Fruit => todo!(),
+            ObjectKind::FlyFruit => todo!(),
+            ObjectKind::FakeWall => todo!(),
+            ObjectKind::Key => todo!(),
+            ObjectKind::Chest => todo!(),
+            ObjectKind::Message => todo!(),
+            ObjectKind::BigChest => todo!(),
+            ObjectKind::Flag => todo!(),
+            ObjectKind::RoomTitle => todo!(),
+            ObjectKind::Platform => todo!(),
+        }
+    }
+
+    fn tile(&self) -> Option<i32> {
+        match self {
+            ObjectKind::PlayerSpawn => Some(1),
+            ObjectKind::Spring => Some(18),
+            ObjectKind::Balloon => Some(22),
+            ObjectKind::FallFloor => Some(23),
+            ObjectKind::Fruit => Some(26),
+            ObjectKind::FlyFruit => Some(28),
+            ObjectKind::FakeWall => Some(64),
+            ObjectKind::Key => Some(8),
+            ObjectKind::Chest => Some(20),
+            ObjectKind::Message => Some(86),
+            ObjectKind::BigChest => Some(96),
+            ObjectKind::Flag => Some(118),
+            _ => None,
         }
     }
 
