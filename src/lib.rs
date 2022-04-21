@@ -3,6 +3,7 @@ mod draw;
 mod editor;
 mod font;
 mod screen;
+mod ui;
 
 use std::{fs::File, io::Read};
 
@@ -14,6 +15,27 @@ const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
 type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
+
+#[derive(Clone, Copy)]
+pub enum MouseButton {
+    // TODO: Handle other mouse buttons? idk
+    Left,
+    Right,
+    Middle,
+}
+#[derive(Clone, Copy)]
+pub enum MouseEvent {
+    // Current position of the mouse
+    // NOT delta
+    Move { x: i32, y: i32 },
+    Down(MouseButton),
+    Up(MouseButton),
+}
+
+#[derive(Clone, Copy)]
+pub enum Event {
+    Mouse(MouseEvent),
+}
 
 #[repr(transparent)]
 pub struct Sprite {
