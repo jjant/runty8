@@ -279,7 +279,7 @@ impl DrawContext {
     }
 
     fn print_char(&mut self, index: usize, x: i32, y: i32, color: Color) {
-        let char_data = font::FONT[index];
+        let char_data = font::FONT.get(index).unwrap_or(&font::MISSING_CHAR);
 
         for x_offset in 0..4_i32 {
             for y_offset in 0..6 {

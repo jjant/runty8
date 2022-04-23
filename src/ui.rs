@@ -1,60 +1,17 @@
+pub mod button;
 pub mod cursor;
+pub mod text;
 
-use crate::{DrawContext, Event, MouseButton, MouseEvent};
+use std::{fmt::Debug, marker::PhantomData};
+
+use crate::{DrawContext, Event};
 use enum_dispatch::enum_dispatch;
 
-use self::cursor::Cursor;
-
-pub struct Button<'a, Msg> {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
-    on_press: Option<Msg>,
-    state: &'a mut ButtonState,
-}
-
-#[derive(Debug)]
-pub struct ButtonState {
-    pressed: bool,
-}
-
-impl ButtonState {
-    pub fn new() -> Self {
-        Self { pressed: false }
-    }
-}
-
-impl<'a, Msg> Button<'a, Msg> {
-    pub fn new(
-        x: i32,
-        y: i32,
-        width: i32,
-        height: i32,
-        on_press: Option<Msg>,
-        state: &'a mut ButtonState,
-    ) -> Self {
-        Button {
-            x,
-            y,
-            width,
-            height,
-            on_press,
-            state,
-        }
-    }
-
-    fn contains(&self, x: i32, y: i32) -> bool {
-        let contains_x = x >= self.x && x < self.width;
-        let contains_y = y >= self.y && y < self.height;
-
-        contains_x && contains_y
-    }
-}
+use self::{button::Button, cursor::Cursor, text::Text};
 
 #[enum_dispatch]
 pub trait Widget {
-    type Msg: Copy;
+    type Msg: Copy + Debug;
 
     fn on_event(
         &mut self,
@@ -64,51 +21,6 @@ pub trait Widget {
     );
 
     fn draw(&self, draw: &mut DrawContext);
-}
-
-impl<'a, Msg: Copy> Widget for Button<'a, Msg> {
-    type Msg = Msg;
-
-    fn on_event(
-        &mut self,
-        event: Event,
-        cursor_position: (i32, i32),
-        dispatch_event: &mut impl FnMut(Self::Msg),
-    ) {
-        use Event::*;
-        use MouseEvent::*;
-
-        match event {
-            Mouse(Down(MouseButton::Left)) => {
-                if self.contains(cursor_position.0, cursor_position.1) {
-                    self.state.pressed = true;
-                }
-            }
-            Mouse(Up(MouseButton::Left)) => {
-                if self.contains(cursor_position.0, cursor_position.1) && self.state.pressed {
-                    if let Some(on_press) = self.on_press {
-                        dispatch_event(on_press);
-                    }
-                }
-
-                self.state.pressed = false;
-            }
-            _ => {}
-        }
-    }
-
-    fn draw(&self, draw: &mut DrawContext) {
-        let color = if self.state.pressed { 5 } else { 9 };
-
-        // TODO: Handle properly
-        draw.rectfill(
-            self.x,
-            self.y,
-            self.x + self.width - 1,
-            self.y + self.height - 1,
-            color,
-        );
-    }
 }
 
 impl<T: Widget> Widget for Vec<T> {
@@ -136,9 +48,11 @@ pub enum WidgetImpl<'a, Msg> {
     Tree(Vec<WidgetImpl<'a, Msg>>),
     Cursor(Cursor<'a, Msg>),
     Button(Button<'a, Msg>),
+    Text(Text<Msg>),
+    DrawFn(DrawFn<Msg>),
 }
 
-impl<'a, Msg: Copy> Widget for WidgetImpl<'a, Msg> {
+impl<'a, Msg: Copy + Debug> Widget for WidgetImpl<'a, Msg> {
     type Msg = Msg;
 
     fn on_event(
@@ -151,6 +65,8 @@ impl<'a, Msg: Copy> Widget for WidgetImpl<'a, Msg> {
             WidgetImpl::Tree(x) => x.on_event(event, cursor_position, dispatch_event),
             WidgetImpl::Button(x) => x.on_event(event, cursor_position, dispatch_event),
             WidgetImpl::Cursor(x) => x.on_event(event, cursor_position, dispatch_event),
+            WidgetImpl::Text(x) => x.on_event(event, cursor_position, dispatch_event),
+            WidgetImpl::DrawFn(x) => x.on_event(event, cursor_position, dispatch_event),
         }
     }
 
@@ -159,12 +75,40 @@ impl<'a, Msg: Copy> Widget for WidgetImpl<'a, Msg> {
             WidgetImpl::Tree(x) => x.draw(draw),
             WidgetImpl::Button(x) => x.draw(draw),
             WidgetImpl::Cursor(x) => x.draw(draw),
+            WidgetImpl::Text(x) => x.draw(draw),
+            WidgetImpl::DrawFn(x) => x.draw(draw),
         }
     }
 }
 
+pub struct DrawFn<Msg> {
+    f: fn(draw: &mut DrawContext),
+    pd: PhantomData<Msg>,
+}
+
+impl<Msg> DrawFn<Msg> {
+    pub fn new(f: fn(draw: &mut DrawContext)) -> Self {
+        Self { f, pd: PhantomData }
+    }
+}
+
+impl<Msg: Copy + Debug> Widget for DrawFn<Msg> {
+    type Msg = Msg;
+
+    fn on_event(
+        &mut self,
+        _event: Event,
+        _cursor_position: (i32, i32),
+        _dispatch_event: &mut impl FnMut(Self::Msg),
+    ) {
+    }
+
+    fn draw(&self, draw: &mut DrawContext) {
+        (self.f)(draw);
+    }
+}
 pub trait ElmApp2 {
-    type Msg: Copy;
+    type Msg: Copy + Debug;
 
     fn init() -> Self;
 

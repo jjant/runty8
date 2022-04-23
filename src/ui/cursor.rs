@@ -1,6 +1,6 @@
 use super::Widget;
 use crate::{editor, DrawContext, Sprite};
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
 pub struct Cursor<'a, Msg> {
     state: &'a mut State,
@@ -20,6 +20,12 @@ impl State {
     }
 }
 
+impl Default for State {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a, Msg: Copy> Cursor<'a, Msg> {
     pub fn new(state: &'a mut State) -> Self {
         Self {
@@ -29,7 +35,7 @@ impl<'a, Msg: Copy> Cursor<'a, Msg> {
     }
 }
 
-impl<'a, Msg: Copy> Widget for Cursor<'a, Msg> {
+impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
     type Msg = Msg;
 
     fn on_event(
@@ -38,7 +44,7 @@ impl<'a, Msg: Copy> Widget for Cursor<'a, Msg> {
         cursor_position: (i32, i32),
         _: &mut impl FnMut(Self::Msg),
     ) {
-        self.state.cursor_position = cursor_position;
+        dbg!(self.state.cursor_position = cursor_position);
     }
 
     fn draw(&self, draw: &mut DrawContext) {
