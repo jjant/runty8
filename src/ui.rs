@@ -1,28 +1,46 @@
+pub mod cursor;
+
 use crate::{DrawContext, Event, MouseButton, MouseEvent};
 use enum_dispatch::enum_dispatch;
 
-pub struct Button<Msg> {
+use self::cursor::Cursor;
+
+pub struct Button<'a, Msg> {
     x: i32,
     y: i32,
     width: i32,
     height: i32,
     on_press: Option<Msg>,
-    state: State,
+    state: &'a mut ButtonState,
 }
 
-struct State {
+#[derive(Debug)]
+pub struct ButtonState {
     pressed: bool,
 }
 
-impl<Msg> Button<Msg> {
-    fn new(x: i32, y: i32, width: i32, height: i32, on_press: Option<Msg>) -> Self {
+impl ButtonState {
+    pub fn new() -> Self {
+        Self { pressed: false }
+    }
+}
+
+impl<'a, Msg> Button<'a, Msg> {
+    pub fn new(
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        on_press: Option<Msg>,
+        state: &'a mut ButtonState,
+    ) -> Self {
         Button {
             x,
             y,
             width,
             height,
             on_press,
-            state: State { pressed: false },
+            state,
         }
     }
 
@@ -48,7 +66,7 @@ pub trait Widget {
     fn draw(&self, draw: &mut DrawContext);
 }
 
-impl<Msg: Copy> Widget for Button<Msg> {
+impl<'a, Msg: Copy> Widget for Button<'a, Msg> {
     type Msg = Msg;
 
     fn on_event(
@@ -114,12 +132,13 @@ impl<T: Widget> Widget for Vec<T> {
     }
 }
 
-pub enum WidgetImpl<Msg> {
-    Tree(Vec<WidgetImpl<Msg>>),
-    Button(Button<Msg>),
+pub enum WidgetImpl<'a, Msg> {
+    Tree(Vec<WidgetImpl<'a, Msg>>),
+    Cursor(Cursor<'a, Msg>),
+    Button(Button<'a, Msg>),
 }
 
-impl<Msg: Copy> Widget for WidgetImpl<Msg> {
+impl<'a, Msg: Copy> Widget for WidgetImpl<'a, Msg> {
     type Msg = Msg;
 
     fn on_event(
@@ -131,6 +150,7 @@ impl<Msg: Copy> Widget for WidgetImpl<Msg> {
         match self {
             WidgetImpl::Tree(x) => x.on_event(event, cursor_position, dispatch_event),
             WidgetImpl::Button(x) => x.on_event(event, cursor_position, dispatch_event),
+            WidgetImpl::Cursor(x) => x.on_event(event, cursor_position, dispatch_event),
         }
     }
 
@@ -138,6 +158,7 @@ impl<Msg: Copy> Widget for WidgetImpl<Msg> {
         match self {
             WidgetImpl::Tree(x) => x.draw(draw),
             WidgetImpl::Button(x) => x.draw(draw),
+            WidgetImpl::Cursor(x) => x.draw(draw),
         }
     }
 }
@@ -149,50 +170,12 @@ pub trait ElmApp2 {
 
     fn update(&mut self, msg: &Self::Msg);
 
-    fn view(&self) -> WidgetImpl<Self::Msg>;
+    fn view(&mut self) -> WidgetImpl<Self::Msg>;
 }
 
-struct MyApp {
-    counter: i32,
-}
+pub fn run_app2<T: ElmApp2 + 'static>() {
+    let state = crate::State::new();
+    let draw_context = DrawContext::new(state);
 
-impl ElmApp2 for MyApp {
-    type Msg = i32;
-
-    fn init() -> Self {
-        Self { counter: 0 }
-    }
-
-    fn update(&mut self, delta: &Self::Msg) {
-        self.counter += delta;
-    }
-
-    fn view(&self) -> WidgetImpl<Self::Msg> {
-        WidgetImpl::Tree(vec![
-            WidgetImpl::Button(Button::new(0, 0, 16, 16, Some(1))),
-            WidgetImpl::Button(Button::new(0, 32, 16, 16, Some(-1))),
-        ])
-    }
-}
-
-fn run_app<T: ElmApp2>() {
-    let mut app = T::init();
-
-    let mut msg_queue = vec![];
-
-    let mut draw_context = DrawContext::new(unsafe { std::mem::zeroed() });
-    loop {
-        let widget = app.view();
-        widget.draw(&mut draw_context);
-
-        let event = todo!();
-        let cursor_position = (0, 0);
-        let dispatch_event = |msg| msg_queue.push(msg);
-
-        widget.on_event(event, cursor_position, &mut dispatch_event);
-
-        for msg in msg_queue.into_iter() {
-            app.update(&msg);
-        }
-    }
+    crate::screen::do_something::<T>(draw_context);
 }

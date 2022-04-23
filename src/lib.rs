@@ -2,13 +2,13 @@ pub mod app;
 mod draw;
 mod editor;
 mod font;
+pub mod graphics;
 mod screen;
-mod ui;
+pub mod ui;
 
 use std::{fs::File, io::Read};
 
 pub use app::App;
-use app::ElmApp;
 use itertools::Itertools;
 
 const WIDTH: usize = 128;
@@ -23,6 +23,7 @@ pub enum MouseButton {
     Right,
     Middle,
 }
+
 #[derive(Clone, Copy)]
 pub enum MouseEvent {
     // Current position of the mouse
@@ -440,12 +441,12 @@ pub enum Button {
     Mouse,
 }
 
-pub fn run_app<T: ElmApp + 'static>() {
-    let state = State::new();
-    let draw_context = DrawContext::new(state);
+// pub fn run_app<T: ElmApp + 'static>() {
+//     let state = State::new();
+//     let draw_context = DrawContext::new(state);
 
-    screen::do_something::<T>(draw_context);
-}
+//     screen::do_something::<T>(draw_context);
+// }
 
 // TODO: Implement properly
 // TODO2: I think this is fine, now?

@@ -141,7 +141,7 @@ fn serialize(bytes: &[u8]) {
     file.write_all(bytes).unwrap();
 }
 
-static MOUSE_SPRITE: &'static [Color] = &[
+pub static MOUSE_SPRITE: &[Color] = &[
     0, 0, 0, 0, 0, 0, 0, 0, //
     0, 0, 0, 1, 0, 0, 0, 0, //
     0, 0, 1, 7, 1, 0, 0, 0, //
@@ -152,7 +152,7 @@ static MOUSE_SPRITE: &'static [Color] = &[
     0, 0, 0, 1, 1, 7, 1, 0, //
 ];
 
-static MOUSE_TARGET_SPRITE: &'static [Color] = &[
+static MOUSE_TARGET_SPRITE: &[Color] = &[
     0, 0, 0, 1, 0, 0, 0, 0, //
     0, 0, 1, 7, 1, 0, 0, 0, //
     0, 1, 0, 0, 0, 1, 0, 0, //
