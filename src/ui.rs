@@ -4,7 +4,7 @@ pub mod text;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{DrawContext, Event};
+use crate::{App, DrawContext, Event};
 use enum_dispatch::enum_dispatch;
 
 use self::{button::Button, cursor::Cursor, text::Text};
@@ -129,6 +129,13 @@ pub trait ElmApp2 {
     fn update(&mut self, msg: &Self::Msg);
 
     fn view(&mut self) -> WidgetImpl<Self::Msg>;
+
+    fn subscriptions(&self) -> Sub<Self::Msg>;
+}
+
+pub enum Sub<Msg> {
+    OnAnimationFrame(fn(f32) -> Msg),
+    NoSub,
 }
 
 pub fn run_app2<T: ElmApp2 + 'static>() {

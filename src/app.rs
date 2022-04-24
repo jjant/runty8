@@ -1,4 +1,5 @@
 use crate as lib;
+pub mod pico8;
 use lib::DrawContext;
 use lib::State;
 

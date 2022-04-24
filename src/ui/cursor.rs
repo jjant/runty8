@@ -44,7 +44,7 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
         cursor_position: (i32, i32),
         _: &mut DispatchEvent<Self::Msg>,
     ) {
-        dbg!(self.state.cursor_position = cursor_position);
+        self.state.cursor_position = cursor_position;
     }
 
     fn draw(&self, draw: &mut DrawContext) {

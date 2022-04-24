@@ -1,18 +1,20 @@
 use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::ui::{ElmApp2, Widget, DispatchEvent};
-use crate::{DrawContext, Scene, State};
-use crate::{Event, MouseButton, MouseEvent};
+use crate::screen::Keys;
+use crate::{App, DrawContext, Scene, State};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
-use glium::glutin::event::{self, ElementState, KeyboardInput, VirtualKeyCode};
+use glium::glutin::event::{ElementState, Event, KeyboardInput, VirtualKeyCode};
 use glium::glutin::event_loop::ControlFlow;
+use glium::texture::{RawImage2d, SrgbTexture2d};
 use glium::uniform;
-use glium::uniforms::MagnifySamplerFilter;
+use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
-pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
+pub fn run_app<T: App + 'static>() {
     let mut app = T::init();
+    let state = crate::State::new();
+    let mut draw_context = DrawContext::new(state);
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
@@ -41,22 +43,25 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
     let nanoseconds_per_frame = 1_000_000_000 / fps;
 
     event_loop.run(move |event, _, control_flow| {
-        let event : Option<Event> = handle_event(event, scale_factor, logical_size, control_flow, &mut draw_context.state, &mut keys);
+        let should_return = handle_event(
+            event,
+            scale_factor,
+            logical_size,
+            control_flow,
+            &mut draw_context.state,
+            &mut keys,
+        );
 
-        // if let ShouldReturn::Yes = should_return {
-        //     return;
-        // }
+        if let ShouldReturn::Yes = should_return {
+            return;
+        }
 
-        let next_frame_time = std::time::Instant::now()
-        + std::time::Duration::from_nanos(nanoseconds_per_frame);
+        let next_frame_time =
+            std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
         *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
         let mut target = display.draw();
         target.clear_color(1.0, 0.0, 0.0, 1.0);
-
-
-
-    let mut msg_queue = vec![];
 
         {
             draw_context.state.update_keys(&keys);
@@ -65,40 +70,31 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
                 Scene::Editor => {
                     editor.draw(&mut draw_context);
                     editor.update(&mut draw_context.state);
-                },
+                }
                 Scene::App => {
-                    let mut view = app.view();
-                    
-                    let dispatch_event =&mut DispatchEvent::new(&mut msg_queue);
-                    if let Some(event) = event {
-                        view.on_event(event, (draw_context.state.mouse_x,draw_context.state.mouse_y), dispatch_event);
-                    }
-
-                    view.draw(&mut draw_context);
-                    for msg in msg_queue.into_iter() {
-                        app.update(&msg);
-                    }
+                    app.draw(&mut draw_context);
+                    app.update(&draw_context.state);
                 }
             }
-            if draw_context.state.escape.btnp()  {
+            if draw_context.state.escape.btnp() {
                 draw_context.state.scene.flip();
             }
 
             keys.reset();
         }
 
-        let image = glium::texture::RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
-        let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
-        let uniforms = uniform! {
-            tex: glium::uniforms::Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
-        };
+        let image = RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
+        let texture = SrgbTexture2d::new(&display, image).unwrap();
 
+        let uniform = uniform! {
+            tex: Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
+        };
         target
             .draw(
                 &whole_screen_vertex_buffer(&display),
                 &indices,
                 &program,
-                &uniforms,
+                &uniform,
                 &Default::default(),
             )
             .unwrap();
@@ -112,19 +108,19 @@ enum ShouldReturn {
 }
 
 fn handle_event(
-    event: event::Event<()>,
+    event: Event<()>,
     hidpi_factor: f64,
     window_size: LogicalSize<f64>,
     control_flow: &mut ControlFlow,
     state: &mut State,
     keys: &mut Keys,
-) -> Option<Event> {
+) -> ShouldReturn {
     match event {
-        event::Event::WindowEvent { event, .. } => match event {
+        Event::WindowEvent { event, .. } => match event {
             glutin::event::WindowEvent::CloseRequested => {
                 *control_flow = glutin::event_loop::ControlFlow::Exit;
 
-                None
+                ShouldReturn::Yes
             }
             // TODO: Handle resize events.
             glutin::event::WindowEvent::CursorMoved { position, .. } => {
@@ -133,37 +129,29 @@ fn handle_event(
                 state.mouse_x = (logical_mouse.x / window_size.width * 128.).floor() as i32;
                 state.mouse_y = (logical_mouse.y / window_size.height * 128.).floor() as i32;
 
-                Some(Event::Mouse(MouseEvent::Move {
-                    x: state.mouse_x,
-                    y: state.mouse_y,
-                }))
+                ShouldReturn::Yes
             }
             glutin::event::WindowEvent::MouseInput {
-                button: event::MouseButton::Left,
+                button: glutin::event::MouseButton::Left,
                 state: input_state,
                 ..
             } => {
                 keys.mouse = Some(input_state == ElementState::Pressed);
 
-                let mouse_event = match input_state {
-                    ElementState::Pressed => MouseEvent::Down(MouseButton::Left),
-                    ElementState::Released => MouseEvent::Up(MouseButton::Left),
-                };
-
-                Some(Event::Mouse(mouse_event))
+                ShouldReturn::Yes
             }
             glutin::event::WindowEvent::KeyboardInput { input, .. } => {
                 handle_key(input, keys);
-                None
+                ShouldReturn::Yes
             }
-            _ => None,
+            _ => ShouldReturn::Yes,
         },
-        event::Event::NewEvents(cause) => match cause {
-            glutin::event::StartCause::ResumeTimeReached { .. } => None, // todo!(),
-            glutin::event::StartCause::Init => None,                     // todo!(),
-            _ => None,
+        Event::NewEvents(cause) => match cause {
+            glutin::event::StartCause::ResumeTimeReached { .. } => ShouldReturn::No,
+            glutin::event::StartCause::Init => ShouldReturn::No,
+            _ => ShouldReturn::Yes,
         },
-        _ => None,
+        _ => ShouldReturn::Yes,
     }
 }
 
@@ -182,35 +170,5 @@ fn handle_key(input: KeyboardInput, keys: &mut Keys) {
         };
 
         *key_ref = Some(input.state == ElementState::Pressed);
-    }
-}
-
-pub(crate) struct Keys {
-    pub(crate) left: Option<bool>,
-    pub(crate) right: Option<bool>,
-    pub(crate) up: Option<bool>,
-    pub(crate) down: Option<bool>,
-    pub(crate) x: Option<bool>,
-    pub(crate) c: Option<bool>,
-    pub(crate) escape: Option<bool>,
-    pub(crate) mouse: Option<bool>,
-}
-
-impl Keys {
-    pub(crate) fn new() -> Self {
-        Self {
-            left: None,
-            right: None,
-            up: None,
-            down: None,
-            x: None,
-            c: None,
-            escape: None,
-            mouse: None,
-        }
-    }
-
-    pub(crate) fn reset(&mut self) {
-        *self = Self::new()
     }
 }

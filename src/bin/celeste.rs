@@ -1,6 +1,6 @@
 #![feature(drain_filter)]
 use rand::Rng;
-use runty8::{App, Button, DrawContext};
+use runty8::{app, App, Button, DrawContext};
 
 struct Cloud {
     x: f32,
@@ -156,12 +156,6 @@ impl App for GameState {
         // screenshake
         if self.shake > 0 {
             self.shake -= 1;
-            // TODO: Implement `camera` api
-            //
-            // camera()
-            // if self.shake > 0 {
-            //     camera(-2 + rnd(5), -2 + rnd(5));
-            // }
         }
 
         // Restart (soon)
@@ -217,6 +211,14 @@ impl App for GameState {
     }
 
     fn draw(&self, draw: &mut runty8::DrawContext) {
+        draw.camera(0, 0);
+        if self.shake > 0 {
+            draw.camera(
+                (-2. + rnd(5.)).floor() as i32,
+                (-2. + rnd(5.)).floor() as i32,
+            );
+        }
+
         if self.freeze > 0 {
             return;
         }
@@ -373,7 +375,7 @@ const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
 
 fn main() {
-    runty8::run_app::<GameState>();
+    app::pico8::run_app::<GameState>();
 }
 
 struct GameState {
