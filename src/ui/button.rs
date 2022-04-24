@@ -39,8 +39,8 @@ impl<'a, Msg> Button<'a, Msg> {
         on_press: Option<Msg>,
         state: &'a mut State,
         content: Box<dyn Widget<Msg = Msg>>,
-    ) -> Self {
-        Button {
+    ) -> Box<Self> {
+        Box::new(Button {
             x,
             y,
             width,
@@ -48,7 +48,7 @@ impl<'a, Msg> Button<'a, Msg> {
             on_press,
             state,
             content,
-        }
+        })
     }
 
     fn contains(&self, x: i32, y: i32) -> bool {

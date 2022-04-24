@@ -82,8 +82,8 @@ pub struct DrawFn<Msg> {
 }
 
 impl<Msg> DrawFn<Msg> {
-    pub fn new(f: fn(draw: &mut DrawContext)) -> Self {
-        Self { f, pd: PhantomData }
+    pub fn new(f: fn(draw: &mut DrawContext)) -> Box<Self> {
+        Box::new(Self { f, pd: PhantomData })
     }
 }
 

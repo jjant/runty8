@@ -13,14 +13,14 @@ pub struct Text<Msg> {
 }
 
 impl<Msg> Text<Msg> {
-    pub fn new(text: String, x: i32, y: i32, color: Color) -> Self {
-        Self {
+    pub fn new(text: String, x: i32, y: i32, color: Color) -> Box<Self> {
+        Box::new(Self {
             x,
             y,
             text,
             color,
             pd: PhantomData,
-        }
+        })
     }
 }
 
