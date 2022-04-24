@@ -1,7 +1,7 @@
 use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::ui::{ElmApp2, Widget};
+use crate::ui::{ElmApp2, Widget, DispatchEvent};
 use crate::{DrawContext, Scene, State};
 use crate::{Event, MouseButton, MouseEvent};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
@@ -68,12 +68,11 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
                 },
                 Scene::App => {
                     let mut view = app.view();
-
+                    
+                    let dispatch_event =&mut  DispatchEvent::new(&mut msg_queue);
                     if let Some(event) = event {
-                        view.on_event(event, (draw_context.state.mouse_x,draw_context.state.mouse_y), &mut |msg| msg_queue.push(msg));
+                        view.on_event(event, (draw_context.state.mouse_x,draw_context.state.mouse_y), dispatch_event);
                     }
-
-                    // dbg!("Drawing");
 
                     view.draw(&mut draw_context);
                     for msg in msg_queue.into_iter() {

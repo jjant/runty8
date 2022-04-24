@@ -2,7 +2,7 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use crate::Color;
 
-use super::Widget;
+use super::{DispatchEvent, Widget};
 
 pub struct Text<Msg> {
     x: i32,
@@ -31,7 +31,7 @@ impl<'a, Msg: Copy + Debug> Widget for Text<Msg> {
         &mut self,
         _event: crate::Event,
         _cursor_position: (i32, i32),
-        _dispatch_event: &mut impl FnMut(Self::Msg),
+        _dispatch_event: &mut DispatchEvent<Self::Msg>,
     ) {
     }
 

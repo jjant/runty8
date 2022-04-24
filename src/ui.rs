@@ -9,6 +9,20 @@ use enum_dispatch::enum_dispatch;
 
 use self::{button::Button, cursor::Cursor, text::Text};
 
+pub struct DispatchEvent<'a, Msg> {
+    queue: &'a mut Vec<Msg>,
+}
+
+impl<'a, Msg> DispatchEvent<'a, Msg> {
+    pub fn new(queue: &'a mut Vec<Msg>) -> Self {
+        Self { queue }
+    }
+
+    pub fn call(&mut self, msg: Msg) {
+        self.queue.push(msg);
+    }
+}
+
 #[enum_dispatch]
 pub trait Widget {
     type Msg: Copy + Debug;
@@ -17,7 +31,7 @@ pub trait Widget {
         &mut self,
         event: Event,
         cursor_position: (i32, i32),
-        dispatch_event: &mut impl FnMut(Self::Msg),
+        dispatch_event: &mut DispatchEvent<Self::Msg>,
     );
 
     fn draw(&self, draw: &mut DrawContext);
@@ -30,7 +44,7 @@ impl<T: Widget> Widget for Vec<T> {
         &mut self,
         event: Event,
         cursor_position: (i32, i32),
-        dispatch_event: &mut impl FnMut(Self::Msg),
+        dispatch_event: &mut DispatchEvent<Self::Msg>,
     ) {
         for w in self.iter_mut() {
             w.on_event(event, cursor_position, dispatch_event);
@@ -59,7 +73,7 @@ impl<'a, Msg: Copy + Debug> Widget for WidgetImpl<'a, Msg> {
         &mut self,
         event: Event,
         cursor_position: (i32, i32),
-        dispatch_event: &mut impl FnMut(Self::Msg),
+        dispatch_event: &mut DispatchEvent<Self::Msg>,
     ) {
         match self {
             WidgetImpl::Tree(x) => x.on_event(event, cursor_position, dispatch_event),
@@ -99,7 +113,7 @@ impl<Msg: Copy + Debug> Widget for DrawFn<Msg> {
         &mut self,
         _event: Event,
         _cursor_position: (i32, i32),
-        _dispatch_event: &mut impl FnMut(Self::Msg),
+        _dispatch_event: &mut DispatchEvent<Self::Msg>,
     ) {
     }
 

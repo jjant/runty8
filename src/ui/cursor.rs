@@ -1,4 +1,4 @@
-use super::Widget;
+use super::{DispatchEvent, Widget};
 use crate::{editor, DrawContext, Sprite};
 use std::{fmt::Debug, marker::PhantomData};
 
@@ -42,7 +42,7 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
         &mut self,
         _: crate::Event,
         cursor_position: (i32, i32),
-        _: &mut impl FnMut(Self::Msg),
+        _: &mut DispatchEvent<Self::Msg>,
     ) {
         dbg!(self.state.cursor_position = cursor_position);
     }
