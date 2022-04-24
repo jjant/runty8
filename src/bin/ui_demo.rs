@@ -3,9 +3,9 @@ use runty8::ui::text::Text;
 use runty8::ui::{
     self,
     cursor::{self, Cursor},
-    ElmApp2, WidgetImpl,
+    ElmApp2,
 };
-use runty8::ui::{DrawFn, Sub};
+use runty8::ui::{DrawFn, Sub, Tree};
 
 fn main() {
     ui::run_app2::<MyApp>();
@@ -38,23 +38,23 @@ impl ElmApp2 for MyApp {
         self.other += 1;
     }
 
-    fn view(&mut self) -> WidgetImpl<Self::Msg> {
+    fn view(&mut self) -> Tree<'_, Self::Msg> {
         let text = format!("MY APP {:?}", self.counter);
 
         dbg!(self.other);
 
-        WidgetImpl::Tree(vec![
-            WidgetImpl::DrawFn(DrawFn::new(|draw| draw.cls())),
-            WidgetImpl::Button(Button::new(
+        Tree::new(vec![
+            Box::new(DrawFn::new(|draw| draw.cls())),
+            Box::new(Button::new(
                 56,
                 32,
                 12,
                 12,
                 Some(1),
                 &mut self.plus_button,
-                Box::new(WidgetImpl::DrawFn(DrawFn::new(|draw| draw.spr(1, 0, 0)))),
+                Box::new(DrawFn::new(|draw| draw.spr(1, 0, 0))),
             )),
-            WidgetImpl::Button(Button::new(
+            Box::new(Button::new(
                 56,
                 64,
                 12,
@@ -63,8 +63,8 @@ impl ElmApp2 for MyApp {
                 &mut self.minus_button,
                 Box::new(Text::new("HI".to_string(), 0, 0, 7)),
             )),
-            WidgetImpl::Text(Text::new(text, 0, 60, 7)),
-            WidgetImpl::Cursor(Cursor::new(&mut self.cursor)),
+            Box::new(Text::new(text, 0, 60, 7)),
+            Box::new(Cursor::new(&mut self.cursor)),
         ])
     }
 

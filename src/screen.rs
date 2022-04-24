@@ -1,14 +1,15 @@
 use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::ui::{ElmApp2, Widget, DispatchEvent};
+use crate::ui::{DispatchEvent, ElmApp2, Widget};
 use crate::{DrawContext, Scene, State};
 use crate::{Event, MouseButton, MouseEvent};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
 use glium::glutin::event::{self, ElementState, KeyboardInput, VirtualKeyCode};
 use glium::glutin::event_loop::ControlFlow;
+use glium::texture::{RawImage2d, SrgbTexture2d};
 use glium::uniform;
-use glium::uniforms::MagnifySamplerFilter;
+use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
 pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
@@ -41,23 +42,23 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
     let nanoseconds_per_frame = 1_000_000_000 / fps;
 
     event_loop.run(move |event, _, control_flow| {
-        let event : Option<Event> = handle_event(event, scale_factor, logical_size, control_flow, &mut draw_context.state, &mut keys);
+        let event: Option<Event> = handle_event(
+            event,
+            scale_factor,
+            logical_size,
+            control_flow,
+            &mut draw_context.state,
+            &mut keys,
+        );
 
-        // if let ShouldReturn::Yes = should_return {
-        //     return;
-        // }
-
-        let next_frame_time = std::time::Instant::now()
-        + std::time::Duration::from_nanos(nanoseconds_per_frame);
+        let next_frame_time =
+            std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
         *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
         let mut target = display.draw();
         target.clear_color(1.0, 0.0, 0.0, 1.0);
 
-
-
-    let mut msg_queue = vec![];
-
+        let mut msg_queue = vec![];
         {
             draw_context.state.update_keys(&keys);
 
@@ -65,32 +66,38 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
                 Scene::Editor => {
                     editor.draw(&mut draw_context);
                     editor.update(&mut draw_context.state);
-                },
+                }
                 Scene::App => {
                     let mut view = app.view();
-                    
-                    let dispatch_event =&mut DispatchEvent::new(&mut msg_queue);
+
+                    let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
                     if let Some(event) = event {
-                        view.on_event(event, (draw_context.state.mouse_x,draw_context.state.mouse_y), dispatch_event);
+                        view.on_event(
+                            event,
+                            (draw_context.state.mouse_x, draw_context.state.mouse_y),
+                            dispatch_event,
+                        );
                     }
 
                     view.draw(&mut draw_context);
+                    drop(view);
+
                     for msg in msg_queue.into_iter() {
                         app.update(&msg);
                     }
                 }
             }
-            if draw_context.state.escape.btnp()  {
+            if draw_context.state.escape.btnp() {
                 draw_context.state.scene.flip();
             }
 
             keys.reset();
         }
 
-        let image = glium::texture::RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
-        let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
+        let image = RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
+        let texture = SrgbTexture2d::new(&display, image).unwrap();
         let uniforms = uniform! {
-            tex: glium::uniforms::Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
+            tex: Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
         };
 
         target
@@ -104,11 +111,6 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
             .unwrap();
         target.finish().unwrap();
     });
-}
-
-enum ShouldReturn {
-    Yes,
-    No,
 }
 
 fn handle_event(

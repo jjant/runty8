@@ -4,7 +4,7 @@ pub mod text;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{App, DrawContext, Event};
+use crate::{DrawContext, Event};
 use enum_dispatch::enum_dispatch;
 
 use self::{button::Button, cursor::Cursor, text::Text};
@@ -37,8 +37,18 @@ pub trait Widget {
     fn draw(&self, draw: &mut DrawContext);
 }
 
-impl<T: Widget> Widget for Vec<T> {
-    type Msg = T::Msg;
+pub struct Tree<'a, Msg> {
+    elements: Vec<Box<dyn Widget<Msg = Msg> + 'a>>,
+}
+
+impl<'a, Msg> Tree<'a, Msg> {
+    pub fn new(elements: Vec<Box<dyn Widget<Msg = Msg> + 'a>>) -> Self {
+        Self { elements }
+    }
+}
+
+impl<'a, Msg: Copy + Debug> Widget for Tree<'a, Msg> {
+    type Msg = Msg;
 
     fn on_event(
         &mut self,
@@ -46,13 +56,13 @@ impl<T: Widget> Widget for Vec<T> {
         cursor_position: (i32, i32),
         dispatch_event: &mut DispatchEvent<Self::Msg>,
     ) {
-        for w in self.iter_mut() {
+        for w in self.elements.iter_mut() {
             w.on_event(event, cursor_position, dispatch_event);
         }
     }
 
     fn draw(&self, draw: &mut DrawContext) {
-        for w in self.iter() {
+        for w in self.elements.iter() {
             w.draw(draw);
         }
     }
@@ -64,35 +74,6 @@ pub enum WidgetImpl<'a, Msg> {
     Button(Button<'a, Msg>),
     Text(Text<Msg>),
     DrawFn(DrawFn<Msg>),
-}
-
-impl<'a, Msg: Copy + Debug> Widget for WidgetImpl<'a, Msg> {
-    type Msg = Msg;
-
-    fn on_event(
-        &mut self,
-        event: Event,
-        cursor_position: (i32, i32),
-        dispatch_event: &mut DispatchEvent<Self::Msg>,
-    ) {
-        match self {
-            WidgetImpl::Tree(x) => x.on_event(event, cursor_position, dispatch_event),
-            WidgetImpl::Button(x) => x.on_event(event, cursor_position, dispatch_event),
-            WidgetImpl::Cursor(x) => x.on_event(event, cursor_position, dispatch_event),
-            WidgetImpl::Text(x) => x.on_event(event, cursor_position, dispatch_event),
-            WidgetImpl::DrawFn(x) => x.on_event(event, cursor_position, dispatch_event),
-        }
-    }
-
-    fn draw(&self, draw: &mut DrawContext) {
-        match self {
-            WidgetImpl::Tree(x) => x.draw(draw),
-            WidgetImpl::Button(x) => x.draw(draw),
-            WidgetImpl::Cursor(x) => x.draw(draw),
-            WidgetImpl::Text(x) => x.draw(draw),
-            WidgetImpl::DrawFn(x) => x.draw(draw),
-        }
-    }
 }
 
 pub struct DrawFn<Msg> {
@@ -128,7 +109,7 @@ pub trait ElmApp2 {
 
     fn update(&mut self, msg: &Self::Msg);
 
-    fn view(&mut self) -> WidgetImpl<Self::Msg>;
+    fn view(&mut self) -> Tree<'_, Self::Msg>;
 
     fn subscriptions(&self) -> Sub<Self::Msg>;
 }
