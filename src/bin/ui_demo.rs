@@ -47,7 +47,7 @@ impl ElmApp2 for MyApp {
                 12,
                 Some(1),
                 &mut self.plus_button,
-                Box::new(WidgetImpl::Tree(vec![])),
+                Box::new(WidgetImpl::DrawFn(DrawFn::new(|draw| draw.spr(1, 0, 0)))),
             )),
             WidgetImpl::Button(Button::new(
                 56,
@@ -56,7 +56,7 @@ impl ElmApp2 for MyApp {
                 12,
                 Some(-1),
                 &mut self.minus_button,
-                Box::new(Text::new("HI".to_string(), 56, 64, 7)),
+                Box::new(Text::new("HI".to_string(), 0, 0, 7)),
             )),
             WidgetImpl::Text(Text::new(text, 0, 60, 7)),
             WidgetImpl::Cursor(Cursor::new(&mut self.cursor)),

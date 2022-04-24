@@ -107,6 +107,9 @@ impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
         //
         // i.e, in `button {x = 23, y = 42} [ content { x = 0, y = 0 } ]`
         // content should be drawn at the right top corner of the button? Probably?
+
+        draw.append_camera(-self.x, -self.y);
         self.content.draw(draw);
+        draw.append_camera(self.x, self.y);
     }
 }

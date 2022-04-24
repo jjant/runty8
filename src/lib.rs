@@ -182,6 +182,7 @@ pub struct DrawContext {
     state: State,
     transparent_color: Option<Color>,
     draw_palette: [Color; 16],
+    camera: (i32, i32),
 }
 
 const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
@@ -204,7 +205,16 @@ impl DrawContext {
             state,
             transparent_color: Some(0),
             draw_palette: ORIGINAL_PALETTE,
+            camera: (0, 0),
         }
+    }
+
+    pub(crate) fn append_camera(&mut self, x: i32, y: i32) {
+        self.camera(self.camera.0 + x, self.camera.1 + y);
+    }
+
+    pub fn camera(&mut self, x: i32, y: i32) {
+        self.camera = (x, y);
     }
 
     pub fn cls(&mut self) {
@@ -248,7 +258,8 @@ impl DrawContext {
 
         for i in 0..8 {
             for j in 0..8 {
-                if let Some(index) = self.index(x + i, y + j) {
+                let (x, y) = self.apply_camera(x + i, y + j);
+                if let Some(index) = self.index(x, y) {
                     Self::set_pixel(
                         &mut self.buffer,
                         self.transparent_color,
@@ -319,6 +330,7 @@ impl DrawContext {
         // https://pico-8.fandom.com/wiki/Pal
         let color = self.draw_palette[color as usize];
 
+        let (x, y) = self.apply_camera(x, y);
         if let Some(index) = self.index(x, y) {
             Self::set_pixel(&mut self.buffer, self.transparent_color, index, color);
         }
@@ -337,6 +349,10 @@ impl DrawContext {
         } else {
             None
         }
+    }
+
+    fn apply_camera(&self, x: i32, y: i32) -> (i32, i32) {
+        (x - self.camera.0, y - self.camera.1)
     }
 }
 
