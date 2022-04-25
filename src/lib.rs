@@ -132,7 +132,7 @@ impl SpriteSheet {
     pub fn deserialize(str: &str) -> Self {
         let sprite_sheet = str
             .as_bytes()
-            .into_iter()
+            .iter()
             .copied()
             .filter_map(|c| (c as char).to_digit(16))
             .map(|c| c as u8)
@@ -262,6 +262,7 @@ impl DrawContext {
                 if let Some(index) = self.index(x, y) {
                     Self::set_pixel(
                         &mut self.buffer,
+                        &self.draw_palette,
                         self.transparent_color,
                         index,
                         buffer[(i + j * 8) as usize],
@@ -305,10 +306,13 @@ impl DrawContext {
 
     fn set_pixel(
         buffer: &mut [Color],
+        draw_palette: &[Color; 16],
         transparent_color: Option<Color>,
         index: usize,
         color: Color,
     ) {
+        // https://pico-8.fandom.com/wiki/Pal
+        let color = draw_palette[color as usize];
         let c = get_color(color);
 
         if let Some(transparent_color) = transparent_color {
@@ -327,12 +331,15 @@ impl DrawContext {
     }
 
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
-        // https://pico-8.fandom.com/wiki/Pal
-        let color = self.draw_palette[color as usize];
-
         let (x, y) = self.apply_camera(x, y);
         if let Some(index) = self.index(x, y) {
-            Self::set_pixel(&mut self.buffer, self.transparent_color, index, color);
+            Self::set_pixel(
+                &mut self.buffer,
+                &self.draw_palette,
+                self.transparent_color,
+                index,
+                color,
+            );
         }
     }
 
@@ -521,10 +528,7 @@ impl ButtonState {
     }
 
     pub fn btnp(&self) -> bool {
-        match *self {
-            JustPressed => true,
-            _ => false,
-        }
+        matches!(*self, JustPressed)
     }
 }
 

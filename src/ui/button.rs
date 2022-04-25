@@ -13,7 +13,7 @@ pub struct Button<'a, Msg> {
     content: Box<dyn Widget<Msg = Msg>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct State {
     pressed: bool,
 }

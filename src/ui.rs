@@ -7,8 +7,6 @@ use std::{fmt::Debug, marker::PhantomData};
 use crate::{DrawContext, Event};
 use enum_dispatch::enum_dispatch;
 
-use self::{button::Button, cursor::Cursor, text::Text};
-
 pub struct DispatchEvent<'a, Msg> {
     queue: &'a mut Vec<Msg>,
 }
@@ -68,22 +66,17 @@ impl<'a, Msg: Copy + Debug> Widget for Tree<'a, Msg> {
     }
 }
 
-pub enum WidgetImpl<'a, Msg> {
-    Tree(Vec<WidgetImpl<'a, Msg>>),
-    Cursor(Cursor<'a, Msg>),
-    Button(Button<'a, Msg>),
-    Text(Text<Msg>),
-    DrawFn(DrawFn<Msg>),
-}
-
 pub struct DrawFn<Msg> {
-    f: fn(draw: &mut DrawContext),
     pd: PhantomData<Msg>,
+    f: Box<dyn Fn(&mut DrawContext)>,
 }
 
 impl<Msg> DrawFn<Msg> {
-    pub fn new(f: fn(draw: &mut DrawContext)) -> Box<Self> {
-        Box::new(Self { f, pd: PhantomData })
+    pub fn new(f: impl Fn(&mut DrawContext) + 'static) -> Box<Self> {
+        Box::new(Self {
+            f: Box::new(f),
+            pd: PhantomData,
+        })
     }
 }
 
