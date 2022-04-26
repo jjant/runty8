@@ -136,8 +136,8 @@ impl ElmApp2 for MyApp {
             sprite_editor_button(&mut self.sprite_button_state, self.tab),
             map_editor_button(&mut self.map_button_state, self.tab),
             color_selector(
-                70,
-                12,
+                79,
+                10,
                 10,
                 self.selected_color,
                 &mut self.color_selector_state,
@@ -213,8 +213,8 @@ fn color_selector<'a>(
     let coordinates = move |index| {
         let i = index % 4;
         let j = index / 4;
-        let x = start_x + i as i32 * tile_size;
-        let y = start_y + j as i32 * tile_size;
+        let x = start_x + 1 + i as i32 * tile_size;
+        let y = start_y + 1 + j as i32 * tile_size;
 
         (x, y)
     };
@@ -238,13 +238,14 @@ fn color_selector<'a>(
         v.push(button);
     }
 
+    // Draw border
     v.push(DrawFn::new(move |draw| {
         draw.palt(None);
         draw.rect(
             start_x,
             start_y,
-            start_x + 4 * tile_size,
-            start_y + 4 * tile_size,
+            start_x + 4 * tile_size + 1,
+            start_y + 4 * tile_size + 1,
             0,
         );
         draw.palt(Some(0));
