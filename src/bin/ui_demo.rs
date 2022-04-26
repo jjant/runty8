@@ -124,11 +124,13 @@ impl ElmApp2 for MyApp {
             color_selector(
                 70,
                 50,
-                12,
+                10,
                 self.selected_color,
                 &mut self.color_selector_state,
                 Msg::SelectColor,
             ),
+            sprite_view(88),
+            bottom_bar(),
             Cursor::new(&mut self.cursor),
         ])
     }
@@ -233,4 +235,25 @@ fn color_selector<'a>(
     }));
 
     Box::new(Tree::new(v))
+}
+
+fn sprite_view(y: i32) -> Box<dyn Widget<Msg = Msg>> {
+    let mut sprites: Vec<Box<dyn Widget<Msg = Msg>>> = vec![DrawFn::new(move |draw| {
+        draw.rectfill(0, y, 127, y + 32 - 1, 3)
+    })];
+
+    for sprite in 0..63 {
+        let row = (sprite / 16) as i32;
+        let col = (sprite % 16) as i32;
+
+        sprites.push(DrawFn::new(move |draw| {
+            draw.spr(sprite, col * 8, y + row * 8);
+        }));
+    }
+
+    Box::new(Tree::new(sprites))
+}
+
+fn bottom_bar() -> Box<dyn Widget<Msg = Msg>> {
+    DrawFn::new(|draw| draw.rectfill(0, 121, 127, 127, 8))
 }
