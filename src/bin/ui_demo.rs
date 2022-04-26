@@ -17,11 +17,12 @@ struct MyApp {
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
-    selected_sprite_tab: i32,
+    selected_sprite_page: usize,
     sprite_button_state: button::State,
     map_button_state: button::State,
     plus_button: button::State,
     minus_button: button::State,
+    tab_buttons: [button::State; 4],
     color_selector_state: [button::State; 16],
 }
 
@@ -36,7 +37,8 @@ enum Msg {
     Delta(i32),
     SpriteButtonClicked,
     MapButtonClicked,
-    SelectColor(usize),
+    ColorSelected(usize),
+    SpritePageSelected(usize),
 }
 
 impl ElmApp2 for MyApp {
@@ -52,7 +54,13 @@ impl ElmApp2 for MyApp {
             minus_button: button::State::new(),
             tab: Tab::SpriteEditor,
             selected_color: 0,
-            selected_sprite_tab: 0,
+            selected_sprite_page: 0,
+            tab_buttons: [
+                button::State::new(),
+                button::State::new(),
+                button::State::new(),
+                button::State::new(),
+            ],
             color_selector_state: [
                 button::State::new(),
                 button::State::new(),
@@ -75,8 +83,6 @@ impl ElmApp2 for MyApp {
     }
 
     fn update(&mut self, msg: &Self::Msg) {
-        self.selected_sprite_tab = (self.selected_sprite_tab + 1) % 4;
-
         match msg {
             Msg::Delta(delta) => self.counter += delta,
             Msg::SpriteButtonClicked => {
@@ -87,8 +93,11 @@ impl ElmApp2 for MyApp {
                 self.tab = Tab::MapEditor;
                 println!("Map button clicked");
             }
-            Msg::SelectColor(selected_color) => {
+            Msg::ColorSelected(selected_color) => {
                 self.selected_color = *selected_color as u8;
+            }
+            Msg::SpritePageSelected(selected_sprite_page) => {
+                self.selected_sprite_page = *selected_sprite_page;
             }
         }
     }
@@ -132,9 +141,9 @@ impl ElmApp2 for MyApp {
                 10,
                 self.selected_color,
                 &mut self.color_selector_state,
-                Msg::SelectColor,
+                Msg::ColorSelected,
             ),
-            sprite_view(self.selected_sprite_tab, 88),
+            sprite_view(self.selected_sprite_page, &mut self.tab_buttons, 88),
             bottom_bar(),
             Cursor::new(&mut self.cursor),
         ])
@@ -254,7 +263,11 @@ fn color_selector<'a>(
     Box::new(Tree::new(v))
 }
 
-fn sprite_view(selected_tab: i32, y: i32) -> Box<dyn Widget<Msg = Msg>> {
+fn sprite_view<'a>(
+    selected_tab: usize,
+    tab_buttons: &'a mut [button::State],
+    y: i32,
+) -> Box<dyn Widget<Msg = Msg> + 'a> {
     let mut sprites: Vec<Box<dyn Widget<Msg = Msg>>> = vec![DrawFn::new(move |draw| {
         draw.rectfill(0, y, 127, y + 32 - 1, 3)
     })];
@@ -268,16 +281,21 @@ fn sprite_view(selected_tab: i32, y: i32) -> Box<dyn Widget<Msg = Msg>> {
         }));
     }
 
-    for sprite_tab in 0..4_usize {
-        sprites.push(DrawFn::new(move |draw| {
-            let base_sprite = if selected_tab == sprite_tab as i32 {
-                33
-            } else {
-                17
-            };
+    for (sprite_tab, tab_button_state) in tab_buttons.iter_mut().enumerate() {
+        let base_sprite = if selected_tab == sprite_tab { 33 } else { 17 };
 
-            draw.spr(base_sprite + sprite_tab, 96 + sprite_tab as i32 * 8, y - 8)
-        }));
+        let x = 96 + sprite_tab as i32 * 8;
+        let y = y - 8;
+
+        sprites.push(Button::new(
+            x,
+            y,
+            8,
+            8,
+            Some(Msg::SpritePageSelected(sprite_tab)),
+            tab_button_state,
+            DrawFn::new(move |draw| draw.spr(base_sprite + sprite_tab, 0, 0)),
+        ));
     }
     Box::new(Tree::new(sprites))
 }
