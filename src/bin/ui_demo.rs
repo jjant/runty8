@@ -101,8 +101,9 @@ impl ElmApp2 for MyApp {
             draw.rectfill(0, 0, 127, 7, 8);
         });
 
+        const BACKGROUND: u8 = 5;
         Tree::new(vec![
-            DrawFn::new(|draw| draw.cls()),
+            DrawFn::new(|draw| draw.rectfill(0, 0, 127, 127, BACKGROUND)),
             top_bar,
             Button::new(
                 56,
@@ -227,6 +228,18 @@ fn color_selector<'a>(
         );
         v.push(button);
     }
+
+    v.push(DrawFn::new(move |draw| {
+        draw.palt(None);
+        draw.rect(
+            start_x,
+            start_y,
+            start_x + 4 * tile_size,
+            start_y + 4 * tile_size,
+            0,
+        );
+        draw.palt(Some(0));
+    }));
 
     // Draw highlight
     v.push(DrawFn::new(move |draw| {
