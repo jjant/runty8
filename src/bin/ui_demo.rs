@@ -17,6 +17,7 @@ struct MyApp {
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
+    selected_sprite_tab: i32,
     sprite_button_state: button::State,
     map_button_state: button::State,
     plus_button: button::State,
@@ -51,6 +52,7 @@ impl ElmApp2 for MyApp {
             minus_button: button::State::new(),
             tab: Tab::SpriteEditor,
             selected_color: 0,
+            selected_sprite_tab: 0,
             color_selector_state: [
                 button::State::new(),
                 button::State::new(),
@@ -73,6 +75,8 @@ impl ElmApp2 for MyApp {
     }
 
     fn update(&mut self, msg: &Self::Msg) {
+        self.selected_sprite_tab = (self.selected_sprite_tab + 1) % 4;
+
         match msg {
             Msg::Delta(delta) => self.counter += delta,
             Msg::SpriteButtonClicked => {
@@ -123,13 +127,13 @@ impl ElmApp2 for MyApp {
             map_editor_button(&mut self.map_button_state, self.tab),
             color_selector(
                 70,
-                50,
+                12,
                 10,
                 self.selected_color,
                 &mut self.color_selector_state,
                 Msg::SelectColor,
             ),
-            sprite_view(88),
+            sprite_view(self.selected_sprite_tab, 88),
             bottom_bar(),
             Cursor::new(&mut self.cursor),
         ])
@@ -237,7 +241,7 @@ fn color_selector<'a>(
     Box::new(Tree::new(v))
 }
 
-fn sprite_view(y: i32) -> Box<dyn Widget<Msg = Msg>> {
+fn sprite_view(selected_tab: i32, y: i32) -> Box<dyn Widget<Msg = Msg>> {
     let mut sprites: Vec<Box<dyn Widget<Msg = Msg>>> = vec![DrawFn::new(move |draw| {
         draw.rectfill(0, y, 127, y + 32 - 1, 3)
     })];
@@ -251,6 +255,17 @@ fn sprite_view(y: i32) -> Box<dyn Widget<Msg = Msg>> {
         }));
     }
 
+    for sprite_tab in 0..4_usize {
+        sprites.push(DrawFn::new(move |draw| {
+            let base_sprite = if selected_tab == sprite_tab as i32 {
+                33
+            } else {
+                17
+            };
+
+            draw.spr(base_sprite + sprite_tab, 96 + sprite_tab as i32 * 8, y - 8)
+        }));
+    }
     Box::new(Tree::new(sprites))
 }
 
