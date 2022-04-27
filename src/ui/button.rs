@@ -95,7 +95,7 @@ impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
         let color = if self.state.pressed { 5 } else { 9 };
 
         // TODO: Handle properly
-        draw.rectfill(
+        draw.rect(
             self.x,
             self.y,
             self.x + self.width - 1,

@@ -1,10 +1,12 @@
 use crate::{
-    app::DevApp, draw, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH,
+    app::DevApp, draw, editor::serialize::Ppm, Button, Color, DrawContext, Sprite, State,
+    SPRITE_HEIGHT, SPRITE_WIDTH,
 };
 use std::{fs::File, io::Write};
 
 use self::canvas::Canvas;
 mod canvas;
+pub mod serialize;
 
 pub struct SpriteEditor {
     mouse_x: i32,
@@ -234,6 +236,9 @@ impl DevApp for SpriteEditor {
         if state.btn(Button::X) {
             println!("[Editor] Serializing sprite sheet");
             serialize(state.sprite_sheet.serialize().as_bytes());
+            Ppm::from_sprite_sheet(&state.sprite_sheet)
+                .write_file("./sprite_sheet.ppm")
+                .expect("couldn't write");
 
             std::process::exit(1);
         }
