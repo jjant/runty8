@@ -233,14 +233,12 @@ impl DevApp for SpriteEditor {
             }
         }
 
-        if state.btn(Button::X) {
+        if state.btnp(Button::X) {
             println!("[Editor] Serializing sprite sheet");
             serialize(state.sprite_sheet.serialize().as_bytes());
             Ppm::from_sprite_sheet(&state.sprite_sheet)
                 .write_file("./sprite_sheet.ppm")
-                .expect("couldn't write");
-
-            std::process::exit(1);
+                .expect("Couldn't write");
         }
 
         if state.btnp(Button::Down) {
