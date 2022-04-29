@@ -17,6 +17,7 @@ struct MyApp {
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
+    selected_sprite: usize,
     selected_sprite_page: usize,
     sprite_button_state: button::State,
     map_button_state: button::State,
@@ -25,6 +26,7 @@ struct MyApp {
     tab_buttons: [button::State; 4],
     color_selector_state: [button::State; 16],
     flags: [Flag; 8],
+    sprite_buttons: Vec<button::State>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -36,10 +38,11 @@ enum Tab {
 #[derive(Debug, Clone, Copy)]
 enum Msg {
     Delta(i32),
-    SpriteButtonClicked,
+    SpriteTabClicked,
     MapButtonClicked,
     ColorSelected(usize),
     SpritePageSelected(usize),
+    SpriteButtonClicked(usize),
     FlagToggled(usize),
 }
 
@@ -56,6 +59,7 @@ impl ElmApp2 for MyApp {
             minus_button: button::State::new(),
             tab: Tab::SpriteEditor,
             selected_color: 0,
+            selected_sprite: 0,
             selected_sprite_page: 0,
             tab_buttons: [
                 button::State::new(),
@@ -91,13 +95,14 @@ impl ElmApp2 for MyApp {
                 Flag::new(),
                 Flag::new(),
             ],
+            sprite_buttons: vec![button::State::new(); 64],
         }
     }
 
     fn update(&mut self, msg: &Self::Msg) {
         match msg {
             Msg::Delta(delta) => self.counter += delta,
-            Msg::SpriteButtonClicked => {
+            Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
                 println!("Sprite button clicked");
             }
@@ -110,6 +115,9 @@ impl ElmApp2 for MyApp {
             }
             Msg::SpritePageSelected(selected_sprite_page) => {
                 self.selected_sprite_page = *selected_sprite_page;
+            }
+            Msg::SpriteButtonClicked(selected_sprite) => {
+                self.selected_sprite = *selected_sprite;
             }
             Msg::FlagToggled(flag) => self.flags[*flag].flip(),
         }
@@ -156,7 +164,13 @@ impl ElmApp2 for MyApp {
                 &mut self.color_selector_state,
                 Msg::ColorSelected,
             ),
-            sprite_view(self.selected_sprite_page, &mut self.tab_buttons, 88),
+            sprite_view(
+                self.selected_sprite,
+                self.selected_sprite_page,
+                &mut self.sprite_buttons,
+                &mut self.tab_buttons,
+                88,
+            ),
             bottom_bar(),
             flags(78, 70, &mut self.flags),
             Cursor::new(&mut self.cursor),
@@ -179,7 +193,7 @@ fn sprite_editor_button<'a>(
         0,
         8,
         8,
-        Some(Msg::SpriteButtonClicked),
+        Some(Msg::SpriteTabClicked),
         state,
         DrawFn::new(move |draw| {
             let color = if selected { 2 } else { 15 };
@@ -278,8 +292,11 @@ fn color_selector<'a>(
     Box::new(Tree::new(v))
 }
 
+/// The 4 rows of sprites at the bottom of the sprite editor
 fn sprite_view<'a>(
+    selected_sprite: usize,
     selected_tab: usize,
+    sprite_buttons: &'a mut [button::State],
     tab_buttons: &'a mut [button::State],
     y: i32,
 ) -> Box<dyn Widget<Msg = Msg> + 'a> {
@@ -287,13 +304,37 @@ fn sprite_view<'a>(
         draw.rectfill(0, y, 127, y + 32 - 1, 3)
     })];
 
-    for sprite in 0..63 {
-        let row = (sprite / 16) as i32;
-        let col = (sprite % 16) as i32;
+    let sprite_position = |sprite| {
+        let index = sprite % 64;
+        let row = (index / 16) as i32;
+        let col = (index % 16) as i32;
 
+        (col * 8, y + row * 8)
+    };
+
+    for (index, sprite_state) in sprite_buttons.iter_mut().enumerate() {
+        let sprite = index + selected_tab * 64;
+
+        let (x, y) = sprite_position(sprite);
+        sprites.push(Button::new(
+            x,
+            y,
+            8,
+            8,
+            Some(Msg::SpriteButtonClicked(sprite)),
+            sprite_state,
+            DrawFn::new(move |draw| {
+                draw.spr(sprite, 0, 0);
+            }),
+        ));
+    }
+
+    // Draw selected sprite highlight
+    {
+        let (x, y) = sprite_position(selected_sprite);
         sprites.push(DrawFn::new(move |draw| {
-            draw.spr(sprite, col * 8, y + row * 8);
-        }));
+            draw.rect(x - 1, y - 1, x + 8, y + 8, 7);
+        }))
     }
 
     for (sprite_tab, tab_button_state) in tab_buttons.iter_mut().enumerate() {
