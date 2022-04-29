@@ -169,8 +169,9 @@ impl ElmApp2 for MyApp {
                 self.selected_sprite_page,
                 &mut self.sprite_buttons,
                 &mut self.tab_buttons,
-                88,
+                87,
             ),
+            sprite_preview(self.selected_sprite, 71, 78),
             bottom_bar(),
             flags(78, 70, &mut self.flags),
             Cursor::new(&mut self.cursor),
@@ -309,7 +310,7 @@ fn sprite_view<'a>(
         let row = (index / 16) as i32;
         let col = (index % 16) as i32;
 
-        (col * 8, y + row * 8)
+        (col * 8, y + 1 + row * 8)
     };
 
     for (index, sprite_state) in sprite_buttons.iter_mut().enumerate() {
@@ -354,6 +355,18 @@ fn sprite_view<'a>(
         ));
     }
     Box::new(Tree::new(sprites))
+}
+
+fn sprite_preview(sprite: usize, x: i32, y: i32) -> Box<dyn Widget<Msg = Msg>> {
+    let spr_str = format!("{:0>3}", sprite);
+
+    Box::new(Tree::new(vec![
+        spr(sprite, x, y),
+        DrawFn::new(move |draw| {
+            draw.rectfill(x + 9, y + 1, x + 9 + 13 - 1, y + 7, 6);
+            draw.print(&spr_str, x + 10, y + 2, 13);
+        }),
+    ]))
 }
 
 fn bottom_bar() -> Box<dyn Widget<Msg = Msg>> {
