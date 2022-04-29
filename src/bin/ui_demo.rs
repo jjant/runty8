@@ -302,7 +302,8 @@ fn sprite_view<'a>(
     y: i32,
 ) -> Box<dyn Widget<Msg = Msg> + 'a> {
     let mut sprites: Vec<Box<dyn Widget<Msg = Msg>>> = vec![DrawFn::new(move |draw| {
-        draw.rectfill(0, y, 127, y + 32 - 1, 3)
+        draw.palt(None);
+        draw.rectfill(0, y, 127, y + 32 + 1, 0);
     })];
 
     let sprite_position = |sprite| {
@@ -325,6 +326,7 @@ fn sprite_view<'a>(
             Some(Msg::SpriteButtonClicked(sprite)),
             sprite_state,
             DrawFn::new(move |draw| {
+                draw.palt(None);
                 draw.spr(sprite, 0, 0);
             }),
         ));
@@ -332,6 +334,7 @@ fn sprite_view<'a>(
 
     // Draw selected sprite highlight
     {
+        // TODO: Fix (wrong highlight when switching pages)
         let (x, y) = sprite_position(selected_sprite);
         sprites.push(DrawFn::new(move |draw| {
             draw.rect(x - 1, y - 1, x + 8, y + 8, 7);
@@ -351,7 +354,10 @@ fn sprite_view<'a>(
             8,
             Some(Msg::SpritePageSelected(sprite_tab)),
             tab_button_state,
-            DrawFn::new(move |draw| draw.spr(base_sprite + sprite_tab, 0, 0)),
+            DrawFn::new(move |draw| {
+                draw.palt(Some(0));
+                draw.spr(base_sprite + sprite_tab, 0, 0);
+            }),
         ));
     }
     Box::new(Tree::new(sprites))
