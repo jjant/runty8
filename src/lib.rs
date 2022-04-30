@@ -91,6 +91,42 @@ pub(crate) struct SpriteSheet {
     sprite_sheet: Vec<Color>,
 }
 
+#[derive(Debug)]
+pub(crate) struct Map {
+    // Don't really want the size to change
+    map: Box<[u8]>,
+}
+
+impl Map {
+    const SCREEN_SIZE_PIXELS: usize = 128;
+    const SCREENS: usize = 4;
+    pub const WIDTH_SPRITES: usize = Self::SCREENS * SPRITE_WIDTH;
+    pub const HEIGHT_SPRITES: usize = Self::SCREENS * SPRITE_HEIGHT;
+    const MAP_SIZE: usize = Self::WIDTH_SPRITES * Self::HEIGHT_SPRITES;
+
+    fn new() -> Self {
+        Map {
+            map: vec![0; Self::MAP_SIZE].into_boxed_slice(),
+        }
+    }
+
+    fn mget(&self, cel_x: usize, cel_y: usize) -> u8 {
+        let index = cel_x + cel_y * Map::WIDTH_SPRITES;
+        // TODO: Handle like pico8
+        assert!(index <= self.map.len());
+
+        self.map[index]
+    }
+
+    fn mset(&mut self, cel_x: usize, cel_y: usize, sprite: u8) {
+        let index = cel_x + cel_y * Map::WIDTH_SPRITES;
+        // TODO: Handle like pico8
+        assert!(index <= self.map.len());
+
+        self.map[index] = sprite;
+    }
+}
+
 pub const SPRITE_WIDTH: usize = 8;
 pub const SPRITE_HEIGHT: usize = 8;
 
@@ -410,11 +446,13 @@ pub struct State {
     pub(crate) scene: Scene,
     pub(crate) sprite_flags: [u8; SpriteSheet::SPRITE_COUNT],
     pub(crate) sprite_sheet: SpriteSheet,
+    pub(crate) map: Map,
 }
 
 impl State {
     fn new() -> Self {
         let sprite_sheet = deserialize();
+        let map = Map::new();
 
         Self {
             left: NotPressed,
@@ -430,7 +468,16 @@ impl State {
             scene: Scene::initial(),
             sprite_sheet,
             sprite_flags: [0; SpriteSheet::SPRITE_COUNT],
+            map,
         }
+    }
+
+    pub fn mget(&self, cel_x: usize, cel_y: usize) -> u8 {
+        self.map.mget(cel_x, cel_y)
+    }
+
+    pub fn mset(&mut self, cel_x: usize, cel_y: usize, sprite: u8) {
+        self.map.mset(cel_x, cel_y, sprite);
     }
 
     pub fn fget(&self, sprite: usize) -> u8 {
