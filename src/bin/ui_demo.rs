@@ -52,46 +52,51 @@ enum Msg {
 impl ElmApp2 for MyApp {
     type Msg = Msg;
 
-    fn init() -> Self {
-        Self {
-            counter: 0,
-            cursor: cursor::State::new(),
-            sprite_button_state: button::State::new(),
-            map_button_state: button::State::new(),
-            plus_button: button::State::new(),
-            minus_button: button::State::new(),
-            tab: Tab::SpriteEditor,
-            selected_color: 0,
-            selected_sprite: 0,
-            selected_sprite_page: 0,
-            tab_buttons: [
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-            ],
-            color_selector_state: [
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-                button::State::new(),
-            ],
-            flags: vec![button::State::new(); 8],
-            sprite_buttons: vec![button::State::new(); 64],
-            current_flags: 0,
-        }
+    fn init() -> (Self, Cmd<Msg>) {
+        let selected_sprite = 0;
+
+        (
+            Self {
+                counter: 0,
+                cursor: cursor::State::new(),
+                sprite_button_state: button::State::new(),
+                map_button_state: button::State::new(),
+                plus_button: button::State::new(),
+                minus_button: button::State::new(),
+                tab: Tab::SpriteEditor,
+                selected_color: 0,
+                selected_sprite,
+                selected_sprite_page: 0,
+                tab_buttons: [
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                ],
+                color_selector_state: [
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                    button::State::new(),
+                ],
+                flags: vec![button::State::new(); 8],
+                sprite_buttons: vec![button::State::new(); 64],
+                current_flags: 0,
+            },
+            Cmd::get_flags(selected_sprite as u8).map(Msg::GotFlags),
+        )
     }
 
     fn update(&mut self, msg: &Self::Msg) -> Cmd<Msg> {
@@ -118,11 +123,14 @@ impl ElmApp2 for MyApp {
             }
             Msg::FlagToggled(flag) => {
                 let sprite = self.selected_sprite as u8;
+
+                println!("TOggling flag {}", flag);
                 return Cmd::toggle_flag(sprite, *flag as u8)
                     .and_then(move |_| Cmd::get_flags(sprite))
                     .map(Msg::GotFlags);
             }
             Msg::GotFlags(flags) => {
+                println!("Got flags {}", flags);
                 self.current_flags = *flags;
             }
         }

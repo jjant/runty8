@@ -2,6 +2,10 @@ use std::marker::PhantomData;
 
 use crate::DrawContext;
 
+/// TODO:
+///   - Make this a vector (to support Cmd::batch)
+///   - Think more about `and_then` (if things don't return, it's not meaningful)
+///     Why should things not return (i.e, return None), instead of just returning ()?
 pub struct Cmd<T> {
     cmd: Box<dyn PureCmd<Output = T> + 'static>,
 }
@@ -83,6 +87,7 @@ impl<R, F: Fn(C::Output) -> R, C: PureCmd> PureCmd for CmdMap<C, F> {
     type Output = R;
 
     fn run(&mut self, runty8: &mut DrawContext) -> Option<R> {
+        println!("[Cmd] CmdMap");
         let output = self.cmd.run(runty8)?;
 
         Some((self.f)(output))
@@ -136,6 +141,7 @@ where
     type Output = B::Output;
 
     fn run(&mut self, runty8: &mut DrawContext) -> Option<Self::Output> {
+        println!("[Cmd] AndThen");
         let a = self.cmd.run(runty8)?;
 
         (self.then)(a).run(runty8)
@@ -150,6 +156,7 @@ impl PureCmd for GetFlags {
     type Output = u8;
 
     fn run(&mut self, runty8: &mut DrawContext) -> Option<Self::Output> {
+        println!("[Cmd] GetFlags");
         let flags = runty8.fget(self.sprite.into());
 
         Some(flags)
@@ -165,10 +172,11 @@ impl PureCmd for ToggleFlag {
     type Output = ();
 
     fn run(&mut self, runty8: &mut DrawContext) -> Option<Self::Output> {
+        println!("[Cmd] ToggleFlag");
         let Self { sprite, flag } = *self;
         let flag_value = runty8.fget_n(sprite.into(), flag);
         runty8.state.fset(sprite.into(), flag.into(), !flag_value);
 
-        None
+        Some(())
     }
 }

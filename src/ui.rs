@@ -95,10 +95,13 @@ impl<Msg: Copy + Debug> Widget for DrawFn<Msg> {
         (self.f)(draw);
     }
 }
-pub trait ElmApp2 {
+pub trait ElmApp2
+where
+    Self: Sized,
+{
     type Msg: Copy + Debug;
 
-    fn init() -> Self;
+    fn init() -> (Self, Cmd<Self::Msg>);
 
     fn update(&mut self, msg: &Self::Msg) -> Cmd<Self::Msg>;
 

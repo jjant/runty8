@@ -14,7 +14,24 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
 pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
-    let mut app = T::init();
+    let (mut app, cmd) = T::init();
+
+    // TODO: Tidy up, duplicated code below
+    let mut cmds = vec![cmd];
+    while !cmds.is_empty() {
+        let mut new_messages = vec![];
+
+        for cmd in cmds.iter_mut() {
+            if let Some(msg) = cmd.run(&mut draw_context) {
+                new_messages.push(msg)
+            }
+        }
+
+        cmds = new_messages
+            .into_iter()
+            .map(|msg| app.update(&msg))
+            .collect();
+    }
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
