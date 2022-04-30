@@ -124,13 +124,11 @@ impl ElmApp2 for MyApp {
             Msg::FlagToggled(flag) => {
                 let sprite = self.selected_sprite as u8;
 
-                println!("TOggling flag {}", flag);
                 return Cmd::toggle_flag(sprite, *flag as u8)
                     .and_then(move |_| Cmd::get_flags(sprite))
                     .map(Msg::GotFlags);
             }
             Msg::GotFlags(flags) => {
-                println!("Got flags {}", flags);
                 self.current_flags = *flags;
             }
         }
