@@ -166,7 +166,7 @@ impl ElmApp2 for MyApp {
             ),
             sprite_preview(self.selected_sprite, 71, 78),
             bottom_bar(),
-            flags(self.selected_sprite, 78, 70, &mut self.flags),
+            flags(self.selected_sprite, 0b1000101, 78, 70, &mut self.flags),
             Cursor::new(&mut self.cursor),
         ])
     }
@@ -378,6 +378,7 @@ fn bottom_bar() -> Box<dyn Widget<Msg = Msg>> {
 // - Optimize? (no Tree::new with draw commands)
 fn flags<'a>(
     selected_sprite: usize,
+    flags: u8,
     x: i32,
     y: i32,
     flag_buttons: &'a mut [button::State],
@@ -391,8 +392,8 @@ fn flags<'a>(
             .enumerate()
             .map(|(index, button)| {
                 let x = x + (SPR_SIZE + 1) * index as i32;
-                // let color = if *flag { FLAG_COLORS[index] } else { 1 };
-                let color = 1;
+                let flag_on = flags & (1 << index) != 0;
+                let color = if flag_on { FLAG_COLORS[index] } else { 1 };
 
                 let b: Box<dyn Widget<Msg = Msg>> = Box::new(Tree::new(vec![
                     palt(Some(7)),
