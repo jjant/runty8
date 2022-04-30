@@ -399,6 +399,7 @@ pub struct State {
     pub mouse_y: i32,
     mouse_pressed: ButtonState,
     pub(crate) scene: Scene,
+    pub(crate) sprite_flags: [u8; SpriteSheet::SPRITE_COUNT],
     pub(crate) sprite_sheet: SpriteSheet,
 }
 
@@ -419,7 +420,27 @@ impl State {
             mouse_pressed: NotPressed,
             scene: Scene::initial(),
             sprite_sheet,
+            sprite_flags: [0; SpriteSheet::SPRITE_COUNT],
         }
+    }
+
+    pub fn fget(&self, sprite: usize) -> u8 {
+        // TODO: Check what pico8 does in these cases:
+        assert!(sprite < self.sprite_flags.len());
+        self.sprite_flags[sprite]
+    }
+
+    pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
+        // TODO: Check what pico8 does in these cases:
+        assert!(sprite < self.sprite_flags.len());
+        assert!(flag <= 7);
+
+        let value = value as u8;
+        let flags = &mut self.sprite_flags[sprite];
+
+        *flags = (*flags & !(1u8 << flag)) | (value << flag);
+
+        *flags
     }
 
     pub fn btn(&self, button: Button) -> bool {
