@@ -1,6 +1,6 @@
 #![feature(drain_filter)]
 use rand::Rng;
-use runty8::{app, App, Button, DrawContext};
+use runty8::{app, App, Button, DrawContext, State};
 
 struct Cloud {
     x: f32,
@@ -173,7 +173,7 @@ impl App for GameState {
             .iter()
             .copied()
             .filter_map(|mut object| {
-                object.move_(&self.objects, self.room);
+                object.move_(state, &self.objects, self.room);
                 let should_destroy = object.type_.update();
 
                 if should_destroy {
@@ -1434,7 +1434,7 @@ impl Object {
         }
     }
 
-    fn move_(&mut self, objects: &[Object], room: Vec2<i32>) {
+    fn move_(&mut self, state: &State, objects: &[Object], room: Vec2<i32>) {
         let ox = self.spd.x;
         let oy = self.spd.y;
 
@@ -1442,21 +1442,28 @@ impl Object {
         self.rem.x += ox;
         let amount_x = (self.rem.x as f32 + 0.5).floor();
         self.rem.x -= amount_x;
-        self.move_x(objects, room, amount_x as i32, 0);
+        self.move_x(state, objects, room, amount_x as i32, 0);
 
         // [y] get move amount
         self.rem.y += oy;
         let amount_y = (self.rem.y as f32 + 0.5).floor();
         self.rem.y -= amount_y;
-        self.move_y(objects, room, amount_y as i32);
+        self.move_y(state, objects, room, amount_y as i32);
     }
 
-    fn move_x(&mut self, objects: &[Object], room: Vec2<i32>, amount: i32, start: i32) {
+    fn move_x(
+        &mut self,
+        state: &State,
+        objects: &[Object],
+        room: Vec2<i32>,
+        amount: i32,
+        start: i32,
+    ) {
         if self.is_solid {
             let step = amount.signum();
 
             for _ in start..=amount.abs() {
-                if !self.is_solid(objects, room, step, 0) {
+                if !self.is_solid(state, objects, room, step, 0) {
                     self.x += step as f32;
                 } else {
                     self.spd.x = 0.;
@@ -1469,12 +1476,12 @@ impl Object {
         }
     }
 
-    fn move_y(&mut self, objects: &[Object], room: Vec2<i32>, amount: i32) {
+    fn move_y(&mut self, state: &State, objects: &[Object], room: Vec2<i32>, amount: i32) {
         if self.is_solid {
             let step = amount.signum();
 
             for _ in 0..=amount.abs() {
-                if !self.is_solid(objects, room, 0, step) {
+                if !self.is_solid(state, objects, room, 0, step) {
                     self.y += step as f32;
                 } else {
                     self.spd.y = 0.;
@@ -1487,7 +1494,14 @@ impl Object {
         }
     }
 
-    fn is_solid(&self, objects: &[Object], room: Vec2<i32>, ox: i32, oy: i32) -> bool {
+    fn is_solid(
+        &self,
+        state: &State,
+        objects: &[Object],
+        room: Vec2<i32>,
+        ox: i32,
+        oy: i32,
+    ) -> bool {
         if oy > 0
             && !self.check(objects, &ObjectType::Platform, ox, 0)
             && self.check(objects, &ObjectType::Platform, ox, oy)
@@ -1496,6 +1510,7 @@ impl Object {
         }
 
         solid_at(
+            state,
             room,
             (self.x + self.hitbox.x + ox as f32).floor() as i32,
             (self.y + self.hitbox.y + oy as f32).floor() as i32,
@@ -1536,11 +1551,11 @@ impl Object {
     }
 }
 
-fn tile_flag_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
+fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
     for i in 0.max(x / 8)..=(15.min((x + w - 1) / 8)) {
         for j in 0.max(y / 8)..=(15.min((y + h - 1) / 8)) {
             // TODO: Implement api: `fget`
-            if fget(tile_at(room, i, j), flag) {
+            if state.fget_n(tile_at(room, i, j) as usize, flag as u8) {
                 return true;
             }
         }
@@ -1552,8 +1567,8 @@ fn tile_at(room: Vec2<i32>, x: i32, y: i32) -> i32 {
     mget(room.x * 16 + x, room.y * 16 + y)
 }
 
-fn solid_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
-    tile_flag_at(room, x, y, w, h, 0)
+fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
+    tile_flag_at(state, room, x, y, w, h, 0)
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -1625,8 +1640,9 @@ impl ObjectType {
 }
 
 impl Object {
-    fn is_ice(&self, room: Vec2<i32>, ox: f32, oy: f32) -> bool {
+    fn is_ice(&self, state: &State, room: Vec2<i32>, ox: f32, oy: f32) -> bool {
         ice_at(
+            state,
             room,
             (self.x + self.hitbox.x + ox).floor() as i32,
             (self.y + self.hitbox.y + oy).floor() as i32,
@@ -1695,12 +1711,6 @@ fn next_room(game_state: &mut GameState) {
 fn mget(x: i32, y: i32) -> i32 {
     // todo!()
     0
-}
-
-fn fget(tile: i32, flag: i32) -> bool {
-    // TODO :Implement api
-    // todo!()
-    false
 }
 
 fn load_room(game_state: &mut GameState, x: i32, y: i32) {
@@ -1792,8 +1802,8 @@ fn appr(val: f32, target: f32, amount: f32) -> f32 {
 fn maybe() -> bool {
     rand::thread_rng().gen()
 }
-fn ice_at(room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
-    tile_flag_at(room, x, y, w, h, 4)
+fn ice_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
+    tile_flag_at(state, room, x, y, w, h, 4)
 }
 
 // function spikes_at(x,y,w,h,xspd,yspd)
@@ -1922,7 +1932,12 @@ impl Platform {
         this.last = this.x;
     }
 
-    fn update(self_: &mut Object, objects: &[Object], room: Vec2<i32>) -> Option<(usize, Object)> {
+    fn update(
+        self_: &mut Object,
+        state: &State,
+        objects: &[Object],
+        room: Vec2<i32>,
+    ) -> Option<(usize, Object)> {
         self_.spd.x = self_.dir as f32 * 0.65;
         if self_.x < -16. {
             self_.x = 128.;
@@ -1934,7 +1949,13 @@ impl Platform {
         let ret = if !self_.check(objects, &ObjectType::Player, 0, 0) {
             let (index, hit) = self_.collide(objects, &ObjectType::Player, 0, -1)?;
             let mut hit = *hit;
-            hit.move_x(objects, room, (self_.x - self_.last).floor() as i32, 1);
+            hit.move_x(
+                state,
+                objects,
+                room,
+                (self_.x - self_.last).floor() as i32,
+                1,
+            );
 
             Some((index, hit))
         } else {

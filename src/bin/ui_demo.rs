@@ -25,7 +25,7 @@ struct MyApp {
     minus_button: button::State,
     tab_buttons: [button::State; 4],
     color_selector_state: [button::State; 16],
-    flags: [Flag; 8],
+    flags: Vec<button::State>,
     sprite_buttons: Vec<button::State>,
 }
 
@@ -85,16 +85,7 @@ impl ElmApp2 for MyApp {
                 button::State::new(),
                 button::State::new(),
             ],
-            flags: [
-                Flag::new(),
-                Flag::new(),
-                Flag::new(),
-                Flag::new(),
-                Flag::new(),
-                Flag::new(),
-                Flag::new(),
-                Flag::new(),
-            ],
+            flags: vec![button::State::new(); 8],
             sprite_buttons: vec![button::State::new(); 64],
         }
     }
@@ -119,7 +110,9 @@ impl ElmApp2 for MyApp {
             Msg::SpriteButtonClicked(selected_sprite) => {
                 self.selected_sprite = *selected_sprite;
             }
-            Msg::FlagToggled(flag) => self.flags[*flag].flip(),
+            Msg::FlagToggled(flag) => {
+                // self.flags[*flag].flip()
+            }
         }
     }
 
@@ -173,7 +166,7 @@ impl ElmApp2 for MyApp {
             ),
             sprite_preview(self.selected_sprite, 71, 78),
             bottom_bar(),
-            flags(78, 70, &mut self.flags),
+            flags(self.selected_sprite, 78, 70, &mut self.flags),
             Cursor::new(&mut self.cursor),
         ])
     }
@@ -379,30 +372,16 @@ fn bottom_bar() -> Box<dyn Widget<Msg = Msg>> {
     DrawFn::new(|draw| draw.rectfill(0, 121, 127, 127, 8))
 }
 
-#[derive(Debug)]
-struct Flag {
-    flag: bool,
-    button: button::State,
-}
-
-impl Flag {
-    fn new() -> Self {
-        Self {
-            flag: false,
-            button: button::State::new(),
-        }
-    }
-
-    fn flip(&mut self) {
-        self.flag = !self.flag;
-    }
-}
-
 // TODO:
 // - Change color of highlight
 // - Don't show button underneath
 // - Optimize? (no Tree::new with draw commands)
-fn flags<'a>(x: i32, y: i32, flag_buttons: &'a mut [Flag]) -> Box<dyn Widget<Msg = Msg> + 'a> {
+fn flags<'a>(
+    selected_sprite: usize,
+    x: i32,
+    y: i32,
+    flag_buttons: &'a mut [button::State],
+) -> Box<dyn Widget<Msg = Msg> + 'a> {
     const SPR_SIZE: i32 = 5;
     const FLAG_COLORS: [u8; 8] = [8, 9, 10, 11, 12, 13, 14, 15];
 
@@ -410,9 +389,10 @@ fn flags<'a>(x: i32, y: i32, flag_buttons: &'a mut [Flag]) -> Box<dyn Widget<Msg
         flag_buttons
             .iter_mut()
             .enumerate()
-            .map(|(index, Flag { flag, button })| {
+            .map(|(index, button)| {
                 let x = x + (SPR_SIZE + 1) * index as i32;
-                let color = if *flag { FLAG_COLORS[index] } else { 1 };
+                // let color = if *flag { FLAG_COLORS[index] } else { 1 };
+                let color = 1;
 
                 let b: Box<dyn Widget<Msg = Msg>> = Box::new(Tree::new(vec![
                     palt(Some(7)),

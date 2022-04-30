@@ -188,6 +188,14 @@ pub struct DrawContext {
 const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 impl DrawContext {
+    pub fn fget(&self, sprite: usize) -> u8 {
+        self.state.fget(sprite)
+    }
+
+    pub fn fget_n(&self, sprite: usize, flag: u8) -> bool {
+        self.state.fget_n(sprite, flag)
+    }
+
     pub fn reset_pal(&mut self) {
         self.draw_palette = ORIGINAL_PALETTE;
         // pal() makes colors opaque
@@ -428,6 +436,19 @@ impl State {
         // TODO: Check what pico8 does in these cases:
         assert!(sprite < self.sprite_flags.len());
         self.sprite_flags[sprite]
+    }
+
+    // TODO: Check we do the same left-to-right (or viceversa)
+    // order as pico8
+    pub fn fget_n(&self, sprite: usize, flag: u8) -> bool {
+        // TODO: Check what pico8 does in these cases:
+        assert!(sprite < self.sprite_flags.len());
+        assert!(flag <= 7);
+
+        let res = (self.sprite_flags[sprite] & (1 << flag)) >> flag;
+        assert!(res == 0 || res == 1);
+
+        res != 0
     }
 
     pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
