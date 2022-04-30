@@ -1,3 +1,4 @@
+use runty8::runtime::cmd::Cmd;
 use runty8::ui::button::{self, Button};
 use runty8::ui::text::Text;
 use runty8::ui::{
@@ -19,6 +20,7 @@ struct MyApp {
     selected_color: u8,
     selected_sprite: usize,
     selected_sprite_page: usize,
+    current_flags: u8,
     sprite_button_state: button::State,
     map_button_state: button::State,
     plus_button: button::State,
@@ -44,6 +46,7 @@ enum Msg {
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
+    GotFlags(u8),
 }
 
 impl ElmApp2 for MyApp {
@@ -87,10 +90,11 @@ impl ElmApp2 for MyApp {
             ],
             flags: vec![button::State::new(); 8],
             sprite_buttons: vec![button::State::new(); 64],
+            current_flags: 0,
         }
     }
 
-    fn update(&mut self, msg: &Self::Msg) {
+    fn update(&mut self, msg: &Self::Msg) -> Cmd<Msg> {
         match msg {
             Msg::Delta(delta) => self.counter += delta,
             Msg::SpriteTabClicked => {
@@ -109,11 +113,21 @@ impl ElmApp2 for MyApp {
             }
             Msg::SpriteButtonClicked(selected_sprite) => {
                 self.selected_sprite = *selected_sprite;
+
+                return Cmd::get_flags(self.selected_sprite as u8).map(Msg::GotFlags);
             }
             Msg::FlagToggled(flag) => {
-                // self.flags[*flag].flip()
+                let sprite = self.selected_sprite as u8;
+                return Cmd::toggle_flag(sprite, *flag as u8)
+                    .and_then(move |_| Cmd::get_flags(sprite))
+                    .map(Msg::GotFlags);
+            }
+            Msg::GotFlags(flags) => {
+                self.current_flags = *flags;
             }
         }
+
+        Cmd::none()
     }
 
     fn view(&mut self) -> Tree<'_, Self::Msg> {
@@ -166,7 +180,7 @@ impl ElmApp2 for MyApp {
             ),
             sprite_preview(self.selected_sprite, 71, 78),
             bottom_bar(),
-            flags(self.selected_sprite, 0b1000101, 78, 70, &mut self.flags),
+            flags(self.current_flags, 78, 70, &mut self.flags),
             Cursor::new(&mut self.cursor),
         ])
     }
@@ -377,8 +391,7 @@ fn bottom_bar() -> Box<dyn Widget<Msg = Msg>> {
 // - Don't show button underneath
 // - Optimize? (no Tree::new with draw commands)
 fn flags<'a>(
-    selected_sprite: usize,
-    flags: u8,
+    selected_sprite_flags: u8,
     x: i32,
     y: i32,
     flag_buttons: &'a mut [button::State],
@@ -392,7 +405,7 @@ fn flags<'a>(
             .enumerate()
             .map(|(index, button)| {
                 let x = x + (SPR_SIZE + 1) * index as i32;
-                let flag_on = flags & (1 << index) != 0;
+                let flag_on = selected_sprite_flags & (1 << index) != 0;
                 let color = if flag_on { FLAG_COLORS[index] } else { 1 };
 
                 let b: Box<dyn Widget<Msg = Msg>> = Box::new(Tree::new(vec![

@@ -4,7 +4,7 @@ pub mod text;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{DrawContext, Event};
+use crate::{runtime::cmd::Cmd, DrawContext, Event};
 use enum_dispatch::enum_dispatch;
 
 pub struct DispatchEvent<'a, Msg> {
@@ -100,7 +100,7 @@ pub trait ElmApp2 {
 
     fn init() -> Self;
 
-    fn update(&mut self, msg: &Self::Msg);
+    fn update(&mut self, msg: &Self::Msg) -> Cmd<Self::Msg>;
 
     fn view(&mut self) -> Tree<'_, Self::Msg>;
 

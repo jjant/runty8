@@ -3,6 +3,7 @@ mod draw;
 mod editor;
 mod font;
 pub mod graphics;
+pub mod runtime;
 mod screen;
 pub mod ui;
 

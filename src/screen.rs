@@ -1,6 +1,7 @@
 use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
+use crate::runtime::cmd::PureCmd;
 use crate::ui::{DispatchEvent, ElmApp2, Widget};
 use crate::{DrawContext, Scene, State};
 use crate::{Event, MouseButton, MouseEvent};
@@ -82,8 +83,25 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
                     view.draw(&mut draw_context);
                     drop(view);
 
+                    let mut commands = vec![];
+
                     for msg in msg_queue.into_iter() {
-                        app.update(&msg);
+                        commands.push(app.update(&msg));
+                    }
+
+                    while !commands.is_empty() {
+                        let mut new_messages = vec![];
+
+                        for cmd in commands.iter_mut() {
+                            if let Some(msg) = cmd.run(&mut draw_context) {
+                                new_messages.push(msg)
+                            }
+                        }
+
+                        commands = new_messages
+                            .into_iter()
+                            .map(|msg| app.update(&msg))
+                            .collect();
                     }
                 }
             }
