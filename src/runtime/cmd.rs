@@ -43,11 +43,10 @@ impl<T: 'static> Cmd<T> {
         Cmd::new(self.cmd.map(f))
     }
 
-    pub fn and_then<B, F>(self, f: F) -> Cmd<B::Output>
+    pub fn and_then<R, F>(self, f: F) -> Cmd<R>
     where
-        B: PureCmd,
-        B::Output: 'static,
-        F: Fn(T) -> B + 'static,
+        R: 'static,
+        F: Fn(T) -> Cmd<R> + 'static,
     {
         Cmd::new(AndThen { cmd: self, then: f })
     }
