@@ -1,11 +1,8 @@
 pub mod button;
 pub mod cursor;
 pub mod text;
-
-use std::{fmt::Debug, marker::PhantomData};
-
 use crate::{runtime::cmd::Cmd, DrawContext, Event};
-use enum_dispatch::enum_dispatch;
+use std::{fmt::Debug, marker::PhantomData};
 
 pub struct DispatchEvent<'a, Msg> {
     queue: &'a mut Vec<Msg>,
@@ -21,7 +18,6 @@ impl<'a, Msg> DispatchEvent<'a, Msg> {
     }
 }
 
-#[enum_dispatch]
 pub trait Widget {
     type Msg: Copy + Debug;
 
@@ -39,9 +35,17 @@ pub struct Tree<'a, Msg> {
     elements: Vec<Box<dyn Widget<Msg = Msg> + 'a>>,
 }
 
+pub type Element<'a, Msg> = Box<dyn Widget<Msg = Msg> + 'a>;
+
+impl<'a, Msg: Copy + Debug + 'a> From<Vec<Element<'a, Msg>>> for Element<'a, Msg> {
+    fn from(val: Vec<Element<'a, Msg>>) -> Self {
+        Tree::<'a, Msg>::new(val)
+    }
+}
+
 impl<'a, Msg> Tree<'a, Msg> {
-    pub fn new(elements: Vec<Box<dyn Widget<Msg = Msg> + 'a>>) -> Self {
-        Self { elements }
+    pub fn new(elements: Vec<Box<dyn Widget<Msg = Msg> + 'a>>) -> Box<Self> {
+        Box::new(Self { elements })
     }
 }
 
@@ -105,7 +109,7 @@ where
 
     fn update(&mut self, msg: &Self::Msg) -> Cmd<Self::Msg>;
 
-    fn view(&mut self) -> Tree<'_, Self::Msg>;
+    fn view(&mut self) -> Element<'_, Self::Msg>;
 
     fn subscriptions(&self) -> Sub<Self::Msg>;
 }

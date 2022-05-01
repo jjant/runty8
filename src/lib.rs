@@ -100,14 +100,19 @@ pub(crate) struct Map {
 impl Map {
     const SCREEN_SIZE_PIXELS: usize = 128;
     const SCREENS: usize = 4;
-    pub const WIDTH_SPRITES: usize = Self::SCREENS * SPRITE_WIDTH;
-    pub const HEIGHT_SPRITES: usize = Self::SCREENS * SPRITE_HEIGHT;
+    const SPRITES_PER_SCREEN_ROW: usize = Self::SCREEN_SIZE_PIXELS / SPRITE_WIDTH;
+    pub const WIDTH_SPRITES: usize = Self::SCREENS * Self::SPRITES_PER_SCREEN_ROW;
+    pub const HEIGHT_SPRITES: usize = Self::SCREENS * Self::SPRITES_PER_SCREEN_ROW;
     const MAP_SIZE: usize = Self::WIDTH_SPRITES * Self::HEIGHT_SPRITES;
 
     fn new() -> Self {
-        Map {
-            map: vec![0; Self::MAP_SIZE].into_boxed_slice(),
-        }
+        let mut map = vec![0; Self::MAP_SIZE].into_boxed_slice();
+
+        map[0] = 1;
+        map[1] = 1;
+        map[2] = 1;
+
+        Map { map }
     }
 
     fn mget(&self, cel_x: usize, cel_y: usize) -> u8 {

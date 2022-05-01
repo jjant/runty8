@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use runty8::runtime::cmd::Cmd;
 use runty8::ui::button::{self, Button};
 use runty8::ui::text::Text;
@@ -6,7 +7,7 @@ use runty8::ui::{
     cursor::{self, Cursor},
     ElmApp2,
 };
-use runty8::ui::{DrawFn, Sub, Tree, Widget};
+use runty8::ui::{DrawFn, Element, Sub, Tree, Widget};
 
 fn main() {
     ui::run_app2::<MyApp>();
@@ -136,37 +137,35 @@ impl ElmApp2 for MyApp {
         Cmd::none()
     }
 
-    fn view(&mut self) -> Tree<'_, Self::Msg> {
-        use Msg::*;
-        let text = format!("MY APP {:?}", self.counter);
-
+    fn view(&mut self) -> Element<'_, Self::Msg> {
         let top_bar = DrawFn::new(|draw| {
             draw.rectfill(0, 0, 127, 7, 8);
         });
 
         const BACKGROUND: u8 = 5;
-        Tree::new(vec![
+
+        let view: Vec<Element<'_, Msg>> = vec![
             DrawFn::new(|draw| draw.rectfill(0, 0, 127, 127, BACKGROUND)),
             top_bar,
-            Button::new(
-                56,
-                32,
-                12,
-                12,
-                Some(Delta(1)),
-                &mut self.plus_button,
-                Text::new("+1".to_string(), 0, 0, 7),
-            ),
-            Button::new(
-                56,
-                64,
-                12,
-                12,
-                Some(Delta(-1)),
-                &mut self.minus_button,
-                Text::new("-1".to_string(), 0, 0, 7),
-            ),
-            Text::new(text, 0, 60, 7),
+            match self.tab {
+                Tab::SpriteEditor => self.sprite_editor_view(),
+                Tab::MapEditor => self.map_view(),
+            },
+        ];
+
+        view.into()
+    }
+
+    fn subscriptions(&self) -> Sub<Self::Msg> {
+        Sub::NoSub
+    }
+}
+
+impl MyApp {
+    fn sprite_editor_view(&mut self) -> Element<'_, Msg> {
+        use Msg::*;
+
+        let v: Vec<Element<'_, Msg>> = vec![
             sprite_editor_button(&mut self.sprite_button_state, self.tab),
             map_editor_button(&mut self.map_button_state, self.tab),
             color_selector(
@@ -188,18 +187,39 @@ impl ElmApp2 for MyApp {
             bottom_bar(),
             flags(self.current_flags, 78, 70, &mut self.flags),
             Cursor::new(&mut self.cursor),
-        ])
+        ];
+
+        v.into()
     }
 
-    fn subscriptions(&self) -> Sub<Self::Msg> {
-        Sub::NoSub
+    fn map_view(&mut self) -> Element<'static, Msg> {
+        let map = [0_u8];
+
+        let v: Vec<Element<'_, Msg>> = map
+            .iter()
+            .copied()
+            .chunks(16 * 4)
+            .into_iter()
+            .enumerate()
+            .flat_map(|(row_index, row)| {
+                row.into_iter().enumerate().map(move |(col_index, sprite)| {
+                    let f: Element<'static, Msg> = DrawFn::new(move |draw| {
+                        let x = col_index * 8;
+                        let y = row_index * 8;
+
+                        draw.spr(sprite.into(), x as i32, y as i32);
+                    });
+
+                    f
+                })
+            })
+            .collect();
+
+        v.into()
     }
 }
 
-fn sprite_editor_button<'a>(
-    state: &'a mut button::State,
-    tab: Tab,
-) -> Box<dyn Widget<Msg = Msg> + 'a> {
+fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::SpriteEditor;
 
     Button::new(
@@ -219,10 +239,7 @@ fn sprite_editor_button<'a>(
     )
 }
 
-fn map_editor_button<'a>(
-    state: &'a mut button::State,
-    tab: Tab,
-) -> Box<dyn Widget<Msg = Msg> + 'a> {
+fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::MapEditor;
 
     Button::new(
@@ -249,7 +266,7 @@ fn color_selector<'a>(
     selected_color: u8,
     states: &'a mut [button::State],
     on_press: impl (Fn(usize) -> Msg) + Copy + 'static,
-) -> Box<dyn Widget<Msg = Msg> + 'a> {
+) -> Element<'_, Msg> {
     let mut v = Vec::with_capacity(16);
 
     let coordinates = move |index| {
@@ -264,7 +281,7 @@ fn color_selector<'a>(
     for (index, state) in states.iter_mut().enumerate() {
         let (x, y) = coordinates(index);
 
-        let button: Box<dyn Widget<Msg = Msg> + 'a> = Button::new(
+        let button: Element<'_, Msg> = Button::new(
             x,
             y,
             tile_size,
@@ -303,7 +320,7 @@ fn color_selector<'a>(
         draw.palt(Some(0));
     }));
 
-    Box::new(Tree::new(v))
+    Tree::new(v)
 }
 
 /// The 4 rows of sprites at the bottom of the sprite editor
@@ -313,7 +330,7 @@ fn sprite_view<'a>(
     sprite_buttons: &'a mut [button::State],
     tab_buttons: &'a mut [button::State],
     y: i32,
-) -> Box<dyn Widget<Msg = Msg> + 'a> {
+) -> Element<'a, Msg> {
     let mut sprites: Vec<Box<dyn Widget<Msg = Msg>>> = vec![DrawFn::new(move |draw| {
         draw.palt(None);
         draw.rectfill(0, y, 127, y + 32 + 1, 0);
@@ -373,19 +390,19 @@ fn sprite_view<'a>(
             }),
         ));
     }
-    Box::new(Tree::new(sprites))
+    Tree::new(sprites)
 }
 
 fn sprite_preview(sprite: usize, x: i32, y: i32) -> Box<dyn Widget<Msg = Msg>> {
     let spr_str = format!("{:0>3}", sprite);
 
-    Box::new(Tree::new(vec![
+    Tree::new(vec![
         spr(sprite, x, y),
         DrawFn::new(move |draw| {
             draw.rectfill(x + 9, y + 1, x + 9 + 13 - 1, y + 7, 6);
             draw.print(&spr_str, x + 10, y + 2, 13);
         }),
-    ]))
+    ])
 }
 
 fn bottom_bar() -> Box<dyn Widget<Msg = Msg>> {
@@ -396,39 +413,46 @@ fn bottom_bar() -> Box<dyn Widget<Msg = Msg>> {
 // - Change color of highlight
 // - Don't show button underneath
 // - Optimize? (no Tree::new with draw commands)
-fn flags<'a>(
+fn flags(
     selected_sprite_flags: u8,
     x: i32,
     y: i32,
-    flag_buttons: &'a mut [button::State],
-) -> Box<dyn Widget<Msg = Msg> + 'a> {
+    flag_buttons: &mut [button::State],
+) -> Element<'_, Msg> {
     const SPR_SIZE: i32 = 5;
     const FLAG_COLORS: [u8; 8] = [8, 9, 10, 11, 12, 13, 14, 15];
 
-    Box::new(Tree::new(
-        flag_buttons
-            .iter_mut()
-            .enumerate()
-            .map(|(index, button)| {
-                let x = x + (SPR_SIZE + 1) * index as i32;
-                let flag_on = selected_sprite_flags & (1 << index) != 0;
-                let color = if flag_on { FLAG_COLORS[index] } else { 1 };
+    flag_buttons
+        .iter_mut()
+        .enumerate()
+        .map(|(index, button)| {
+            let x = x + (SPR_SIZE + 1) * index as i32;
+            let flag_on = selected_sprite_flags & (1 << index) != 0;
+            let color = if flag_on { FLAG_COLORS[index] } else { 1 };
 
-                let b: Box<dyn Widget<Msg = Msg>> = Box::new(Tree::new(vec![
-                    palt(Some(7)),
-                    pal(1, color),
-                    spr(58, 0, 0),
-                    pal(1, 1),
-                    palt(Some(0)),
-                ]));
+            let button_content: Element<'_, Msg> = vec![
+                palt(Some(7)),
+                pal(1, color),
+                spr(58, 0, 0),
+                pal(1, 1),
+                palt(Some(0)),
+            ]
+            .into();
 
-                let button: Box<dyn Widget<Msg = Msg>> =
-                    Button::new(x, y, 5, 5, Some(Msg::FlagToggled(index)), button, b);
+            let button: Box<dyn Widget<Msg = Msg>> = Button::new(
+                x,
+                y,
+                5,
+                5,
+                Some(Msg::FlagToggled(index)),
+                button,
+                button_content,
+            );
 
-                button
-            })
-            .collect(),
-    ))
+            button
+        })
+        .collect::<Vec<Element<'_, Msg>>>()
+        .into()
 }
 
 fn palt(transparent_color: Option<u8>) -> Box<dyn Widget<Msg = Msg> + 'static> {
