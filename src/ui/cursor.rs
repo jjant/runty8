@@ -1,5 +1,5 @@
 use super::{DispatchEvent, Widget};
-use crate::{editor, DrawContext, Sprite};
+use crate::{editor, runtime::draw_context::DrawContext, Sprite};
 use std::{fmt::Debug, marker::PhantomData};
 
 pub struct Cursor<'a, Msg> {

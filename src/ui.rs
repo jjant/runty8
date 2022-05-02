@@ -1,7 +1,10 @@
 pub mod button;
 pub mod cursor;
 pub mod text;
-use crate::{runtime::cmd::Cmd, DrawContext, Event};
+use crate::{
+    runtime::{cmd::Cmd, draw_context::DrawContext},
+    Event,
+};
 use std::{fmt::Debug, marker::PhantomData};
 
 pub struct DispatchEvent<'a, Msg> {

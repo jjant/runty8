@@ -1,9 +1,10 @@
 use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
+use crate::runtime::draw_context::DrawContext;
 use crate::runtime::state::Scene;
 use crate::screen::Keys;
-use crate::{App, DrawContext, State};
+use crate::{App, State};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
 use glium::glutin::event::{ElementState, Event, KeyboardInput, VirtualKeyCode};
 use glium::glutin::event_loop::ControlFlow;
@@ -14,7 +15,7 @@ use glium::{glutin, Surface};
 
 pub fn run_app<T: App + 'static>() {
     let mut app = T::init();
-    let state = crate::State::new();
+    let state = State::new();
     let mut draw_context = DrawContext::new(state);
 
     let event_loop = glutin::event_loop::EventLoop::new();

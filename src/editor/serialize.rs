@@ -1,8 +1,8 @@
 use itertools::Itertools;
 
 use crate::editor::SPRITES_PER_ROW;
+use crate::runtime::draw_context::COLORS;
 use crate::runtime::sprite_sheet::SpriteSheet;
-use crate::COLORS;
 use std::io::Write;
 use std::{fs::File, path::Path};
 

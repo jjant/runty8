@@ -2,9 +2,10 @@ use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::cmd::PureCmd;
+use crate::runtime::draw_context::DrawContext;
 use crate::runtime::state::Scene;
 use crate::ui::{DispatchEvent, ElmApp2};
-use crate::{DrawContext, State};
+use crate::State;
 
 use crate::{Event, MouseButton, MouseEvent};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};

@@ -1,6 +1,5 @@
-use crate as lib;
+use crate::{self as lib, runtime::draw_context::DrawContext};
 pub mod pico8;
-use lib::DrawContext;
 use lib::State;
 
 pub trait App {

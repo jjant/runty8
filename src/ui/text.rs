@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::Color;
+use crate::{Color, runtime::draw_context::DrawContext};
 
 use super::{DispatchEvent, Widget};
 
@@ -35,7 +35,7 @@ impl<'a, Msg: Copy + Debug> Widget for Text<Msg> {
     ) {
     }
 
-    fn draw(&self, draw: &mut crate::DrawContext) {
+    fn draw(&self, draw: &mut DrawContext) {
         draw.print(&self.text, self.x, self.y, self.color);
     }
 }
