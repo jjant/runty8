@@ -1,10 +1,12 @@
-use super::sprite_sheet::{self, SpriteSheet};
+use super::{
+    map::Map,
+    sprite_sheet::{self, SpriteSheet},
+};
 use crate::screen::Keys;
-use crate::Map;
 use ButtonState::*;
 
 #[derive(Debug)]
-pub struct State {
+pub struct State<'map> {
     left: ButtonState,
     right: ButtonState,
     up: ButtonState,
@@ -18,13 +20,13 @@ pub struct State {
     pub(crate) scene: Scene,
     pub(crate) sprite_flags: [u8; SpriteSheet::SPRITE_COUNT],
     pub(crate) sprite_sheet: SpriteSheet,
-    pub(crate) map: Map,
+    pub(crate) map: &'map Map,
 }
 
-impl State {
-    pub(crate) fn new() -> Self {
+impl<'map> State<'map> {
+    // TODO: Make pub(crate)
+    pub fn new(map: &'map Map) -> Self {
         let sprite_sheet = sprite_sheet::deserialize();
-        let map = Map::new();
 
         Self {
             left: NotPressed,

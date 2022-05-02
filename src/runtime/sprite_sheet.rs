@@ -70,6 +70,7 @@ pub(crate) fn deserialize() -> SpriteSheet {
     SpriteSheet::deserialize(&file)
 }
 
+#[repr(transparent)]
 pub struct Sprite {
     pub sprite: [Color],
 }

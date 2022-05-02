@@ -8,29 +8,39 @@ const NUM_COMPONENTS: usize = 3;
 type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
 
-pub struct DrawContext {
+// TODO: Make pub(crate)
+pub struct DrawData {
     pub(crate) buffer: Buffer,
-    pub(crate) state: State,
     transparent_color: Option<Color>,
     draw_palette: [Color; 16],
     camera: (i32, i32),
 }
 
-const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-
-impl DrawContext {
-    pub(crate) fn new(state: State) -> Self {
-        Self {
+impl DrawData {
+    // TODO: Make pub(crate)
+    pub fn new() -> Self {
+        DrawData {
             buffer: BLACK_BUFFER,
-            state,
             transparent_color: Some(0),
             draw_palette: ORIGINAL_PALETTE,
             camera: (0, 0),
         }
     }
+}
+pub struct DrawContext<'a, 'map> {
+    data: &'a mut DrawData,
+    pub(crate) state: &'a mut State<'map>,
+}
+
+const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+
+impl<'a, 'map> DrawContext<'a, 'map> {
+    pub(crate) fn new(state: &'a mut State<'map>, data: &'a mut DrawData) -> Self {
+        Self { state, data }
+    }
 
     pub(crate) fn append_camera(&mut self, x: i32, y: i32) {
-        self.camera(self.camera.0 + x, self.camera.1 + y);
+        self.camera(self.data.camera.0 + x, self.data.camera.1 + y);
     }
 
     pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
@@ -97,12 +107,12 @@ impl DrawContext {
     }
 
     fn apply_camera(&self, x: i32, y: i32) -> (i32, i32) {
-        (x - self.camera.0, y - self.camera.1)
+        (x - self.data.camera.0, y - self.data.camera.1)
     }
 }
 
 // Pico8 api
-impl DrawContext {
+impl<'a, 'map> DrawContext<'a, 'map> {
     pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
         let sprite = self.state.sprite_sheet.get_sprite(sprite);
         let buffer = &sprite.sprite;
@@ -112,9 +122,9 @@ impl DrawContext {
                 let (x, y) = self.apply_camera(x + i, y + j);
                 if let Some(index) = self.index(x, y) {
                     Self::set_pixel(
-                        &mut self.buffer,
-                        &self.draw_palette,
-                        self.transparent_color,
+                        &mut self.data.buffer,
+                        &self.data.draw_palette,
+                        self.data.transparent_color,
                         index,
                         buffer[(i + j * 8) as usize],
                     )
@@ -140,23 +150,23 @@ impl DrawContext {
     }
 
     pub fn reset_pal(&mut self) {
-        self.draw_palette = ORIGINAL_PALETTE;
+        self.data.draw_palette = ORIGINAL_PALETTE;
         // pal() makes colors opaque
         self.palt(None);
     }
 
     pub fn pal(&mut self, c0: Color, c1: Color) {
         // https://pico-8.fandom.com/wiki/Pal
-        self.draw_palette[c0 as usize] = c1;
+        self.data.draw_palette[c0 as usize] = c1;
     }
 
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
         let (x, y) = self.apply_camera(x, y);
         if let Some(index) = self.index(x, y) {
             Self::set_pixel(
-                &mut self.buffer,
-                &self.draw_palette,
-                self.transparent_color,
+                &mut self.data.buffer,
+                &self.data.draw_palette,
+                self.data.transparent_color,
                 index,
                 color,
             );
@@ -164,15 +174,15 @@ impl DrawContext {
     }
 
     pub fn palt(&mut self, transparent_color: Option<Color>) {
-        self.transparent_color = transparent_color
+        self.data.transparent_color = transparent_color
     }
 
     pub fn camera(&mut self, x: i32, y: i32) {
-        self.camera = (x, y);
+        self.data.camera = (x, y);
     }
 
     pub fn cls(&mut self) {
-        self.buffer = BLACK_BUFFER;
+        self.data.buffer = BLACK_BUFFER;
     }
 
     pub fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {

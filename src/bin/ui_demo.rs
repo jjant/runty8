@@ -1,19 +1,25 @@
 use itertools::Itertools;
-use runty8::runtime::cmd::Cmd;
+use runty8::runtime::draw_context::DrawData;
+use runty8::runtime::state::State;
+use runty8::runtime::{cmd::Cmd, map::Map};
 use runty8::ui::button::{self, Button};
 use runty8::ui::{
-    self,
     cursor::{self, Cursor},
     ElmApp2,
 };
 use runty8::ui::{DrawFn, Element, Sub, Tree, Widget};
 
 fn main() {
-    ui::run_app2::<MyApp>();
+    let map: &'static Map = Box::leak(Box::new(Map::new()));
+    let state = State::new(map);
+    let draw_data = DrawData::new();
+
+    runty8::screen::run_app::<MyApp>(map, state, draw_data);
 }
 
 #[derive(Debug)]
-struct MyApp {
+struct MyApp<'map> {
+    map: &'map Map,
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
@@ -45,14 +51,16 @@ enum Msg {
     GotFlags(u8),
 }
 
-impl ElmApp2 for MyApp {
+impl<'a> ElmApp2 for MyApp<'a> {
     type Msg = Msg;
+    type Flags = &'a Map;
 
-    fn init() -> (Self, Cmd<Msg>) {
+    fn init(map: Self::Flags) -> (Self, Cmd<Msg>) {
         let selected_sprite = 0;
 
         (
             Self {
+                map,
                 cursor: cursor::State::new(),
                 sprite_button_state: button::State::new(),
                 map_button_state: button::State::new(),
@@ -139,9 +147,23 @@ impl ElmApp2 for MyApp {
             DrawFn::new(|draw| draw.rectfill(0, 0, 127, 127, BACKGROUND)),
             top_bar,
             match self.tab {
-                Tab::SpriteEditor => self.sprite_editor_view(),
-                Tab::MapEditor => self.map_view(),
+                Tab::SpriteEditor => sprite_editor_view(
+                    self.tab,
+                    self.selected_sprite,
+                    self.selected_sprite_page,
+                    self.selected_color,
+                    &mut self.sprite_button_state,
+                    &mut self.map_button_state,
+                    &mut self.color_selector_state,
+                    &mut self.tab_buttons,
+                    &mut self.sprite_buttons,
+                    self.current_flags,
+                    &mut self.flags,
+                ),
+                Tab::MapEditor => self.map_view(0, 32),
             },
+            bottom_bar(),
+            Cursor::new(&mut self.cursor),
         ];
 
         view.into()
@@ -152,49 +174,60 @@ impl ElmApp2 for MyApp {
     }
 }
 
-impl MyApp {
-    fn sprite_editor_view(&mut self) -> Element<'_, Msg> {
-        let v: Vec<Element<'_, Msg>> = vec![
-            sprite_editor_button(&mut self.sprite_button_state, self.tab),
-            map_editor_button(&mut self.map_button_state, self.tab),
-            color_selector(
-                79,
-                10,
-                10,
-                self.selected_color,
-                &mut self.color_selector_state,
-                Msg::ColorSelected,
-            ),
-            sprite_view(
-                self.selected_sprite,
-                self.selected_sprite_page,
-                &mut self.sprite_buttons,
-                &mut self.tab_buttons,
-                87,
-            ),
-            sprite_preview(self.selected_sprite, 71, 78),
-            bottom_bar(),
-            flags(self.current_flags, 78, 70, &mut self.flags),
-            Cursor::new(&mut self.cursor),
-        ];
+#[allow(clippy::too_many_arguments)]
+fn sprite_editor_view<'a>(
+    tab: Tab,
+    selected_sprite: usize,
+    selected_sprite_page: usize,
+    selected_color: u8,
+    sprite_button_state: &'a mut button::State,
+    map_button_state: &'a mut button::State,
+    color_selector_state: &'a mut [button::State],
+    tab_buttons: &'a mut [button::State],
+    sprite_buttons: &'a mut [button::State],
+    current_flags: u8,
+    flag_buttons: &'a mut [button::State],
+) -> Element<'a, Msg> {
+    let v: Vec<Element<'_, Msg>> = vec![
+        sprite_editor_button(sprite_button_state, tab),
+        map_editor_button(map_button_state, tab),
+        color_selector(
+            79,
+            10,
+            10,
+            selected_color,
+            color_selector_state,
+            Msg::ColorSelected,
+        ),
+        sprite_view(
+            selected_sprite,
+            selected_sprite_page,
+            sprite_buttons,
+            tab_buttons,
+            87,
+        ),
+        sprite_preview(selected_sprite, 71, 78),
+        flags(current_flags, 78, 70, flag_buttons),
+    ];
 
-        v.into()
-    }
+    v.into()
+}
+impl<'map> MyApp<'map> {
+    fn map_view(&mut self, x: i32, y: i32) -> Element<'static, Msg> {
+        dbg!(self.map.iter().count());
 
-    fn map_view(&mut self) -> Element<'static, Msg> {
-        let map = [0_u8];
-
-        let v: Vec<Element<'_, Msg>> = map
+        let v: Vec<Element<'_, Msg>> = self
+            .map
             .iter()
-            .copied()
-            .chunks(16 * 4)
+            .chunks(16)
             .into_iter()
+            .take(3)
             .enumerate()
             .flat_map(|(row_index, row)| {
                 row.into_iter().enumerate().map(move |(col_index, sprite)| {
                     let f: Element<'static, Msg> = DrawFn::new(move |draw| {
-                        let x = col_index * 8;
-                        let y = row_index * 8;
+                        let x = x as usize + col_index * 8;
+                        let y = y as usize + row_index * 8;
 
                         draw.spr(sprite.into(), x as i32, y as i32);
                     });

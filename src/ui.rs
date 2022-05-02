@@ -2,7 +2,10 @@ pub mod button;
 pub mod cursor;
 pub mod text;
 use crate::{
-    runtime::{cmd::Cmd, draw_context::DrawContext},
+    runtime::{
+        cmd::Cmd,
+        draw_context::{DrawContext, DrawData},
+    },
     Event,
 };
 use std::{fmt::Debug, marker::PhantomData};
@@ -107,8 +110,9 @@ where
     Self: Sized,
 {
     type Msg: Copy + Debug;
+    type Flags;
 
-    fn init() -> (Self, Cmd<Self::Msg>);
+    fn init(flags: Self::Flags) -> (Self, Cmd<Self::Msg>);
 
     fn update(&mut self, msg: &Self::Msg) -> Cmd<Self::Msg>;
 
@@ -120,11 +124,4 @@ where
 pub enum Sub<Msg> {
     OnAnimationFrame(fn(f32) -> Msg),
     NoSub,
-}
-
-pub fn run_app2<T: ElmApp2 + 'static>() {
-    let state = crate::State::new();
-    let draw_context = DrawContext::new(state);
-
-    crate::screen::do_something::<T>(draw_context);
 }

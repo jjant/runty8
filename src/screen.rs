@@ -2,7 +2,7 @@ use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::cmd::PureCmd;
-use crate::runtime::draw_context::DrawContext;
+use crate::runtime::draw_context::{DrawContext, DrawData};
 use crate::runtime::state::Scene;
 use crate::ui::{DispatchEvent, ElmApp2};
 use crate::State;
@@ -16,14 +16,19 @@ use glium::uniform;
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
-pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
-    let (mut app, cmd) = T::init();
+pub fn run_app<T: ElmApp2 + 'static>(
+    flags: T::Flags,
+    mut state: State<'static>,
+    mut data: DrawData,
+) {
+    let (mut app, cmd) = T::init(flags);
 
     // TODO: Tidy up, duplicated code below
     let mut cmds = vec![cmd];
     while !cmds.is_empty() {
         let mut new_messages = vec![];
 
+        let mut draw_context = DrawContext::new(&mut state, &mut data);
         for cmd in cmds.iter_mut() {
             if let Some(msg) = cmd.run(&mut draw_context) {
                 new_messages.push(msg)
@@ -68,7 +73,7 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
             scale_factor,
             logical_size,
             control_flow,
-            &mut draw_context.state,
+            &mut state,
             &mut keys,
         );
 
@@ -79,6 +84,7 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
         let mut target = display.draw();
         target.clear_color(1.0, 0.0, 0.0, 1.0);
 
+        let mut draw_context = DrawContext::new(&mut state, &mut data);
         let mut msg_queue = vec![];
         {
             draw_context.state.update_keys(&keys);
@@ -86,7 +92,7 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
             match draw_context.state.scene {
                 Scene::Editor => {
                     editor.draw(&mut draw_context);
-                    editor.update(&mut draw_context.state);
+                    editor.update(draw_context.state);
                 }
                 Scene::App => {
                     let mut view = app.view();
@@ -132,7 +138,7 @@ pub fn do_something<T: ElmApp2 + 'static>(mut draw_context: DrawContext) {
             keys.reset();
         }
 
-        let image = RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
+        let image = RawImage2d::from_raw_rgb(data.buffer.to_vec(), (128, 128));
         let texture = SrgbTexture2d::new(&display, image).unwrap();
         let uniforms = uniform! {
             tex: Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
