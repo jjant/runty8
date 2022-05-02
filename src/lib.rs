@@ -253,13 +253,15 @@ impl DrawContext {
             }
         }
 
-        let r = ((c >> 16) & 0x0000FF) as u8;
-        let g = ((c >> 8) & 0x0000FF) as u8;
-        let b = ((c >> 0) & 0x0000FF) as u8;
-
-        buffer[NUM_COMPONENTS * index + 0] = r;
-        buffer[NUM_COMPONENTS * index + 1] = g;
-        buffer[NUM_COMPONENTS * index + 2] = b;
+        #[allow(clippy::identity_op)]
+        {
+            let r = ((c >> 16) & 0x0000FF) as u8;
+            let g = ((c >> 8) & 0x0000FF) as u8;
+            let b = ((c >> 0) & 0x0000FF) as u8;
+            buffer[NUM_COMPONENTS * index + 0] = r;
+            buffer[NUM_COMPONENTS * index + 1] = g;
+            buffer[NUM_COMPONENTS * index + 2] = b;
+        }
     }
 
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
