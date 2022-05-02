@@ -6,11 +6,11 @@ pub mod graphics;
 pub mod runtime;
 mod screen;
 pub mod ui;
-
-use std::{fs::File, io::Read};
-
 pub use app::App;
-use itertools::Itertools;
+use runtime::{
+    sprite_sheet::{Color, Sprite},
+    state::State,
+};
 
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
@@ -40,57 +40,6 @@ pub enum Event {
 }
 
 #[repr(transparent)]
-pub struct Sprite {
-    pub sprite: [Color],
-}
-
-impl Sprite {
-    fn new(sprite: &[u8]) -> &Self {
-        unsafe { &*(sprite as *const [u8] as *const Self) }
-    }
-
-    fn new_mut(sprite: &mut [u8]) -> &mut Self {
-        unsafe { &mut *(sprite as *mut [u8] as *mut Self) }
-    }
-
-    pub fn pset(&mut self, x: isize, y: isize, color: Color) {
-        self.sprite[Self::index(x, y).unwrap()] = color;
-    }
-
-    pub fn pget(&self, x: isize, y: isize) -> Color {
-        self.sprite[Self::index(x, y).unwrap()]
-    }
-
-    fn index(x: isize, y: isize) -> Option<usize> {
-        (x + y * (SPRITE_WIDTH as isize)).try_into().ok()
-    }
-
-    pub(crate) fn shift_up(&mut self) {
-        self.sprite.rotate_left(8);
-    }
-
-    pub(crate) fn shift_down(&mut self) {
-        self.sprite.rotate_right(8);
-    }
-
-    pub(crate) fn shift_left(&mut self) {
-        self.sprite
-            .chunks_mut(SPRITE_WIDTH)
-            .for_each(|row| row.rotate_left(1));
-    }
-
-    pub(crate) fn shift_right(&mut self) {
-        self.sprite
-            .chunks_mut(SPRITE_WIDTH)
-            .for_each(|row| row.rotate_right(1));
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct SpriteSheet {
-    sprite_sheet: Vec<Color>,
-}
-
 #[derive(Debug)]
 pub(crate) struct Map {
     // Don't really want the size to change
@@ -100,7 +49,7 @@ pub(crate) struct Map {
 impl Map {
     const SCREEN_SIZE_PIXELS: usize = 128;
     const SCREENS: usize = 4;
-    const SPRITES_PER_SCREEN_ROW: usize = Self::SCREEN_SIZE_PIXELS / SPRITE_WIDTH;
+    const SPRITES_PER_SCREEN_ROW: usize = Self::SCREEN_SIZE_PIXELS / Sprite::WIDTH;
     pub const WIDTH_SPRITES: usize = Self::SCREENS * Self::SPRITES_PER_SCREEN_ROW;
     pub const HEIGHT_SPRITES: usize = Self::SCREENS * Self::SPRITES_PER_SCREEN_ROW;
     const MAP_SIZE: usize = Self::WIDTH_SPRITES * Self::HEIGHT_SPRITES;
@@ -132,58 +81,6 @@ impl Map {
     }
 }
 
-pub const SPRITE_WIDTH: usize = 8;
-pub const SPRITE_HEIGHT: usize = 8;
-
-impl SpriteSheet {
-    pub const SPRITE_COUNT: usize = 256;
-
-    #[allow(dead_code)]
-    pub fn new() -> Self {
-        Self {
-            sprite_sheet: vec![0; Self::SPRITE_COUNT * SPRITE_WIDTH * SPRITE_HEIGHT],
-        }
-    }
-
-    pub fn get_sprite(&self, sprite: usize) -> &Sprite {
-        let index = self.sprite_index(sprite);
-
-        Sprite::new(&self.sprite_sheet[index..(index + SPRITE_WIDTH * SPRITE_HEIGHT)])
-    }
-
-    pub(crate) fn get_sprite_mut(&mut self, sprite: usize) -> &mut Sprite {
-        let index = self.sprite_index(sprite);
-
-        Sprite::new_mut(&mut self.sprite_sheet[index..(index + SPRITE_WIDTH * SPRITE_HEIGHT)])
-    }
-
-    fn sprite_index(&self, sprite: usize) -> usize {
-        // How many pixels we need to skip to get to the start of this sprite.
-        sprite * SPRITE_WIDTH * SPRITE_HEIGHT
-    }
-
-    pub fn serialize(&self) -> String {
-        let lines = self.sprite_sheet.chunks(128).map(|chunk| {
-            Itertools::intersperse(chunk.iter().map(|n| format!("{:X}", n)), "".to_owned())
-                .collect()
-        });
-
-        Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
-    }
-
-    pub fn deserialize(str: &str) -> Self {
-        let sprite_sheet = str
-            .as_bytes()
-            .iter()
-            .copied()
-            .filter_map(|c| (c as char).to_digit(16))
-            .map(|c| c as u8)
-            .collect();
-
-        Self { sprite_sheet }
-    }
-}
-
 // Add _FF at the end for alpha
 const COLORS: [u32; 16] = [
     0x000000, // _FF,
@@ -203,21 +100,6 @@ const COLORS: [u32; 16] = [
     0xFF77A8, // _FF,
     0xFFCCAA, // _FF,
 ];
-
-pub type Color = u8; // Actually a u4
-
-// TODO: Make a more reliable version of this.
-// TODO: Improve capacity calculation? It's kinda flakey
-fn deserialize() -> SpriteSheet {
-    let capacity = 128 * 128 + 128;
-    let mut file = String::with_capacity(capacity);
-    File::open("sprite_sheet.txt")
-        .expect("Couldn't OPEN file")
-        .read_to_string(&mut file)
-        .expect("Couldn't READ file");
-
-    SpriteSheet::deserialize(&file)
-}
 
 pub struct DrawContext {
     buffer: Buffer,
@@ -415,223 +297,4 @@ impl DrawContext {
 
 fn get_color(index: Color) -> u32 {
     COLORS[index as usize]
-}
-
-#[derive(Debug)]
-pub enum Scene {
-    Editor,
-    App,
-}
-
-impl Scene {
-    fn initial() -> Self {
-        Scene::Editor
-    }
-
-    pub fn flip(&mut self) {
-        *self = match self {
-            Scene::Editor => Scene::App,
-            Scene::App => Scene::Editor,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct State {
-    left: ButtonState,
-    right: ButtonState,
-    up: ButtonState,
-    down: ButtonState,
-    x: ButtonState,
-    c: ButtonState,
-    pub(crate) escape: ButtonState,
-    pub mouse_x: i32,
-    pub mouse_y: i32,
-    mouse_pressed: ButtonState,
-    pub(crate) scene: Scene,
-    pub(crate) sprite_flags: [u8; SpriteSheet::SPRITE_COUNT],
-    pub(crate) sprite_sheet: SpriteSheet,
-    pub(crate) map: Map,
-}
-
-impl State {
-    fn new() -> Self {
-        let sprite_sheet = deserialize();
-        let map = Map::new();
-
-        Self {
-            left: NotPressed,
-            right: NotPressed,
-            up: NotPressed,
-            down: NotPressed,
-            x: NotPressed,
-            c: NotPressed,
-            escape: NotPressed,
-            mouse_x: 64,
-            mouse_y: 64,
-            mouse_pressed: NotPressed,
-            scene: Scene::initial(),
-            sprite_sheet,
-            sprite_flags: [0; SpriteSheet::SPRITE_COUNT],
-            map,
-        }
-    }
-
-    pub fn mget(&self, cel_x: usize, cel_y: usize) -> u8 {
-        self.map.mget(cel_x, cel_y)
-    }
-
-    pub fn mset(&mut self, cel_x: usize, cel_y: usize, sprite: u8) {
-        self.map.mset(cel_x, cel_y, sprite);
-    }
-
-    pub fn fget(&self, sprite: usize) -> u8 {
-        // TODO: Check what pico8 does in these cases:
-        assert!(sprite < self.sprite_flags.len());
-        self.sprite_flags[sprite]
-    }
-
-    // TODO: Check we do the same left-to-right (or viceversa)
-    // order as pico8
-    pub fn fget_n(&self, sprite: usize, flag: u8) -> bool {
-        // TODO: Check what pico8 does in these cases:
-        assert!(sprite < self.sprite_flags.len());
-        assert!(flag <= 7);
-
-        let res = (self.sprite_flags[sprite] & (1 << flag)) >> flag;
-        assert!(res == 0 || res == 1);
-
-        res != 0
-    }
-
-    pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
-        // TODO: Check what pico8 does in these cases:
-        assert!(sprite < self.sprite_flags.len());
-        assert!(flag <= 7);
-
-        let value = value as u8;
-        let flags = &mut self.sprite_flags[sprite];
-
-        *flags = (*flags & !(1u8 << flag)) | (value << flag);
-
-        *flags
-    }
-
-    pub fn btn(&self, button: Button) -> bool {
-        self.button(button).btn()
-    }
-
-    pub fn btnp(&self, button: Button) -> bool {
-        self.button(button).btnp()
-    }
-
-    pub(crate) fn update_keys(&mut self, keys: &Keys) {
-        self.left.update(keys.left);
-        self.right.update(keys.right);
-        self.up.update(keys.up);
-        self.down.update(keys.down);
-        self.x.update(keys.x);
-        self.c.update(keys.c);
-        self.escape.update(keys.escape);
-        self.mouse_pressed.update(keys.mouse);
-    }
-
-    fn button(&self, button: Button) -> &ButtonState {
-        match button {
-            Button::Left => &self.left,
-            Button::Right => &self.right,
-            Button::Up => &self.up,
-            Button::Down => &self.down,
-            Button::X => &self.x,
-            Button::C => &self.c,
-            Button::Mouse => &self.mouse_pressed,
-        }
-    }
-}
-
-pub enum Button {
-    Left,
-    Right,
-    Up,
-    Down,
-    X,
-    C,
-    Mouse,
-}
-
-// pub fn run_app<T: ElmApp + 'static>() {
-//     let state = State::new();
-//     let draw_context = DrawContext::new(state);
-
-//     screen::do_something::<T>(draw_context);
-// }
-
-// TODO: Implement properly
-// TODO2: I think this is fine, now?
-#[derive(Debug)]
-pub(crate) enum ButtonState {
-    JustPressed,
-    Held,
-    NotPressed,
-}
-
-use screen::Keys;
-use ButtonState::*;
-
-impl ButtonState {
-    fn update(&mut self, is_pressed: Option<bool>) {
-        match is_pressed {
-            Some(is_pressed) => {
-                if is_pressed {
-                    self.press()
-                } else {
-                    self.unpress()
-                }
-            }
-            None => self.no_change(),
-        }
-    }
-
-    // A frame has passed but we've registered no event related to this key.
-    fn no_change(&mut self) {
-        *self = match self {
-            JustPressed => Held,
-            Held => Held,
-            NotPressed => NotPressed,
-        }
-    }
-
-    // Caution: This may come either from a "first" press or a "repeated" press.
-    fn press(&mut self) {
-        *self = match self {
-            JustPressed => Held,
-            Held => Held,
-            NotPressed => JustPressed,
-        }
-    }
-
-    fn unpress(&mut self) {
-        *self = NotPressed;
-    }
-
-    pub fn btn(&self) -> bool {
-        match *self {
-            JustPressed => true,
-            Held => true,
-            NotPressed => false,
-        }
-    }
-
-    pub fn btnp(&self) -> bool {
-        matches!(*self, JustPressed)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
 }

@@ -1,8 +1,9 @@
 use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
+use crate::runtime::state::Scene;
 use crate::screen::Keys;
-use crate::{App, DrawContext, Scene, State};
+use crate::{App, DrawContext, State};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
 use glium::glutin::event::{ElementState, Event, KeyboardInput, VirtualKeyCode};
 use glium::glutin::event_loop::ControlFlow;
