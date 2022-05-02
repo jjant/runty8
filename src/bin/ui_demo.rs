@@ -1,7 +1,6 @@
 use itertools::Itertools;
 use runty8::runtime::cmd::Cmd;
 use runty8::ui::button::{self, Button};
-use runty8::ui::text::Text;
 use runty8::ui::{
     self,
     cursor::{self, Cursor},
@@ -15,7 +14,6 @@ fn main() {
 
 #[derive(Debug)]
 struct MyApp {
-    counter: i32,
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
@@ -24,8 +22,6 @@ struct MyApp {
     current_flags: u8,
     sprite_button_state: button::State,
     map_button_state: button::State,
-    plus_button: button::State,
-    minus_button: button::State,
     tab_buttons: [button::State; 4],
     color_selector_state: [button::State; 16],
     flags: Vec<button::State>,
@@ -40,7 +36,6 @@ enum Tab {
 
 #[derive(Debug, Clone, Copy)]
 enum Msg {
-    Delta(i32),
     SpriteTabClicked,
     MapButtonClicked,
     ColorSelected(usize),
@@ -58,12 +53,9 @@ impl ElmApp2 for MyApp {
 
         (
             Self {
-                counter: 0,
                 cursor: cursor::State::new(),
                 sprite_button_state: button::State::new(),
                 map_button_state: button::State::new(),
-                plus_button: button::State::new(),
-                minus_button: button::State::new(),
                 tab: Tab::SpriteEditor,
                 selected_color: 0,
                 selected_sprite,
@@ -102,7 +94,6 @@ impl ElmApp2 for MyApp {
 
     fn update(&mut self, msg: &Self::Msg) -> Cmd<Msg> {
         match msg {
-            Msg::Delta(delta) => self.counter += delta,
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
                 println!("Sprite button clicked");
@@ -163,8 +154,6 @@ impl ElmApp2 for MyApp {
 
 impl MyApp {
     fn sprite_editor_view(&mut self) -> Element<'_, Msg> {
-        use Msg::*;
-
         let v: Vec<Element<'_, Msg>> = vec![
             sprite_editor_button(&mut self.sprite_button_state, self.tab),
             map_editor_button(&mut self.map_button_state, self.tab),
