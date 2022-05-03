@@ -25,21 +25,45 @@ impl Flags {
         self.flags.len()
     }
 
-    fn get_mut(&mut self, index: usize) -> &mut u8 {
-        let cell = self.flags.get_mut(index).unwrap();
-
-        cell.get_mut()
-    }
-
     fn set(&self, index: usize, value: u8) {
         self.flags[index].set(value);
     }
 
     pub fn get(&self, index: usize) -> Option<u8> {
-        // TODO: Check what pico8 does in cases when the index is out of boudns
+        // TODO: Check what pico8 does in cases when the index is out of bounds
         let cell = self.flags.get(index)?;
 
         Some(cell.get())
+    }
+
+    pub fn fset(&self, sprite: usize, flag: usize, value: bool) -> u8 {
+        // TODO: Check what pico8 does in these cases:
+        assert!(flag <= 7);
+
+        let value = value as u8;
+        let mut flags = self.get(sprite).unwrap();
+        flags = (flags & !(1u8 << flag)) | (value << flag);
+
+        self.set(sprite, flags);
+
+        flags
+    }
+
+    pub fn fget_n(&self, sprite: usize, flag: u8) -> bool {
+        // TODO: Check what pico8 does in these cases:
+        assert!(sprite < self.len());
+        assert!(flag <= 7);
+
+        let res = (self.get(sprite).unwrap() & (1 << flag)) >> flag;
+        assert!(res == 0 || res == 1);
+
+        res != 0
+    }
+}
+
+impl Default for Flags {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -96,30 +120,14 @@ impl<'map, 'flags> State<'map, 'flags> {
         self.sprite_flags.get(sprite).unwrap()
     }
 
-    // TODO: Check we do the same left-to-right (or viceversa)
+    // TODO: Check we do the same left-to-right (or vice versa)
     // order as pico8
     pub fn fget_n(&self, sprite: usize, flag: u8) -> bool {
-        // TODO: Check what pico8 does in these cases:
-        assert!(sprite < self.sprite_flags.len());
-        assert!(flag <= 7);
-
-        let res = (self.sprite_flags.get(sprite).unwrap() & (1 << flag)) >> flag;
-        assert!(res == 0 || res == 1);
-
-        res != 0
+        self.sprite_flags.fget_n(sprite, flag)
     }
 
     pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
-        // TODO: Check what pico8 does in these cases:
-        assert!(sprite < self.sprite_flags.len());
-        assert!(flag <= 7);
-
-        let value = value as u8;
-        let mut flags = self.sprite_flags.get(sprite).unwrap();
-        flags = (flags & !(1u8 << flag)) | (value << flag);
-        self.sprite_flags.set(sprite, flags);
-
-        flags
+        self.sprite_flags.fset(sprite, flag, value)
     }
 
     pub fn btn(&self, button: Button) -> bool {

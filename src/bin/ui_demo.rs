@@ -28,7 +28,6 @@ struct MyApp<'a> {
     selected_color: u8,
     selected_sprite: usize,
     selected_sprite_page: usize,
-    current_flags: u8,
     sprite_button_state: button::State,
     map_button_state: button::State,
     tab_buttons: [button::State; 4],
@@ -51,7 +50,6 @@ enum Msg {
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
-    GotFlags(u8),
 }
 
 impl<'a> ElmApp2 for MyApp<'a> {
@@ -98,9 +96,8 @@ impl<'a> ElmApp2 for MyApp<'a> {
                 ],
                 flag_buttons: vec![button::State::new(); 8],
                 sprite_buttons: vec![button::State::new(); 64],
-                current_flags: 0,
             },
-            Cmd::get_flags(selected_sprite as u8).map(Msg::GotFlags),
+            Cmd::none(),
         )
     }
 
@@ -122,20 +119,13 @@ impl<'a> ElmApp2 for MyApp<'a> {
             }
             Msg::SpriteButtonClicked(selected_sprite) => {
                 self.selected_sprite = *selected_sprite;
-
-                return Cmd::get_flags(self.selected_sprite as u8).map(Msg::GotFlags);
             }
-            Msg::FlagToggled(flag) => {
-                let sprite = self.selected_sprite as u8;
+            Msg::FlagToggled(flag_index) => {
+                let flag_index = *flag_index;
 
-                // self.flags
-                // return Cmd::toggle_flag(sprite, *flag as u8)
-                //     .and_then(move |_| Cmd::get_flags(sprite))
-                //     .map(Msg::GotFlags);
-                return Cmd::none();
-            }
-            Msg::GotFlags(flags) => {
-                self.current_flags = *flags;
+                let flag_value = self.flags.fget_n(self.selected_sprite, flag_index as u8);
+                self.flags
+                    .fset(self.selected_sprite, flag_index, !flag_value);
             }
         }
 
@@ -191,7 +181,7 @@ fn sprite_editor_view<'a>(
     color_selector_state: &'a mut [button::State],
     tab_buttons: &'a mut [button::State],
     sprite_buttons: &'a mut [button::State],
-    current_flags: u8,
+    selected_sprite_flags: u8,
     flag_buttons: &'a mut [button::State],
 ) -> Element<'a, Msg> {
     let v: Vec<Element<'_, Msg>> = vec![
@@ -213,7 +203,7 @@ fn sprite_editor_view<'a>(
             87,
         ),
         sprite_preview(selected_sprite, 71, 78),
-        flags(current_flags, 78, 70, flag_buttons),
+        flags(selected_sprite_flags, 78, 70, flag_buttons),
     ];
 
     v.into()
