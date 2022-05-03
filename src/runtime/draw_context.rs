@@ -27,15 +27,21 @@ impl DrawData {
         }
     }
 }
-pub struct DrawContext<'a, 'map> {
+
+impl Default for DrawData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+pub struct DrawContext<'a, 'map, 'flags> {
     data: &'a mut DrawData,
-    pub(crate) state: &'a mut State<'map>,
+    pub(crate) state: &'a mut State<'map, 'flags>,
 }
 
 const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
-impl<'a, 'map> DrawContext<'a, 'map> {
-    pub(crate) fn new(state: &'a mut State<'map>, data: &'a mut DrawData) -> Self {
+impl<'a, 'map, 'flags> DrawContext<'a, 'map, 'flags> {
+    pub(crate) fn new(state: &'a mut State<'map, 'flags>, data: &'a mut DrawData) -> Self {
         Self { state, data }
     }
 
@@ -112,7 +118,7 @@ impl<'a, 'map> DrawContext<'a, 'map> {
 }
 
 // Pico8 api
-impl<'a, 'map> DrawContext<'a, 'map> {
+impl<'a, 'map, 'flags> DrawContext<'a, 'map, 'flags> {
     pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
         let sprite = self.state.sprite_sheet.get_sprite(sprite);
         let buffer = &sprite.sprite;

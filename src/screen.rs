@@ -18,7 +18,7 @@ use glium::{glutin, Surface};
 
 pub fn run_app<T: ElmApp2 + 'static>(
     flags: T::Flags,
-    mut state: State<'static>,
+    mut state: State<'static, 'static>,
     mut data: DrawData,
 ) {
     let (mut app, cmd) = T::init(flags);

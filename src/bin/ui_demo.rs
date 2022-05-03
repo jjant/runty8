@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use runty8::runtime::draw_context::DrawData;
-use runty8::runtime::state::State;
+use runty8::runtime::state::{Flags, State};
 use runty8::runtime::{cmd::Cmd, map::Map};
 use runty8::ui::button::{self, Button};
 use runty8::ui::{
@@ -11,15 +11,18 @@ use runty8::ui::{DrawFn, Element, Sub, Tree, Widget};
 
 fn main() {
     let map: &'static Map = Box::leak(Box::new(Map::new()));
-    let state = State::new(map);
+    let sprite_flags: &'static Flags = Box::leak(Box::new(Flags::new()));
+
+    let state = State::new(map, sprite_flags);
     let draw_data = DrawData::new();
 
-    runty8::screen::run_app::<MyApp>(map, state, draw_data);
+    runty8::screen::run_app::<MyApp>((map, sprite_flags), state, draw_data);
 }
 
 #[derive(Debug)]
-struct MyApp<'map> {
-    map: &'map Map,
+struct MyApp<'a> {
+    map: &'a Map,
+    flags: &'a Flags,
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
@@ -30,7 +33,7 @@ struct MyApp<'map> {
     map_button_state: button::State,
     tab_buttons: [button::State; 4],
     color_selector_state: [button::State; 16],
-    flags: Vec<button::State>,
+    flag_buttons: Vec<button::State>,
     sprite_buttons: Vec<button::State>,
 }
 
@@ -53,14 +56,15 @@ enum Msg {
 
 impl<'a> ElmApp2 for MyApp<'a> {
     type Msg = Msg;
-    type Flags = &'a Map;
+    type Flags = (&'a Map, &'a Flags);
 
-    fn init(map: Self::Flags) -> (Self, Cmd<Msg>) {
+    fn init((map, flags): Self::Flags) -> (Self, Cmd<Msg>) {
         let selected_sprite = 0;
 
         (
             Self {
                 map,
+                flags,
                 cursor: cursor::State::new(),
                 sprite_button_state: button::State::new(),
                 map_button_state: button::State::new(),
@@ -92,7 +96,7 @@ impl<'a> ElmApp2 for MyApp<'a> {
                     button::State::new(),
                     button::State::new(),
                 ],
-                flags: vec![button::State::new(); 8],
+                flag_buttons: vec![button::State::new(); 8],
                 sprite_buttons: vec![button::State::new(); 64],
                 current_flags: 0,
             },
@@ -124,9 +128,11 @@ impl<'a> ElmApp2 for MyApp<'a> {
             Msg::FlagToggled(flag) => {
                 let sprite = self.selected_sprite as u8;
 
-                return Cmd::toggle_flag(sprite, *flag as u8)
-                    .and_then(move |_| Cmd::get_flags(sprite))
-                    .map(Msg::GotFlags);
+                // self.flags
+                // return Cmd::toggle_flag(sprite, *flag as u8)
+                //     .and_then(move |_| Cmd::get_flags(sprite))
+                //     .map(Msg::GotFlags);
+                return Cmd::none();
             }
             Msg::GotFlags(flags) => {
                 self.current_flags = *flags;
@@ -157,8 +163,8 @@ impl<'a> ElmApp2 for MyApp<'a> {
                     &mut self.color_selector_state,
                     &mut self.tab_buttons,
                     &mut self.sprite_buttons,
-                    self.current_flags,
-                    &mut self.flags,
+                    self.flags.get(self.selected_sprite).unwrap(),
+                    &mut self.flag_buttons,
                 ),
                 Tab::MapEditor => self.map_view(0, 32),
             },

@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use super::{
     map::Map,
     sprite_sheet::{self, SpriteSheet},
@@ -6,7 +8,43 @@ use crate::screen::Keys;
 use ButtonState::*;
 
 #[derive(Debug)]
-pub struct State<'map> {
+pub struct Flags {
+    flags: [Cell<u8>; SpriteSheet::SPRITE_COUNT],
+}
+
+impl Flags {
+    pub fn new() -> Self {
+        let flags = vec![Cell::new(0); SpriteSheet::SPRITE_COUNT]
+            .try_into()
+            .unwrap();
+
+        Self { flags }
+    }
+
+    fn len(&self) -> usize {
+        self.flags.len()
+    }
+
+    fn get_mut(&mut self, index: usize) -> &mut u8 {
+        let cell = self.flags.get_mut(index).unwrap();
+
+        cell.get_mut()
+    }
+
+    fn set(&self, index: usize, value: u8) {
+        self.flags[index].set(value);
+    }
+
+    pub fn get(&self, index: usize) -> Option<u8> {
+        // TODO: Check what pico8 does in cases when the index is out of boudns
+        let cell = self.flags.get(index)?;
+
+        Some(cell.get())
+    }
+}
+
+#[derive(Debug)]
+pub struct State<'map, 'flags> {
     left: ButtonState,
     right: ButtonState,
     up: ButtonState,
@@ -18,14 +56,14 @@ pub struct State<'map> {
     pub mouse_y: i32,
     mouse_pressed: ButtonState,
     pub(crate) scene: Scene,
-    pub(crate) sprite_flags: [u8; SpriteSheet::SPRITE_COUNT],
     pub(crate) sprite_sheet: SpriteSheet,
+    pub(crate) sprite_flags: &'flags Flags,
     pub(crate) map: &'map Map,
 }
 
-impl<'map> State<'map> {
+impl<'map, 'flags> State<'map, 'flags> {
     // TODO: Make pub(crate)
-    pub fn new(map: &'map Map) -> Self {
+    pub fn new(map: &'map Map, sprite_flags: &'flags Flags) -> Self {
         let sprite_sheet = sprite_sheet::deserialize();
 
         Self {
@@ -41,7 +79,7 @@ impl<'map> State<'map> {
             mouse_pressed: NotPressed,
             scene: Scene::initial(),
             sprite_sheet,
-            sprite_flags: [0; SpriteSheet::SPRITE_COUNT],
+            sprite_flags,
             map,
         }
     }
@@ -55,9 +93,7 @@ impl<'map> State<'map> {
     }
 
     pub fn fget(&self, sprite: usize) -> u8 {
-        // TODO: Check what pico8 does in these cases:
-        assert!(sprite < self.sprite_flags.len());
-        self.sprite_flags[sprite]
+        self.sprite_flags.get(sprite).unwrap()
     }
 
     // TODO: Check we do the same left-to-right (or viceversa)
@@ -67,7 +103,7 @@ impl<'map> State<'map> {
         assert!(sprite < self.sprite_flags.len());
         assert!(flag <= 7);
 
-        let res = (self.sprite_flags[sprite] & (1 << flag)) >> flag;
+        let res = (self.sprite_flags.get(sprite).unwrap() & (1 << flag)) >> flag;
         assert!(res == 0 || res == 1);
 
         res != 0
@@ -79,11 +115,11 @@ impl<'map> State<'map> {
         assert!(flag <= 7);
 
         let value = value as u8;
-        let flags = &mut self.sprite_flags[sprite];
+        let mut flags = self.sprite_flags.get(sprite).unwrap();
+        flags = (flags & !(1u8 << flag)) | (value << flag);
+        self.sprite_flags.set(sprite, flags);
 
-        *flags = (*flags & !(1u8 << flag)) | (value << flag);
-
-        *flags
+        flags
     }
 
     pub fn btn(&self, button: Button) -> bool {
