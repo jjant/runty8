@@ -133,31 +133,32 @@ impl<'a> ElmApp2 for MyApp<'a> {
     }
 
     fn view(&mut self) -> Element<'_, Self::Msg> {
-        let top_bar = DrawFn::new(|draw| {
-            draw.rectfill(0, 0, 127, 7, 8);
-        });
-
         const BACKGROUND: u8 = 5;
 
         let view: Vec<Element<'_, Msg>> = vec![
             DrawFn::new(|draw| draw.rectfill(0, 0, 127, 127, BACKGROUND)),
-            top_bar,
+            top_bar(
+                &mut self.sprite_button_state,
+                &mut self.map_button_state,
+                self.tab,
+            ),
             match self.tab {
                 Tab::SpriteEditor => sprite_editor_view(
-                    self.tab,
                     self.selected_sprite,
-                    self.selected_sprite_page,
                     self.selected_color,
-                    &mut self.sprite_button_state,
-                    &mut self.map_button_state,
                     &mut self.color_selector_state,
-                    &mut self.tab_buttons,
-                    &mut self.sprite_buttons,
                     self.flags.get(self.selected_sprite).unwrap(),
                     &mut self.flag_buttons,
                 ),
-                Tab::MapEditor => self.map_view(0, 32),
+                Tab::MapEditor => map_view(self.map, 0, 8),
             },
+            sprite_view(
+                self.selected_sprite,
+                self.selected_sprite_page,
+                &mut self.sprite_buttons,
+                &mut self.tab_buttons,
+                87,
+            ),
             bottom_bar(),
             Cursor::new(&mut self.cursor),
         ];
@@ -170,23 +171,30 @@ impl<'a> ElmApp2 for MyApp<'a> {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn sprite_editor_view<'a>(
-    tab: Tab,
-    selected_sprite: usize,
-    selected_sprite_page: usize,
-    selected_color: u8,
+fn top_bar<'a>(
     sprite_button_state: &'a mut button::State,
     map_button_state: &'a mut button::State,
+    tab: Tab,
+) -> Element<'a, Msg> {
+    vec![
+        DrawFn::new(|draw| {
+            draw.rectfill(0, 0, 127, 7, 8);
+        }),
+        sprite_editor_button(sprite_button_state, tab),
+        map_editor_button(map_button_state, tab),
+    ]
+    .into()
+}
+
+#[allow(clippy::too_many_arguments)]
+fn sprite_editor_view<'a>(
+    selected_sprite: usize,
+    selected_color: u8,
     color_selector_state: &'a mut [button::State],
-    tab_buttons: &'a mut [button::State],
-    sprite_buttons: &'a mut [button::State],
     selected_sprite_flags: u8,
     flag_buttons: &'a mut [button::State],
 ) -> Element<'a, Msg> {
     let v: Vec<Element<'_, Msg>> = vec![
-        sprite_editor_button(sprite_button_state, tab),
-        map_editor_button(map_button_state, tab),
         color_selector(
             79,
             10,
@@ -195,46 +203,34 @@ fn sprite_editor_view<'a>(
             color_selector_state,
             Msg::ColorSelected,
         ),
-        sprite_view(
-            selected_sprite,
-            selected_sprite_page,
-            sprite_buttons,
-            tab_buttons,
-            87,
-        ),
         sprite_preview(selected_sprite, 71, 78),
         flags(selected_sprite_flags, 78, 70, flag_buttons),
     ];
 
     v.into()
 }
-impl<'map> MyApp<'map> {
-    fn map_view(&mut self, x: i32, y: i32) -> Element<'static, Msg> {
-        dbg!(self.map.iter().count());
+fn map_view(map: &Map, x: i32, y: i32) -> Element<'_, Msg> {
+    let v: Vec<Element<'_, Msg>> = map
+        .iter()
+        .chunks(16)
+        .into_iter()
+        .take(9)
+        .enumerate()
+        .flat_map(|(row_index, row)| {
+            row.into_iter().enumerate().map(move |(col_index, sprite)| {
+                let f: Element<'static, Msg> = DrawFn::new(move |draw| {
+                    let x = x as usize + col_index * 8;
+                    let y = y as usize + row_index * 8;
 
-        let v: Vec<Element<'_, Msg>> = self
-            .map
-            .iter()
-            .chunks(16)
-            .into_iter()
-            .take(3)
-            .enumerate()
-            .flat_map(|(row_index, row)| {
-                row.into_iter().enumerate().map(move |(col_index, sprite)| {
-                    let f: Element<'static, Msg> = DrawFn::new(move |draw| {
-                        let x = x as usize + col_index * 8;
-                        let y = y as usize + row_index * 8;
+                    draw.spr(sprite.into(), x as i32, y as i32);
+                });
 
-                        draw.spr(sprite.into(), x as i32, y as i32);
-                    });
-
-                    f
-                })
+                f
             })
-            .collect();
+        })
+        .collect();
 
-        v.into()
-    }
+    v.into()
 }
 
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {

@@ -78,8 +78,8 @@ pub struct DrawFn<Msg> {
     f: Box<dyn Fn(&mut DrawContext)>,
 }
 
-impl<Msg> DrawFn<Msg> {
-    pub fn new(f: impl Fn(&mut DrawContext) + 'static) -> Box<Self> {
+impl<'a, Msg: Copy + Debug + 'a> DrawFn<Msg> {
+    pub fn new(f: impl Fn(&mut DrawContext) + 'static) -> Element<'a, Msg> {
         Box::new(Self {
             f: Box::new(f),
             pd: PhantomData,
