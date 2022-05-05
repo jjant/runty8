@@ -88,10 +88,8 @@ impl SpriteEditor {
                     }
 
                     self.draw_mode = DrawMode::Line(None);
-                } else {
-                    if let Some((x, y)) = Canvas::try_lookup(self.mouse_x, self.mouse_y) {
-                        self.bottom_text = format!("X:{} Y:{}", x, y);
-                    };
+                } else if let Some((x, y)) = Canvas::try_lookup(self.mouse_x, self.mouse_y) {
+                    self.bottom_text = format!("X:{} Y:{}", x, y);
                 }
             }
         }
@@ -297,7 +295,7 @@ impl DevApp for SpriteEditor {
         for x in 0..8 {
             for y in 0..8 {
                 let color = self
-                    .selected_sprite(&draw_context.state)
+                    .selected_sprite(draw_context.state)
                     .pget(x as isize, y as isize);
 
                 Canvas::pixel_rect(x, y).fill(draw_context, color);
@@ -430,7 +428,7 @@ impl Rect {
         contains_x && contains_y
     }
 
-    pub fn distance_squared(&self, x: i32, y: i32) -> i32 {
+    fn distance_squared(&self, x: i32, y: i32) -> i32 {
         let dx = [self.x - x, 0, x - (self.x + self.width)]
             .into_iter()
             .max()
