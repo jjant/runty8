@@ -1,5 +1,5 @@
 use crate::{self as lib, runtime::draw_context::DrawContext};
-// pub mod pico8;
+pub mod pico8;
 use lib::State;
 
 pub trait App {

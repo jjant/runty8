@@ -1,8 +1,9 @@
 use crate::app::DevApp;
 use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::runtime::draw_context::DrawContext;
-use crate::runtime::state::Scene;
+use crate::runtime::draw_context::{DrawContext, DrawData};
+use crate::runtime::map::Map;
+use crate::runtime::state::{Flags, Scene};
 use crate::screen::Keys;
 use crate::{App, State};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
@@ -15,8 +16,10 @@ use glium::{glutin, Surface};
 
 pub fn run_app<T: App + 'static>() {
     let mut app = T::init();
-    let state = State::new();
-    let mut draw_context = DrawContext::new(state);
+    let map: &'static Map = Box::leak(Box::new(Map::new()));
+    let sprite_flags: &'static Flags = Box::leak(Box::new(Flags::new()));
+    let mut state = State::new(map, sprite_flags);
+    let mut draw_data = DrawData::new();
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
@@ -50,7 +53,7 @@ pub fn run_app<T: App + 'static>() {
             scale_factor,
             logical_size,
             control_flow,
-            &mut draw_context.state,
+            &mut state,
             &mut keys,
         );
 
@@ -66,26 +69,29 @@ pub fn run_app<T: App + 'static>() {
         target.clear_color(1.0, 0.0, 0.0, 1.0);
 
         {
-            draw_context.state.update_keys(&keys);
+            state.update_keys(&keys);
 
-            match draw_context.state.scene {
+            match state.scene {
                 Scene::Editor => {
+                    let mut draw_context = DrawContext::new(&mut state, &mut draw_data);
+
                     editor.draw(&mut draw_context);
-                    editor.update(&mut draw_context.state);
+                    editor.update(&mut state);
                 }
                 Scene::App => {
+                    let mut draw_context = DrawContext::new(&mut state, &mut draw_data);
                     app.draw(&mut draw_context);
-                    app.update(&draw_context.state);
+                    app.update(&state);
                 }
             }
-            if draw_context.state.escape.btnp() {
-                draw_context.state.scene.flip();
+            if state.escape.btnp() {
+                state.scene.flip();
             }
 
             keys.reset();
         }
 
-        let image = RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
+        let image = RawImage2d::from_raw_rgb(draw_data.buffer.to_vec(), (128, 128));
         let texture = SrgbTexture2d::new(&display, image).unwrap();
 
         let uniform = uniform! {

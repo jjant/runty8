@@ -1,6 +1,8 @@
 #![feature(drain_filter)]
 use rand::Rng;
-use runty8::{app, App, Button, DrawContext, State};
+use runty8::runtime::draw_context::DrawContext;
+use runty8::runtime::state::{Button, State};
+use runty8::{app, App};
 
 struct Cloud {
     x: f32,
@@ -126,7 +128,7 @@ impl App for GameState {
         gs
     }
 
-    fn update(&mut self, state: &runty8::State) {
+    fn update(&mut self, state: &State) {
         self.frames = (self.frames + 1) % 30;
 
         if self.frames == 0 && level_index(self) < 30 {
@@ -210,7 +212,7 @@ impl App for GameState {
         }
     }
 
-    fn draw(&self, draw: &mut runty8::DrawContext) {
+    fn draw(&self, draw: &mut DrawContext) {
         draw.camera(0, 0);
         if self.shake > 0 {
             draw.camera(
@@ -730,7 +732,7 @@ fn set_hair_color(draw: &mut DrawContext, frames: i32, djump: i32) {
 
 #[allow(dead_code)]
 fn draw_hair(
-    state: &runty8::State,
+    state: &State,
     draw: &mut DrawContext,
     x: f32,
     y: f32,
