@@ -5,6 +5,7 @@ use runty8::runtime::{cmd::Cmd, map::Map};
 use runty8::ui::button::{self, Button};
 use runty8::ui::{
     cursor::{self, Cursor},
+    text::Text,
     ElmApp2,
 };
 use runty8::ui::{DrawFn, Element, Sub, Tree};
@@ -135,6 +136,8 @@ impl<'a> ElmApp2 for MyApp<'a> {
     fn view(&mut self) -> Element<'_, Self::Msg> {
         const BACKGROUND: u8 = 5;
 
+        let bottom_bar_text = "THIS IS THE BOT BAR".to_owned();
+
         Tree::new()
             .push(DrawFn::new(|draw| {
                 draw.rectfill(0, 0, 127, 127, BACKGROUND)
@@ -161,7 +164,7 @@ impl<'a> ElmApp2 for MyApp<'a> {
                 &mut self.tab_buttons,
                 87,
             ))
-            .push(bottom_bar())
+            .push(bottom_bar(bottom_bar_text))
             .push(Cursor::new(&mut self.cursor))
             .into()
     }
@@ -435,8 +438,18 @@ fn sprite_preview(sprite: usize, x: i32, y: i32) -> Element<'static, Msg> {
         .into()
 }
 
-fn bottom_bar() -> Element<'static, Msg> {
-    DrawFn::new(|draw| draw.rectfill(0, 121, 127, 127, 8)).into()
+fn bottom_bar(text: String) -> Element<'static, Msg> {
+    const X: i32 = 0;
+    const Y: i32 = 121;
+    const BAR_WIDTH: i32 = 128;
+    const BAR_HEIGHT: i32 = 7;
+
+    Tree::new()
+        .push(DrawFn::new(|draw| {
+            draw.rectfill(X, Y, X + BAR_WIDTH - 1, Y + BAR_HEIGHT - 1, 8)
+        }))
+        .push(Text::new(text, X + 1, Y + 1, 2))
+        .into()
 }
 
 // TODO:

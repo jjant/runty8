@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{Color, runtime::draw_context::DrawContext};
+use crate::{runtime::draw_context::DrawContext, Color};
 
 use super::{DispatchEvent, Widget};
 
@@ -13,14 +13,14 @@ pub struct Text<Msg> {
 }
 
 impl<Msg> Text<Msg> {
-    pub fn new(text: String, x: i32, y: i32, color: Color) -> Box<Self> {
-        Box::new(Self {
+    pub fn new(text: String, x: i32, y: i32, color: Color) -> Self {
+        Self {
             x,
             y,
             text,
             color,
             pd: PhantomData,
-        })
+        }
     }
 }
 
