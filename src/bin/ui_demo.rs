@@ -7,7 +7,7 @@ use runty8::ui::{
     cursor::{self, Cursor},
     ElmApp2,
 };
-use runty8::ui::{DrawFn, Element, Sub, Tree, Widget};
+use runty8::ui::{DrawFn, Element, Sub, Tree};
 
 fn main() {
     let map: &'static Map = Box::leak(Box::new(Map::new()));
@@ -135,14 +135,16 @@ impl<'a> ElmApp2 for MyApp<'a> {
     fn view(&mut self) -> Element<'_, Self::Msg> {
         const BACKGROUND: u8 = 5;
 
-        let view: Vec<Element<'_, Msg>> = vec![
-            DrawFn::new(|draw| draw.rectfill(0, 0, 127, 127, BACKGROUND)),
-            top_bar(
+        Tree::new()
+            .push(DrawFn::new(|draw| {
+                draw.rectfill(0, 0, 127, 127, BACKGROUND)
+            }))
+            .push(top_bar(
                 &mut self.sprite_button_state,
                 &mut self.map_button_state,
                 self.tab,
-            ),
-            match self.tab {
+            ))
+            .push(match self.tab {
                 Tab::SpriteEditor => sprite_editor_view(
                     self.selected_sprite,
                     self.selected_color,
@@ -151,19 +153,17 @@ impl<'a> ElmApp2 for MyApp<'a> {
                     &mut self.flag_buttons,
                 ),
                 Tab::MapEditor => map_view(self.map, 0, 8),
-            },
-            sprite_view(
+            })
+            .push(sprite_view(
                 self.selected_sprite,
                 self.selected_sprite_page,
                 &mut self.sprite_buttons,
                 &mut self.tab_buttons,
                 87,
-            ),
-            bottom_bar(),
-            Cursor::new(&mut self.cursor),
-        ];
-
-        view.into()
+            ))
+            .push(bottom_bar())
+            .push(Cursor::new(&mut self.cursor))
+            .into()
     }
 
     fn subscriptions(&self) -> Sub<Self::Msg> {
@@ -176,14 +176,13 @@ fn top_bar<'a>(
     map_button_state: &'a mut button::State,
     tab: Tab,
 ) -> Element<'a, Msg> {
-    vec![
-        DrawFn::new(|draw| {
+    Tree::new()
+        .push(DrawFn::new(|draw| {
             draw.rectfill(0, 0, 127, 7, 8);
-        }),
-        sprite_editor_button(sprite_button_state, tab),
-        map_editor_button(map_button_state, tab),
-    ]
-    .into()
+        }))
+        .push(sprite_editor_button(sprite_button_state, tab))
+        .push(map_editor_button(map_button_state, tab))
+        .into()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -194,21 +193,20 @@ fn sprite_editor_view<'a>(
     selected_sprite_flags: u8,
     flag_buttons: &'a mut [button::State],
 ) -> Element<'a, Msg> {
-    let v: Vec<Element<'_, Msg>> = vec![
-        color_selector(
+    Tree::new()
+        .push(color_selector(
             79,
             10,
             10,
             selected_color,
             color_selector_state,
             Msg::ColorSelected,
-        ),
-        sprite_preview(selected_sprite, 71, 78),
-        flags(selected_sprite_flags, 78, 70, flag_buttons),
-    ];
-
-    v.into()
+        ))
+        .push(sprite_preview(selected_sprite, 71, 78))
+        .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
+        .into()
 }
+
 fn map_view(map: &Map, x: i32, y: i32) -> Element<'_, Msg> {
     let v: Vec<Element<'_, Msg>> = map
         .iter()
@@ -218,19 +216,18 @@ fn map_view(map: &Map, x: i32, y: i32) -> Element<'_, Msg> {
         .enumerate()
         .flat_map(|(row_index, row)| {
             row.into_iter().enumerate().map(move |(col_index, sprite)| {
-                let f: Element<'static, Msg> = DrawFn::new(move |draw| {
+                DrawFn::new(move |draw| {
                     let x = x as usize + col_index * 8;
                     let y = y as usize + row_index * 8;
 
                     draw.spr(sprite.into(), x as i32, y as i32);
-                });
-
-                f
+                })
+                .into()
             })
         })
         .collect();
 
-    v.into()
+    Tree::with_children(v).into()
 }
 
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
@@ -251,6 +248,7 @@ fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg>
             draw.pal(15, 15);
         }),
     )
+    .into()
 }
 
 fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
@@ -271,6 +269,7 @@ fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
             draw.pal(15, 15);
         }),
     )
+    .into()
 }
 
 fn color_selector<'a>(
@@ -307,34 +306,41 @@ fn color_selector<'a>(
                 draw.rectfill(0, 0, tile_size - 1, tile_size - 1, index as u8);
                 draw.palt(Some(0));
             }),
-        );
+        )
+        .into();
         v.push(button);
     }
 
     // Draw border
-    v.push(DrawFn::new(move |draw| {
-        draw.palt(None);
-        draw.rect(
-            start_x,
-            start_y,
-            start_x + 4 * tile_size + 1,
-            start_y + 4 * tile_size + 1,
-            0,
-        );
-        draw.palt(Some(0));
-    }));
+    v.push(
+        DrawFn::new(move |draw| {
+            draw.palt(None);
+            draw.rect(
+                start_x,
+                start_y,
+                start_x + 4 * tile_size + 1,
+                start_y + 4 * tile_size + 1,
+                0,
+            );
+            draw.palt(Some(0));
+        })
+        .into(),
+    );
 
     // Draw highlight
-    v.push(DrawFn::new(move |draw| {
-        let (x, y) = coordinates(selected_color as usize);
+    v.push(
+        DrawFn::new(move |draw| {
+            let (x, y) = coordinates(selected_color as usize);
 
-        draw.palt(None);
-        draw.rect(x, y, x + tile_size - 1, y + tile_size - 1, 0);
-        draw.rect(x - 1, y - 1, x + tile_size, y + tile_size, 7);
-        draw.palt(Some(0));
-    }));
+            draw.palt(None);
+            draw.rect(x, y, x + tile_size - 1, y + tile_size - 1, 0);
+            draw.rect(x - 1, y - 1, x + tile_size, y + tile_size, 7);
+            draw.palt(Some(0));
+        })
+        .into(),
+    );
 
-    Tree::new(v)
+    Tree::with_children(v).into()
 }
 
 /// The 4 rows of sprites at the bottom of the sprite editor
@@ -345,10 +351,11 @@ fn sprite_view<'a>(
     tab_buttons: &'a mut [button::State],
     y: i32,
 ) -> Element<'a, Msg> {
-    let mut sprites: Vec<Box<dyn Widget<Msg = Msg>>> = vec![DrawFn::new(move |draw| {
+    let mut children = vec![DrawFn::new(move |draw| {
         draw.palt(None);
         draw.rectfill(0, y, 127, y + 32 + 1, 0);
-    })];
+    })
+    .into()];
 
     let sprite_position = |sprite| {
         let index = sprite % 64;
@@ -362,27 +369,33 @@ fn sprite_view<'a>(
         let sprite = index + selected_tab * 64;
 
         let (x, y) = sprite_position(sprite);
-        sprites.push(Button::new(
-            x,
-            y,
-            8,
-            8,
-            Some(Msg::SpriteButtonClicked(sprite)),
-            sprite_state,
-            DrawFn::new(move |draw| {
-                draw.palt(None);
-                draw.spr(sprite, 0, 0);
-            }),
-        ));
+        children.push(
+            Button::new(
+                x,
+                y,
+                8,
+                8,
+                Some(Msg::SpriteButtonClicked(sprite)),
+                sprite_state,
+                DrawFn::new(move |draw| {
+                    draw.palt(None);
+                    draw.spr(sprite, 0, 0);
+                }),
+            )
+            .into(),
+        );
     }
 
     // Draw selected sprite highlight
     {
         // TODO: Fix (wrong highlight when switching pages)
         let (x, y) = sprite_position(selected_sprite);
-        sprites.push(DrawFn::new(move |draw| {
-            draw.rect(x - 1, y - 1, x + 8, y + 8, 7);
-        }))
+        children.push(
+            DrawFn::new(move |draw| {
+                draw.rect(x - 1, y - 1, x + 8, y + 8, 7);
+            })
+            .into(),
+        )
     }
 
     for (sprite_tab, tab_button_state) in tab_buttons.iter_mut().enumerate() {
@@ -391,36 +404,39 @@ fn sprite_view<'a>(
         let x = 96 + sprite_tab as i32 * 8;
         let y = y - 8;
 
-        sprites.push(Button::new(
-            x,
-            y,
-            8,
-            8,
-            Some(Msg::SpritePageSelected(sprite_tab)),
-            tab_button_state,
-            DrawFn::new(move |draw| {
-                draw.palt(Some(0));
-                draw.spr(base_sprite + sprite_tab, 0, 0);
-            }),
-        ));
+        children.push(
+            Button::new(
+                x,
+                y,
+                8,
+                8,
+                Some(Msg::SpritePageSelected(sprite_tab)),
+                tab_button_state,
+                DrawFn::new(move |draw| {
+                    draw.palt(Some(0));
+                    draw.spr(base_sprite + sprite_tab, 0, 0);
+                }),
+            )
+            .into(),
+        );
     }
-    Tree::new(sprites)
+    Tree::with_children(children).into()
 }
 
-fn sprite_preview(sprite: usize, x: i32, y: i32) -> Box<dyn Widget<Msg = Msg>> {
+fn sprite_preview(sprite: usize, x: i32, y: i32) -> Element<'static, Msg> {
     let spr_str = format!("{:0>3}", sprite);
 
-    Tree::new(vec![
-        spr(sprite, x, y),
-        DrawFn::new(move |draw| {
+    Tree::new()
+        .push(spr(sprite, x, y))
+        .push(DrawFn::new(move |draw| {
             draw.rectfill(x + 9, y + 1, x + 9 + 13 - 1, y + 7, 6);
             draw.print(&spr_str, x + 10, y + 2, 13);
-        }),
-    ])
+        }))
+        .into()
 }
 
-fn bottom_bar() -> Box<dyn Widget<Msg = Msg>> {
-    DrawFn::new(|draw| draw.rectfill(0, 121, 127, 127, 8))
+fn bottom_bar() -> Element<'static, Msg> {
+    DrawFn::new(|draw| draw.rectfill(0, 121, 127, 127, 8)).into()
 }
 
 // TODO:
@@ -436,7 +452,7 @@ fn flags(
     const SPR_SIZE: i32 = 5;
     const FLAG_COLORS: [u8; 8] = [8, 9, 10, 11, 12, 13, 14, 15];
 
-    flag_buttons
+    let children = flag_buttons
         .iter_mut()
         .enumerate()
         .map(|(index, button)| {
@@ -444,16 +460,15 @@ fn flags(
             let flag_on = selected_sprite_flags & (1 << index) != 0;
             let color = if flag_on { FLAG_COLORS[index] } else { 1 };
 
-            let button_content: Element<'_, Msg> = vec![
-                palt(Some(7)),
-                pal(1, color),
-                spr(58, 0, 0),
-                pal(1, 1),
-                palt(Some(0)),
-            ]
-            .into();
+            let button_content: Element<'_, Msg> = Tree::new()
+                .push(palt(Some(7)))
+                .push(pal(1, color))
+                .push(spr(58, 0, 0))
+                .push(pal(1, 1))
+                .push(palt(Some(0)))
+                .into();
 
-            let button: Box<dyn Widget<Msg = Msg>> = Button::new(
+            let button = Button::new(
                 x,
                 y,
                 5,
@@ -463,20 +478,21 @@ fn flags(
                 button_content,
             );
 
-            button
+            button.into()
         })
-        .collect::<Vec<Element<'_, Msg>>>()
-        .into()
+        .collect();
+
+    Tree::with_children(children).into()
 }
 
-fn palt(transparent_color: Option<u8>) -> Box<dyn Widget<Msg = Msg> + 'static> {
+fn palt(transparent_color: Option<u8>) -> impl Into<Element<'static, Msg>> {
     DrawFn::new(move |draw| draw.palt(transparent_color))
 }
 
-fn pal(c0: u8, c1: u8) -> Box<dyn Widget<Msg = Msg> + 'static> {
+fn pal(c0: u8, c1: u8) -> impl Into<Element<'static, Msg>> {
     DrawFn::new(move |draw| draw.pal(c0, c1))
 }
 
-fn spr(sprite: usize, x: i32, y: i32) -> Box<dyn Widget<Msg = Msg>> {
+fn spr(sprite: usize, x: i32, y: i32) -> impl Into<Element<'static, Msg>> {
     DrawFn::new(move |draw| draw.spr(sprite, x, y))
 }

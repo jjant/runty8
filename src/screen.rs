@@ -99,14 +99,14 @@ pub fn run_app<T: ElmApp2 + 'static>(
 
                     let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
                     if let Some(event) = event {
-                        view.on_event(
+                        view.as_widget_mut().on_event(
                             event,
                             (draw_context.state.mouse_x, draw_context.state.mouse_y),
                             dispatch_event,
                         );
                     }
 
-                    view.draw(&mut draw_context);
+                    view.as_widget().draw(&mut draw_context);
                     drop(view);
 
                     let mut commands = vec![];

@@ -35,20 +35,41 @@ pub trait Widget {
 }
 
 pub struct Tree<'a, Msg> {
-    elements: Vec<Box<dyn Widget<Msg = Msg> + 'a>>,
+    children: Vec<Element<'a, Msg>>,
 }
 
-pub type Element<'a, Msg> = Box<dyn Widget<Msg = Msg> + 'a>;
+pub struct Element<'a, Msg> {
+    widget: Box<dyn Widget<Msg = Msg> + 'a>,
+}
 
-impl<'a, Msg: Copy + Debug + 'a> From<Vec<Element<'a, Msg>>> for Element<'a, Msg> {
-    fn from(val: Vec<Element<'a, Msg>>) -> Self {
-        Tree::<'a, Msg>::new(val)
+impl<'a, Msg> Element<'a, Msg> {
+    fn new(widget: impl Widget<Msg = Msg> + 'a) -> Self {
+        Self {
+            widget: Box::new(widget),
+        }
+    }
+
+    pub fn as_widget(&self) -> &dyn Widget<Msg = Msg> {
+        self.widget.as_ref()
+    }
+
+    pub fn as_widget_mut(&mut self) -> &mut dyn Widget<Msg = Msg> {
+        self.widget.as_mut()
     }
 }
 
 impl<'a, Msg> Tree<'a, Msg> {
-    pub fn new(elements: Vec<Box<dyn Widget<Msg = Msg> + 'a>>) -> Box<Self> {
-        Box::new(Self { elements })
+    pub fn new() -> Self {
+        Self::with_children(vec![])
+    }
+
+    pub fn with_children(children: Vec<Element<'a, Msg>>) -> Self {
+        Self { children }
+    }
+
+    pub fn push(mut self, element: impl Into<Element<'a, Msg>>) -> Self {
+        self.children.push(element.into());
+        self
     }
 }
 
@@ -61,33 +82,35 @@ impl<'a, Msg: Copy + Debug> Widget for Tree<'a, Msg> {
         cursor_position: (i32, i32),
         dispatch_event: &mut DispatchEvent<Self::Msg>,
     ) {
-        for w in self.elements.iter_mut() {
-            w.on_event(event, cursor_position, dispatch_event);
+        for element in self.children.iter_mut() {
+            element
+                .widget
+                .on_event(event, cursor_position, dispatch_event);
         }
     }
 
     fn draw(&self, draw: &mut DrawContext) {
-        for w in self.elements.iter() {
-            w.draw(draw);
+        for element in self.children.iter() {
+            element.widget.draw(draw);
         }
     }
 }
 
-pub struct DrawFn<Msg> {
+pub struct DrawFn<'a, Msg> {
     pd: PhantomData<Msg>,
-    f: Box<dyn Fn(&mut DrawContext)>,
+    f: Box<dyn Fn(&mut DrawContext) + 'a>,
 }
 
-impl<'a, Msg: Copy + Debug + 'a> DrawFn<Msg> {
-    pub fn new(f: impl Fn(&mut DrawContext) + 'static) -> Element<'a, Msg> {
-        Box::new(Self {
+impl<'a, Msg: Copy + Debug + 'a> DrawFn<'a, Msg> {
+    pub fn new(f: impl Fn(&mut DrawContext) + 'a) -> Self {
+        Self {
             f: Box::new(f),
             pd: PhantomData,
-        })
+        }
     }
 }
 
-impl<Msg: Copy + Debug> Widget for DrawFn<Msg> {
+impl<'a, Msg: Copy + Debug> Widget for DrawFn<'a, Msg> {
     type Msg = Msg;
 
     fn on_event(
@@ -102,6 +125,13 @@ impl<Msg: Copy + Debug> Widget for DrawFn<Msg> {
         (self.f)(draw);
     }
 }
+
+impl<'a, Msg: Copy + Debug + 'a, T: Widget<Msg = Msg> + 'a> From<T> for Element<'a, Msg> {
+    fn from(val: T) -> Self {
+        Element::new(val)
+    }
+}
+
 pub trait ElmApp2
 where
     Self: Sized,

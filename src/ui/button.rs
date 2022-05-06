@@ -1,6 +1,6 @@
 use crate::{runtime::draw_context::DrawContext, Event, MouseButton};
 
-use super::{DispatchEvent, Widget};
+use super::{DispatchEvent, Element, Widget};
 use std::fmt::Debug;
 
 pub struct Button<'a, Msg> {
@@ -10,7 +10,7 @@ pub struct Button<'a, Msg> {
     height: i32,
     on_press: Option<Msg>,
     state: &'a mut State,
-    content: Box<dyn Widget<Msg = Msg>>,
+    content: Element<'a, Msg>,
 }
 
 #[derive(Debug, Clone)]
@@ -38,17 +38,17 @@ impl<'a, Msg> Button<'a, Msg> {
         height: i32,
         on_press: Option<Msg>,
         state: &'a mut State,
-        content: Box<dyn Widget<Msg = Msg>>,
-    ) -> Box<Self> {
-        Box::new(Button {
+        content: impl Into<Element<'a, Msg>>,
+    ) -> Self {
+        Button {
             x,
             y,
             width,
             height,
             on_press,
             state,
-            content,
-        })
+            content: content.into(),
+        }
     }
 
     fn contains(&self, x: i32, y: i32) -> bool {
@@ -103,13 +103,8 @@ impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
             color,
         );
 
-        // TODO: Offset contents so that they're based off of the button's position?
-        //
-        // i.e, in `button {x = 23, y = 42} [ content { x = 0, y = 0 } ]`
-        // content should be drawn at the right top corner of the button? Probably?
-
         draw.append_camera(-self.x, -self.y);
-        self.content.draw(draw);
+        self.content.as_widget().draw(draw);
         draw.append_camera(self.x, self.y);
     }
 }

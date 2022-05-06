@@ -27,11 +27,11 @@ impl Default for State {
 }
 
 impl<'a, Msg: Copy> Cursor<'a, Msg> {
-    pub fn new(state: &'a mut State) -> Box<Self> {
-        Box::new(Self {
+    pub fn new(state: &'a mut State) -> Self {
+        Self {
             state,
             pd: PhantomData,
-        })
+        }
     }
 }
 
