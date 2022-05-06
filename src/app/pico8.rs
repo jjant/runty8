@@ -44,7 +44,7 @@ pub fn run_app<T: App + 'static>() {
 
     let mut keys = Keys::new();
 
-    let fps = 30_u64;
+    let fps = 60_u64;
     let nanoseconds_per_frame = 1_000_000_000 / fps;
 
     event_loop.run(move |event, _, control_flow| {
