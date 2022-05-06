@@ -48,6 +48,7 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
     }
 
     fn draw(&self, draw: &mut DrawContext) {
+        draw.palt(Some(0));
         draw.raw_spr(
             Sprite::new(editor::MOUSE_SPRITE),
             self.state.cursor_position.0 - 3,

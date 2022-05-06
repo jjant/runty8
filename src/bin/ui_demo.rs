@@ -32,7 +32,7 @@ struct MyApp<'a> {
     sprite_button_state: button::State,
     map_button_state: button::State,
     tab_buttons: [button::State; 4],
-    color_selector_state: [button::State; 16],
+    color_selector_state: Vec<button::State>,
     flag_buttons: Vec<button::State>,
     sprite_buttons: Vec<button::State>,
 }
@@ -77,24 +77,7 @@ impl<'a> ElmApp2 for MyApp<'a> {
                     button::State::new(),
                     button::State::new(),
                 ],
-                color_selector_state: [
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                ],
+                color_selector_state: vec![button::State::new(); 16],
                 flag_buttons: vec![button::State::new(); 8],
                 sprite_buttons: vec![button::State::new(); 64],
             },
@@ -149,7 +132,6 @@ impl<'a> ElmApp2 for MyApp<'a> {
             ))
             .push(match self.tab {
                 Tab::SpriteEditor => sprite_editor_view(
-                    self.selected_sprite,
                     self.selected_color,
                     &mut self.color_selector_state,
                     self.flags.get(self.selected_sprite).unwrap(),
@@ -157,11 +139,16 @@ impl<'a> ElmApp2 for MyApp<'a> {
                 ),
                 Tab::MapEditor => map_view(self.map, 0, 8),
             })
+            .push(tools_row(
+                76,
+                self.selected_sprite,
+                self.selected_sprite_page,
+                &mut self.tab_buttons,
+            ))
             .push(sprite_view(
                 self.selected_sprite,
                 self.selected_sprite_page,
                 &mut self.sprite_buttons,
-                &mut self.tab_buttons,
                 87,
             ))
             .push(bottom_bar(bottom_bar_text))
@@ -190,7 +177,6 @@ fn top_bar<'a>(
 
 #[allow(clippy::too_many_arguments)]
 fn sprite_editor_view<'a>(
-    selected_sprite: usize,
     selected_color: u8,
     color_selector_state: &'a mut [button::State],
     selected_sprite_flags: u8,
@@ -205,7 +191,6 @@ fn sprite_editor_view<'a>(
             color_selector_state,
             Msg::ColorSelected,
         ))
-        .push(sprite_preview(selected_sprite, 71, 78))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
         .into()
 }
@@ -346,14 +331,63 @@ fn color_selector<'a>(
     Tree::with_children(v).into()
 }
 
+fn tools_row(
+    y: i32,
+    sprite: usize,
+    selected_tab: usize,
+    tab_buttons: &mut [button::State],
+) -> Element<'_, Msg> {
+    let mut children = vec![DrawFn::new(move |draw| {
+        const HEIGHT: i32 = 11;
+        draw.rectfill(0, y, 127, y + HEIGHT - 1, 5)
+    })
+    .into()];
+
+    for (sprite_tab, tab_button_state) in tab_buttons.iter_mut().enumerate() {
+        let base_sprite = if selected_tab == sprite_tab { 33 } else { 17 };
+
+        let x = 96 + sprite_tab as i32 * 8;
+
+        children.push(
+            Button::new(
+                x,
+                y + 3,
+                8,
+                8,
+                Some(Msg::SpritePageSelected(sprite_tab)),
+                tab_button_state,
+                DrawFn::new(move |draw| {
+                    draw.palt(Some(0));
+                    draw.spr(base_sprite + sprite_tab, 0, 0);
+                }),
+            )
+            .into(),
+        );
+    }
+
+    const X: i32 = 70;
+    let sprite_preview = spr(sprite, X, y + 2);
+    children.push(sprite_preview.into());
+
+    let spr_str = format!("{:0>3}", sprite);
+    let sprite_number = DrawFn::new(move |draw| {
+        let y = y + 2;
+        draw.rectfill(X + 9, y + 1, X + 9 + 13 - 1, y + 7, 6);
+        draw.print(&spr_str, X + 10, y + 2, 13);
+    })
+    .into();
+    children.push(sprite_number);
+
+    Tree::with_children(children).into()
+}
+
 /// The 4 rows of sprites at the bottom of the sprite editor
-fn sprite_view<'a>(
+fn sprite_view(
     selected_sprite: usize,
     selected_tab: usize,
-    sprite_buttons: &'a mut [button::State],
-    tab_buttons: &'a mut [button::State],
+    sprite_buttons: &mut [button::State],
     y: i32,
-) -> Element<'a, Msg> {
+) -> Element<'_, Msg> {
     let mut children = vec![DrawFn::new(move |draw| {
         draw.palt(None);
         draw.rectfill(0, y, 127, y + 32 + 1, 0);
@@ -401,41 +435,7 @@ fn sprite_view<'a>(
         )
     }
 
-    for (sprite_tab, tab_button_state) in tab_buttons.iter_mut().enumerate() {
-        let base_sprite = if selected_tab == sprite_tab { 33 } else { 17 };
-
-        let x = 96 + sprite_tab as i32 * 8;
-        let y = y - 8;
-
-        children.push(
-            Button::new(
-                x,
-                y,
-                8,
-                8,
-                Some(Msg::SpritePageSelected(sprite_tab)),
-                tab_button_state,
-                DrawFn::new(move |draw| {
-                    draw.palt(Some(0));
-                    draw.spr(base_sprite + sprite_tab, 0, 0);
-                }),
-            )
-            .into(),
-        );
-    }
     Tree::with_children(children).into()
-}
-
-fn sprite_preview(sprite: usize, x: i32, y: i32) -> Element<'static, Msg> {
-    let spr_str = format!("{:0>3}", sprite);
-
-    Tree::new()
-        .push(spr(sprite, x, y))
-        .push(DrawFn::new(move |draw| {
-            draw.rectfill(x + 9, y + 1, x + 9 + 13 - 1, y + 7, 6);
-            draw.print(&spr_str, x + 10, y + 2, 13);
-        }))
-        .into()
 }
 
 fn bottom_bar(text: String) -> Element<'static, Msg> {
