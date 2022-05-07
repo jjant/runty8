@@ -1,16 +1,45 @@
-use crate::app::{DevApp, ElmApp};
+use crate::app::DevApp;
 use crate::editor::SpriteEditor;
-use crate::{DrawContext, Scene, State};
-use glium::backend::Facade;
-use glium::glutin::dpi::{LogicalPosition, LogicalSize};
-use glium::glutin::event::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode};
-use glium::glutin::event_loop::ControlFlow;
-use glium::uniforms::MagnifySamplerFilter;
-use glium::{glutin, Surface, VertexBuffer};
-use glium::{implement_vertex, uniform};
+use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
+use crate::runtime::cmd::PureCmd;
+use crate::runtime::draw_context::{DrawContext, DrawData};
+use crate::runtime::state::Scene;
+use crate::ui::{DispatchEvent, ElmApp2};
+use crate::State;
 
-pub fn do_something<T: ElmApp + 'static>(mut draw_context: DrawContext) {
-    let mut app = T::init();
+use crate::{Event, MouseButton, MouseEvent};
+use glium::glutin::dpi::{LogicalPosition, LogicalSize};
+use glium::glutin::event::{self, ElementState, KeyboardInput, VirtualKeyCode};
+use glium::glutin::event_loop::ControlFlow;
+use glium::texture::{RawImage2d, SrgbTexture2d};
+use glium::uniform;
+use glium::uniforms::{MagnifySamplerFilter, Sampler};
+use glium::{glutin, Surface};
+
+pub fn run_app<T: ElmApp2 + 'static>(
+    flags: T::Flags,
+    mut state: State<'static, 'static>,
+    mut data: DrawData,
+) {
+    let (mut app, cmd) = T::init(flags);
+
+    // TODO: Tidy up, duplicated code below
+    let mut cmds = vec![cmd];
+    while !cmds.is_empty() {
+        let mut new_messages = vec![];
+
+        let mut draw_context = DrawContext::new(&mut state, &mut data);
+        for cmd in cmds.iter_mut() {
+            if let Some(msg) = cmd.run(&mut draw_context) {
+                new_messages.push(msg)
+            }
+        }
+
+        cmds = new_messages
+            .into_iter()
+            .map(|msg| app.update(&msg))
+            .collect();
+    }
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
@@ -36,48 +65,83 @@ pub fn do_something<T: ElmApp + 'static>(mut draw_context: DrawContext) {
     let mut keys = Keys::new();
 
     let fps = 30_u64;
-    let nanoseconds_per_frame = 1_000_000_000 / 60_u64;
+    let nanoseconds_per_frame = 1_000_000_000 / fps;
 
     event_loop.run(move |event, _, control_flow| {
-        let should_return = handle_event(event, scale_factor, logical_size, control_flow, &mut draw_context.state, &mut keys);
+        let event: Option<Event> = handle_event(
+            event,
+            scale_factor,
+            logical_size,
+            control_flow,
+            &mut state,
+            &mut keys,
+        );
 
-        if let ShouldReturn::Yes = should_return {
-            return;
-        }
-
-        let next_frame_time = std::time::Instant::now()
-        + std::time::Duration::from_nanos(nanoseconds_per_frame);
-
+        let next_frame_time =
+            std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
         *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 
         let mut target = display.draw();
         target.clear_color(1.0, 0.0, 0.0, 1.0);
 
-
-
+        let mut draw_context = DrawContext::new(&mut state, &mut data);
+        let mut msg_queue = vec![];
         {
             draw_context.state.update_keys(&keys);
+
             match draw_context.state.scene {
                 Scene::Editor => {
                     editor.draw(&mut draw_context);
-                    editor.update(&mut draw_context.state);
-                },
+                    editor.update(draw_context.state);
+                }
                 Scene::App => {
-                    let actions = app.draw(&mut draw_context);
-                    app.update(&draw_context.state, &actions);
+                    let mut view = app.view();
+
+                    let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
+                    if let Some(event) = event {
+                        view.as_widget_mut().on_event(
+                            event,
+                            (draw_context.state.mouse_x, draw_context.state.mouse_y),
+                            dispatch_event,
+                        );
+                    }
+
+                    view.as_widget().draw(&mut draw_context);
+                    drop(view);
+
+                    let mut commands = vec![];
+
+                    for msg in msg_queue.into_iter() {
+                        commands.push(app.update(&msg));
+                    }
+
+                    while !commands.is_empty() {
+                        let mut new_messages = vec![];
+
+                        for cmd in commands.iter_mut() {
+                            if let Some(msg) = cmd.run(&mut draw_context) {
+                                new_messages.push(msg)
+                            }
+                        }
+
+                        commands = new_messages
+                            .into_iter()
+                            .map(|msg| app.update(&msg))
+                            .collect();
+                    }
                 }
             }
-            if draw_context.state.escape.btnp()  {
+            if draw_context.state.escape.btnp() {
                 draw_context.state.scene.flip();
             }
 
             keys.reset();
         }
 
-        let image = glium::texture::RawImage2d::from_raw_rgb(draw_context.buffer.to_vec(), (128, 128));
-        let texture = glium::texture::SrgbTexture2d::new(&display, image).unwrap();
+        let image = RawImage2d::from_raw_rgb(data.buffer.to_vec(), (128, 128));
+        let texture = SrgbTexture2d::new(&display, image).unwrap();
         let uniforms = uniform! {
-            tex: glium::uniforms::Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
+            tex: Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
         };
 
         target
@@ -93,27 +157,20 @@ pub fn do_something<T: ElmApp + 'static>(mut draw_context: DrawContext) {
     });
 }
 
-enum ShouldReturn {
-    Yes,
-    No,
-}
-
-// TODO: (IMPORTANT)
-// Apparently draw() stops working if you move the mouse outside the window???
 fn handle_event(
-    event: Event<()>,
+    event: event::Event<()>,
     hidpi_factor: f64,
     window_size: LogicalSize<f64>,
     control_flow: &mut ControlFlow,
     state: &mut State,
     keys: &mut Keys,
-) -> ShouldReturn {
+) -> Option<Event> {
     match event {
-        Event::WindowEvent { event, .. } => match event {
+        event::Event::WindowEvent { event, .. } => match event {
             glutin::event::WindowEvent::CloseRequested => {
                 *control_flow = glutin::event_loop::ControlFlow::Exit;
 
-                return ShouldReturn::Yes;
+                None
             }
             // TODO: Handle resize events.
             glutin::event::WindowEvent::CursorMoved { position, .. } => {
@@ -122,29 +179,37 @@ fn handle_event(
                 state.mouse_x = (logical_mouse.x / window_size.width * 128.).floor() as i32;
                 state.mouse_y = (logical_mouse.y / window_size.height * 128.).floor() as i32;
 
-                return ShouldReturn::Yes;
+                Some(Event::Mouse(MouseEvent::Move {
+                    x: state.mouse_x,
+                    y: state.mouse_y,
+                }))
             }
             glutin::event::WindowEvent::MouseInput {
-                button: MouseButton::Left,
+                button: event::MouseButton::Left,
                 state: input_state,
                 ..
             } => {
                 keys.mouse = Some(input_state == ElementState::Pressed);
 
-                return ShouldReturn::Yes;
+                let mouse_event = match input_state {
+                    ElementState::Pressed => MouseEvent::Down(MouseButton::Left),
+                    ElementState::Released => MouseEvent::Up(MouseButton::Left),
+                };
+
+                Some(Event::Mouse(mouse_event))
             }
             glutin::event::WindowEvent::KeyboardInput { input, .. } => {
                 handle_key(input, keys);
-                return ShouldReturn::Yes;
+                None
             }
-            _ => return ShouldReturn::Yes,
+            _ => None,
         },
-        Event::NewEvents(cause) => match cause {
-            glutin::event::StartCause::ResumeTimeReached { .. } => return ShouldReturn::No,
-            glutin::event::StartCause::Init => return ShouldReturn::No,
-            _ => return ShouldReturn::Yes,
+        event::Event::NewEvents(cause) => match cause {
+            glutin::event::StartCause::ResumeTimeReached { .. } => None, // todo!(),
+            glutin::event::StartCause::Init => None,                     // todo!(),
+            _ => None,
         },
-        _ => return ShouldReturn::Yes,
+        _ => None,
     }
 }
 
@@ -166,77 +231,6 @@ fn handle_key(input: KeyboardInput, keys: &mut Keys) {
     }
 }
 
-// Rendering boilerplate
-
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 4],
-    tex_coords: [f32; 2], // <- this is new
-}
-
-implement_vertex!(Vertex, position, tex_coords); // don't forget to add `tex_coords` here
-
-fn whole_screen_vertex_buffer(display: &impl Facade) -> VertexBuffer<Vertex> {
-    let vertex1 = Vertex {
-        position: [-1.0, -1.0, 0.0, 1.0],
-        tex_coords: [0.0, 0.0],
-    };
-    let vertex2 = Vertex {
-        position: [1.0, 1.0, 0.0, 1.0],
-        tex_coords: [1.0, 1.0],
-    };
-    let vertex3 = Vertex {
-        position: [-1.0, 1.0, 0.0, 1.0],
-        tex_coords: [0.0, 1.0],
-    };
-
-    let vertex4 = Vertex {
-        position: [-1.0, -1.0, 0.0, 1.0],
-        tex_coords: [0.0, 0.0],
-    };
-    let vertex5 = Vertex {
-        position: [1.0, -1.0, 0.0, 1.0],
-        tex_coords: [1.0, 0.0],
-    };
-    let vertex6 = Vertex {
-        position: [1.0, 1.0, 0.0, 1.0],
-        tex_coords: [1.0, 1.0],
-    };
-
-    let shape = vec![vertex1, vertex2, vertex3, vertex4, vertex5, vertex6];
-
-    glium::VertexBuffer::new(display, &shape).unwrap()
-}
-
-const VERTEX_SHADER: &str = r#"
-#version 140
-
-in vec4 position;
-in vec2 tex_coords;
-out vec2 v_tex_coords;
-
-uniform vec2 wanted_resolution;
-
-void main() {
-    v_tex_coords = tex_coords;
-    gl_Position = position;
-}
-"#;
-
-const FRAGMENT_SHADER: &str = r#"
-#version 140
-
-in vec2 v_tex_coords;
-out vec4 color;
-
-uniform sampler2D tex;
-
-void main() {
-    float y = 1.0 - v_tex_coords.y;
-    color = texture(tex, vec2(v_tex_coords.x, y));
-}
-"#;
-
 pub(crate) struct Keys {
     pub(crate) left: Option<bool>,
     pub(crate) right: Option<bool>,
@@ -249,7 +243,7 @@ pub(crate) struct Keys {
 }
 
 impl Keys {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             left: None,
             right: None,
@@ -262,7 +256,7 @@ impl Keys {
         }
     }
 
-    fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         *self = Self::new()
     }
 }

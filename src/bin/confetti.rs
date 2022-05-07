@@ -1,9 +1,12 @@
 use rand::Rng;
-use runty8::{App, Button, DrawContext, State};
+use runty8::runtime::draw_context::DrawContext;
+use runty8::runtime::state::{Button, State};
+use runty8::{app, App};
 
 fn main() {
-    runty8::run_app::<Confetti>();
+    app::pico8::run_app::<Confetti>();
 }
+
 struct Confetti {
     particles: Vec<Particle>,
     mouse_x: i32,
@@ -42,7 +45,7 @@ impl App for Confetti {
         }
     }
 
-    fn draw(&self, draw_context: &mut runty8::DrawContext) {
+    fn draw(&self, draw_context: &mut DrawContext) {
         draw_context.cls();
 
         let text_x = 3;

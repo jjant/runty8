@@ -2,6 +2,15 @@
 const CHAR_SIZE: usize = 4 * 6;
 type Character = [u8; CHAR_SIZE];
 
+pub const MISSING_CHAR: Character = [
+    1, 1, 1, 1, //
+    1, 1, 1, 1, //
+    1, 1, 1, 1, //
+    1, 1, 1, 1, //
+    1, 1, 1, 1, //
+    1, 1, 1, 1, //
+];
+
 const SYMBOLS1: [Character; 16] = [
     [
         0, 0, 0, 0, //

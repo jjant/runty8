@@ -1,10 +1,15 @@
 use crate::{
-    app::DevApp, draw, Button, Color, DrawContext, Sprite, State, SPRITE_HEIGHT, SPRITE_WIDTH,
+    app::DevApp,
+    draw,
+    editor::serialize::Ppm,
+    runtime::{draw_context::DrawContext, state::Button},
+    Color, Sprite, State,
 };
 use std::{fs::File, io::Write};
 
 use self::canvas::Canvas;
 mod canvas;
+pub mod serialize;
 
 pub struct SpriteEditor {
     mouse_x: i32,
@@ -79,14 +84,12 @@ impl SpriteEditor {
                     let (end_x, end_y) = Canvas::to_local(self.mouse_x, self.mouse_y);
 
                     for (x, y) in draw::line(start_x, start_y, end_x, end_y) {
-                        sprite[(x + y * SPRITE_WIDTH as i32) as usize] = self.highlighted_color;
+                        sprite[(x + y * Sprite::WIDTH as i32) as usize] = self.highlighted_color;
                     }
 
                     self.draw_mode = DrawMode::Line(None);
-                } else {
-                    if let Some((x, y)) = Canvas::try_lookup(self.mouse_x, self.mouse_y) {
-                        self.bottom_text = format!("X:{} Y:{}", x, y);
-                    };
+                } else if let Some((x, y)) = Canvas::try_lookup(self.mouse_x, self.mouse_y) {
+                    self.bottom_text = format!("X:{} Y:{}", x, y);
                 }
             }
         }
@@ -104,8 +107,8 @@ impl SpriteEditor {
 
                 draw_context.spr(
                     sprite_index,
-                    (sprite_x * SPRITE_WIDTH) as i32,
-                    y_start + BORDER as i32 + (sprite_y * SPRITE_WIDTH) as i32,
+                    (sprite_x * Sprite::WIDTH) as i32,
+                    y_start + BORDER as i32 + (sprite_y * Sprite::WIDTH) as i32,
                 )
             }
         }
@@ -123,10 +126,10 @@ impl SpriteEditor {
         let selected_sprite_y = self.selected_sprite / SPRITES_PER_ROW;
 
         Rect {
-            x: selected_sprite_x as i32 * SPRITE_WIDTH as i32,
-            y: y_start + BORDER as i32 + (selected_sprite_y as usize * SPRITE_WIDTH) as i32,
-            width: SPRITE_WIDTH as i32,
-            height: SPRITE_HEIGHT as i32,
+            x: selected_sprite_x as i32 * Sprite::WIDTH as i32,
+            y: y_start + BORDER as i32 + (selected_sprite_y as usize * Sprite::WIDTH) as i32,
+            width: Sprite::WIDTH as i32,
+            height: Sprite::HEIGHT as i32,
         }
         .highlight(draw_context, false, 7);
     }
@@ -141,7 +144,7 @@ fn serialize(bytes: &[u8]) {
     file.write_all(bytes).unwrap();
 }
 
-static MOUSE_SPRITE: &'static [Color] = &[
+pub static MOUSE_SPRITE: &[Color] = &[
     0, 0, 0, 0, 0, 0, 0, 0, //
     0, 0, 0, 1, 0, 0, 0, 0, //
     0, 0, 1, 7, 1, 0, 0, 0, //
@@ -152,7 +155,7 @@ static MOUSE_SPRITE: &'static [Color] = &[
     0, 0, 0, 1, 1, 7, 1, 0, //
 ];
 
-static MOUSE_TARGET_SPRITE: &'static [Color] = &[
+static MOUSE_TARGET_SPRITE: &[Color] = &[
     0, 0, 0, 1, 0, 0, 0, 0, //
     0, 0, 1, 7, 1, 0, 0, 0, //
     0, 1, 0, 0, 0, 1, 0, 0, //
@@ -213,10 +216,10 @@ impl DevApp for SpriteEditor {
                 // TODO: Use a const for the "4"
                 for y in 0..4 {
                     let sprite_area = Rect {
-                        x: x as i32 * SPRITE_WIDTH as i32,
-                        y: SPRITE_SHEET_AREA.y + (y as usize * SPRITE_WIDTH) as i32,
-                        width: SPRITE_WIDTH as i32,
-                        height: SPRITE_HEIGHT as i32,
+                        x: x as i32 * Sprite::WIDTH as i32,
+                        y: SPRITE_SHEET_AREA.y + (y as usize * Sprite::WIDTH) as i32,
+                        width: Sprite::WIDTH as i32,
+                        height: Sprite::HEIGHT as i32,
                     };
 
                     if sprite_area.contains(self.mouse_x, self.mouse_y) {
@@ -231,11 +234,12 @@ impl DevApp for SpriteEditor {
             }
         }
 
-        if state.btn(Button::X) {
+        if state.btnp(Button::X) {
             println!("[Editor] Serializing sprite sheet");
             serialize(state.sprite_sheet.serialize().as_bytes());
-
-            std::process::exit(1);
+            Ppm::from_sprite_sheet(&state.sprite_sheet)
+                .write_file("./sprite_sheet.ppm")
+                .expect("Couldn't write");
         }
 
         if state.btnp(Button::Down) {
@@ -291,7 +295,7 @@ impl DevApp for SpriteEditor {
         for x in 0..8 {
             for y in 0..8 {
                 let color = self
-                    .selected_sprite(&draw_context.state)
+                    .selected_sprite(draw_context.state)
                     .pget(x as isize, y as isize);
 
                 Canvas::pixel_rect(x, y).fill(draw_context, color);
@@ -424,7 +428,7 @@ impl Rect {
         contains_x && contains_y
     }
 
-    pub fn distance_squared(&self, x: i32, y: i32) -> i32 {
+    fn distance_squared(&self, x: i32, y: i32) -> i32 {
         let dx = [self.x - x, 0, x - (self.x + self.width)]
             .into_iter()
             .max()
