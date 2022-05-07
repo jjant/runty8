@@ -18,7 +18,7 @@ pub fn run_app<T: App + 'static>() {
     let mut app = T::init();
     let map: &'static Map = Box::leak(Box::new(Map::new()));
     let sprite_flags: &'static Flags = Box::leak(Box::new(Flags::new()));
-    let mut state = State::new(map, sprite_flags);
+    let mut state = State::new("sprite_sheet.txt", map, sprite_flags);
     let mut draw_data = DrawData::new();
 
     let event_loop = glutin::event_loop::EventLoop::new();

@@ -83,12 +83,20 @@ pub struct State<'map, 'flags> {
     pub(crate) sprite_sheet: SpriteSheet,
     pub(crate) sprite_flags: &'flags Flags,
     pub(crate) map: &'map Map,
+    pub(crate) sprite_sheet_path: &'map str,
 }
 
 impl<'map, 'flags> State<'map, 'flags> {
     // TODO: Make pub(crate)
-    pub fn new(map: &'map Map, sprite_flags: &'flags Flags) -> Self {
-        let sprite_sheet = sprite_sheet::deserialize();
+    pub fn new(sprite_sheet_path: &'map str, map: &'map Map, sprite_flags: &'flags Flags) -> Self {
+        let sprite_sheet = match sprite_sheet::deserialize(sprite_sheet_path) {
+            Ok(sprite_sheet) => sprite_sheet,
+            Err(err) => {
+                println!("{}", err);
+
+                SpriteSheet::new()
+            }
+        };
 
         Self {
             left: NotPressed,
@@ -105,6 +113,7 @@ impl<'map, 'flags> State<'map, 'flags> {
             sprite_sheet,
             sprite_flags,
             map,
+            sprite_sheet_path,
         }
     }
 

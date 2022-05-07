@@ -5,7 +5,6 @@ use crate::{
     runtime::{draw_context::DrawContext, state::Button},
     Color, Sprite, State,
 };
-use std::{fs::File, io::Write};
 
 use self::canvas::Canvas;
 mod canvas;
@@ -139,9 +138,8 @@ impl SpriteEditor {
     }
 }
 
-fn serialize(bytes: &[u8]) {
-    let mut file = File::create("sprite_sheet.txt").unwrap();
-    file.write_all(bytes).unwrap();
+fn serialize(file_path: &str, bytes: &[u8]) {
+    std::fs::write(file_path, bytes).unwrap();
 }
 
 pub static MOUSE_SPRITE: &[Color] = &[
@@ -235,10 +233,22 @@ impl DevApp for SpriteEditor {
         }
 
         if state.btnp(Button::X) {
-            println!("[Editor] Serializing sprite sheet");
-            serialize(state.sprite_sheet.serialize().as_bytes());
+            println!(
+                "[Editor] Serializing sprite sheet to: {}",
+                state.sprite_sheet_path
+            );
+            serialize(
+                state.sprite_sheet_path,
+                state.sprite_sheet.serialize().as_bytes(),
+            );
+
             Ppm::from_sprite_sheet(&state.sprite_sheet)
-                .write_file("./sprite_sheet.ppm")
+                .write_file(
+                    std::path::Path::new(state.sprite_sheet_path)
+                        .with_extension("ppm")
+                        .to_str()
+                        .unwrap(),
+                )
                 .expect("Couldn't write");
         }
 

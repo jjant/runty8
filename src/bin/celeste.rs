@@ -377,6 +377,7 @@ const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
 
 fn main() {
+    println!(file!());
     app::pico8::run_app::<GameState>();
 }
 

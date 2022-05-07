@@ -18,6 +18,20 @@ impl SpriteSheet {
         }
     }
 
+    fn with_vec(sprite_sheet: Vec<Color>) -> Result<Self, String> {
+        const REQUIRED_BYTES: usize = SpriteSheet::SPRITE_COUNT * Sprite::WIDTH * Sprite::HEIGHT;
+
+        if sprite_sheet.len() != REQUIRED_BYTES {
+            Err(format!(
+                "[SpriteSheet] Needed {} bytes, got {}",
+                REQUIRED_BYTES,
+                sprite_sheet.len()
+            ))
+        } else {
+            Ok(Self { sprite_sheet })
+        }
+    }
+
     pub fn get_sprite(&self, sprite: usize) -> &Sprite {
         let index = self.sprite_index(sprite);
 
@@ -44,7 +58,7 @@ impl SpriteSheet {
         Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
     }
 
-    pub fn deserialize(str: &str) -> Self {
+    pub fn deserialize(str: &str) -> Result<Self, String> {
         let sprite_sheet = str
             .as_bytes()
             .iter()
@@ -53,21 +67,25 @@ impl SpriteSheet {
             .map(|c| c as u8)
             .collect();
 
-        Self { sprite_sheet }
+        Self::with_vec(sprite_sheet)
     }
 }
 
 // TODO: Make a more reliable version of this.
 // TODO: Improve capacity calculation? It's kinda flakey
-pub(crate) fn deserialize() -> SpriteSheet {
+pub(crate) fn deserialize(file_name: &str) -> Result<SpriteSheet, String> {
+    println!("[Editor] Deserialising sprite sheet from: {}", file_name);
     let capacity = 128 * 128 + 128;
-    let mut file = String::with_capacity(capacity);
-    File::open("sprite_sheet.txt")
-        .expect("Couldn't OPEN file")
-        .read_to_string(&mut file)
-        .expect("Couldn't READ file");
+    let mut file_contents = String::with_capacity(capacity);
+    let mut file = File::open(file_name).map_err(|_| "Couldn't OPEN file")?;
 
-    SpriteSheet::deserialize(&file)
+    file.read_to_string(&mut file_contents)
+        .map_err(|_| "Couldn't READ file")?;
+
+    let sprite_sheet = SpriteSheet::deserialize(&file_contents)?;
+
+    println!("[Editor] Deserialising successful");
+    Ok(sprite_sheet)
 }
 
 #[repr(transparent)]
