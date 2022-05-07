@@ -2,7 +2,11 @@ use crate::{
     app::DevApp,
     draw,
     editor::serialize::Ppm,
-    runtime::{draw_context::DrawContext, state::Button},
+    runtime::{
+        draw_context::DrawContext,
+        sprite_sheet::SpriteSheet,
+        state::{Button, Flags},
+    },
     Color, Sprite, State,
 };
 
@@ -136,10 +140,52 @@ impl SpriteEditor {
     fn selected_sprite<'a>(&self, state: &'a State) -> &'a Sprite {
         state.sprite_sheet.get_sprite(self.selected_sprite.into())
     }
-}
 
-fn serialize(file_path: &str, bytes: &[u8]) {
-    std::fs::write(file_path, bytes).unwrap();
+    /// Serialises all game assets (sprite sheet, sprite flags, map, etc)
+    /// TODO: Implement properly
+    fn serialize(&self, state: &State) {
+        let sprite_sheet_path = format!(
+            "{}{}{}",
+            state.assets_path,
+            std::path::MAIN_SEPARATOR,
+            SpriteSheet::file_name()
+        );
+
+        println!(
+            "[Editor] Serializing sprite sheet to: {}",
+            sprite_sheet_path
+        );
+        std::fs::write(sprite_sheet_path, state.sprite_sheet.serialize().as_bytes()).unwrap();
+
+        let sprite_sheet_image_path = format!(
+            "{}{}{}",
+            state.assets_path,
+            std::path::MAIN_SEPARATOR,
+            "sprite_sheet.ppm"
+        );
+
+        println!(
+            "[Editor] Serializing sprite sheet image to: {}",
+            sprite_sheet_image_path
+        );
+        Ppm::from_sprite_sheet(&state.sprite_sheet)
+            .write_file(&sprite_sheet_image_path)
+            .expect("Couldn't write");
+
+        let sprite_flags_path = format!(
+            "{}{}{}",
+            state.assets_path,
+            std::path::MAIN_SEPARATOR,
+            Flags::file_name()
+        );
+
+        println!(
+            "[Editor] Serializing sprite flags to: {}",
+            sprite_flags_path
+        );
+        std::fs::write(sprite_flags_path, state.sprite_flags.serialize())
+            .expect("Couldn't serialize sprite flags");
+    }
 }
 
 pub static MOUSE_SPRITE: &[Color] = &[
@@ -233,23 +279,7 @@ impl DevApp for SpriteEditor {
         }
 
         if state.btnp(Button::X) {
-            println!(
-                "[Editor] Serializing sprite sheet to: {}",
-                state.sprite_sheet_path
-            );
-            serialize(
-                state.sprite_sheet_path,
-                state.sprite_sheet.serialize().as_bytes(),
-            );
-
-            Ppm::from_sprite_sheet(&state.sprite_sheet)
-                .write_file(
-                    std::path::Path::new(state.sprite_sheet_path)
-                        .with_extension("ppm")
-                        .to_str()
-                        .unwrap(),
-                )
-                .expect("Couldn't write");
+            self.serialize(state)
         }
 
         if state.btnp(Button::Down) {

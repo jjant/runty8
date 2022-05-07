@@ -1,10 +1,8 @@
 use std::cell::Cell;
 
-use super::{
-    map::Map,
-    sprite_sheet::{self, SpriteSheet},
-};
+use super::{map::Map, sprite_sheet::SpriteSheet};
 use crate::screen::Keys;
+use itertools::Itertools;
 use ButtonState::*;
 
 #[derive(Debug)]
@@ -13,12 +11,22 @@ pub struct Flags {
 }
 
 impl Flags {
+    pub fn file_name() -> &'static str {
+        "sprite_flags.txt"
+    }
+
     pub fn new() -> Self {
         let flags = vec![Cell::new(0); SpriteSheet::SPRITE_COUNT]
             .try_into()
             .unwrap();
 
         Self { flags }
+    }
+
+    pub(crate) fn with_flags(flags: [u8; SpriteSheet::SPRITE_COUNT]) -> Self {
+        Self {
+            flags: flags.map(Cell::new),
+        }
     }
 
     fn len(&self) -> usize {
@@ -59,6 +67,32 @@ impl Flags {
 
         res != 0
     }
+
+    pub fn deserialize(file_contents: &str) -> Result<Self, String> {
+        let flags_vec: Result<Vec<u8>, String> = file_contents
+            .lines()
+            .map(|line| line.parse::<u8>().map_err(|e| format!("{:?}", e)))
+            .collect();
+
+        let flags_array: [u8; SpriteSheet::SPRITE_COUNT] =
+            flags_vec?.try_into().map_err(|v: Vec<u8>| {
+                format!(
+                    "Incorrect number of elements, needed: {}, got: {}",
+                    SpriteSheet::SPRITE_COUNT,
+                    v.len()
+                )
+            })?;
+
+        Ok(Self::with_flags(flags_array))
+    }
+
+    pub(crate) fn serialize(&self) -> String {
+        self.flags
+            .iter()
+            .map(Cell::get)
+            .map(|flag| flag.to_string())
+            .join("\n")
+    }
 }
 
 impl Default for Flags {
@@ -83,21 +117,17 @@ pub struct State<'map, 'flags> {
     pub(crate) sprite_sheet: SpriteSheet,
     pub(crate) sprite_flags: &'flags Flags,
     pub(crate) map: &'map Map,
-    pub(crate) sprite_sheet_path: &'map str,
+    pub(crate) assets_path: &'static str,
 }
 
 impl<'map, 'flags> State<'map, 'flags> {
     // TODO: Make pub(crate)
-    pub fn new(sprite_sheet_path: &'map str, map: &'map Map, sprite_flags: &'flags Flags) -> Self {
-        let sprite_sheet = match sprite_sheet::deserialize(sprite_sheet_path) {
-            Ok(sprite_sheet) => sprite_sheet,
-            Err(err) => {
-                println!("{}", err);
-
-                SpriteSheet::new()
-            }
-        };
-
+    pub fn new(
+        assets_path: &'static str,
+        sprite_sheet: SpriteSheet,
+        sprite_flags: &'flags Flags,
+        map: &'map Map,
+    ) -> Self {
         Self {
             left: NotPressed,
             right: NotPressed,
@@ -113,7 +143,7 @@ impl<'map, 'flags> State<'map, 'flags> {
             sprite_sheet,
             sprite_flags,
             map,
-            sprite_sheet_path,
+            assets_path,
         }
     }
 

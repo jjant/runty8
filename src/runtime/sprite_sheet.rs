@@ -4,12 +4,16 @@ use itertools::Itertools;
 use std::{fs::File, io::Read};
 
 #[derive(Debug)]
-pub(crate) struct SpriteSheet {
+pub struct SpriteSheet {
     pub(crate) sprite_sheet: Vec<Color>,
 }
 
 impl SpriteSheet {
     pub const SPRITE_COUNT: usize = 256;
+
+    pub fn file_name() -> &'static str {
+        "sprite_sheet.txt"
+    }
 
     #[allow(dead_code)]
     pub fn new() -> Self {

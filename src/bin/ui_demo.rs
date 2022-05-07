@@ -2,6 +2,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use runty8::runtime::draw_context::DrawData;
+use runty8::runtime::sprite_sheet::SpriteSheet;
 use runty8::runtime::state::{Flags, State};
 use runty8::runtime::{cmd::Cmd, map::Map};
 use runty8::ui::button::{self, Button};
@@ -12,7 +13,7 @@ use runty8::ui::{
 };
 use runty8::ui::{DrawFn, Element, Sub, Tree};
 
-fn create_sprite_directory_and_compute_file_path() -> &'static str {
+fn create_directory() -> &'static str {
     let buf = Path::new(file!()).with_extension("");
     let dir_name = buf.to_str().unwrap();
 
@@ -20,24 +21,43 @@ fn create_sprite_directory_and_compute_file_path() -> &'static str {
         println!("Couldn't create directory, error: {:?}", e);
     };
 
-    let file_name = format!(
-        "{}{}{}",
-        dir_name,
-        std::path::MAIN_SEPARATOR,
-        "sprite_sheet.txt"
-    );
-    let file_name = Path::new(&file_name);
+    Box::leak(Box::from(dir_name))
+}
 
-    Box::leak(Box::from(file_name.to_str().unwrap()))
+fn create_sprite_flags(assets_path: &str) -> Flags {
+    if let Ok(content) = std::fs::read_to_string(&format!(
+        "{}{}{}",
+        assets_path,
+        std::path::MAIN_SEPARATOR,
+        Flags::file_name()
+    )) {
+        Flags::deserialize(&content).unwrap()
+    } else {
+        Flags::new()
+    }
+}
+
+fn create_sprite_sheet(assets_path: &str) -> SpriteSheet {
+    if let Ok(content) = std::fs::read_to_string(&format!(
+        "{}{}{}",
+        assets_path,
+        std::path::MAIN_SEPARATOR,
+        SpriteSheet::file_name()
+    )) {
+        SpriteSheet::deserialize(&content).unwrap()
+    } else {
+        SpriteSheet::new()
+    }
 }
 
 fn main() {
+    let assets_path = create_directory();
+
     let map: &'static Map = Box::leak(Box::new(Map::new()));
-    let sprite_flags: &'static Flags = Box::leak(Box::new(Flags::new()));
+    let sprite_flags: &'static Flags = Box::leak(Box::new(create_sprite_flags(assets_path)));
+    let sprite_sheet = create_sprite_sheet(assets_path);
 
-    let sprite_sheet_path = create_sprite_directory_and_compute_file_path();
-
-    let state = State::new(sprite_sheet_path, map, sprite_flags);
+    let state = State::new(assets_path, sprite_sheet, sprite_flags, map);
     let draw_data = DrawData::new();
 
     runty8::screen::run_app::<MyApp>((map, sprite_flags), state, draw_data);

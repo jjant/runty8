@@ -3,6 +3,7 @@ use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::{DrawContext, DrawData};
 use crate::runtime::map::Map;
+use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::runtime::state::{Flags, Scene};
 use crate::screen::Keys;
 use crate::{App, State};
@@ -18,7 +19,10 @@ pub fn run_app<T: App + 'static>() {
     let mut app = T::init();
     let map: &'static Map = Box::leak(Box::new(Map::new()));
     let sprite_flags: &'static Flags = Box::leak(Box::new(Flags::new()));
-    let mut state = State::new("sprite_sheet.txt", map, sprite_flags);
+    let sprite_sheet =
+        SpriteSheet::deserialize(&std::fs::read_to_string("./sprite_sheet.txt").unwrap()).unwrap();
+
+    let mut state = State::new(".", sprite_sheet, sprite_flags, map);
     let mut draw_data = DrawData::new();
 
     let event_loop = glutin::event_loop::EventLoop::new();
