@@ -228,7 +228,7 @@ fn get_color(index: Color) -> u32 {
 }
 
 // Add _FF at the end for alpha
-pub(crate) const COLORS: [u32; 16] = [
+pub const COLORS: [u32; 16] = [
     0x000000, // _FF,
     0x1D2B53, // _FF,
     0x7E2553, // _FF,

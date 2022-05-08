@@ -36,6 +36,17 @@ impl SpriteSheet {
         }
     }
 
+    pub fn set(&mut self, x: usize, y: usize, c: Color) {
+        self.sprite_sheet[Self::to_linear_index(x, y)] = c;
+    }
+
+    pub fn to_linear_index(x: usize, y: usize) -> usize {
+        let x_part = 64 * (x / 8) + x % 8;
+        let y_part = 16 * 64 * (y / 8) + 8 * (y % 8);
+
+        y_part + x_part
+    }
+
     pub fn get_sprite(&self, sprite: usize) -> &Sprite {
         let index = self.sprite_index(sprite);
 
@@ -139,5 +150,17 @@ impl Sprite {
         self.sprite
             .chunks_mut(Sprite::WIDTH)
             .for_each(|row| row.rotate_right(1));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn indexing_works() {
+        assert_eq!(SpriteSheet::to_linear_index(8, 0), 64);
+        assert_eq!(SpriteSheet::to_linear_index(8, 1), 64 + 8);
+        assert_eq!(SpriteSheet::to_linear_index(1, 9), 1033);
     }
 }

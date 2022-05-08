@@ -6,7 +6,7 @@ use crate::runtime::sprite_sheet::SpriteSheet;
 use std::io::Write;
 use std::{fs::File, path::Path};
 
-pub(crate) struct Ppm {
+pub struct Ppm {
     height: usize,
     width: usize,
     data: Vec<u8>,
@@ -58,6 +58,7 @@ impl Ppm {
             data,
         }
     }
+
     pub fn write_file(&self, filename: &str) -> std::io::Result<()> {
         let path = Path::new(filename);
         let mut file = File::create(&path)?;

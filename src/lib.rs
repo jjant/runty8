@@ -1,7 +1,7 @@
 #![allow(clippy::new_without_default)]
 pub mod app;
 mod draw;
-mod editor;
+pub mod editor;
 mod font;
 pub mod graphics;
 pub mod runtime;

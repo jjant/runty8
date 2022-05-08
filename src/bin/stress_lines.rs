@@ -1,7 +1,14 @@
-use runty8::{App, Button, State};
+use runty8::{
+    app,
+    runtime::{
+        draw_context::DrawContext,
+        state::{Button, State},
+    },
+    App,
+};
 
 fn main() {
-    runty8::run_app::<StressLines>();
+    app::pico8::run_app::<StressLines>();
 }
 struct StressLines {
     mouse: MouseState,
@@ -80,7 +87,7 @@ impl App for StressLines {
         // }
     }
 
-    fn draw(&self, draw_context: &mut runty8::DrawContext) {
+    fn draw(&self, draw_context: &mut DrawContext) {
         draw_context.cls();
 
         // Diagonal line
