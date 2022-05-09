@@ -2,7 +2,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use runty8::runtime::draw_context::DrawData;
-use runty8::runtime::sprite_sheet::SpriteSheet;
+use runty8::runtime::sprite_sheet::{Sprite, SpriteSheet};
 use runty8::runtime::state::{Flags, State};
 use runty8::runtime::{cmd::Cmd, map::Map};
 use runty8::ui::button::{self, Button};
@@ -78,6 +78,7 @@ struct MyApp<'a> {
     color_selector_state: Vec<button::State>,
     flag_buttons: Vec<button::State>,
     sprite_buttons: Vec<button::State>,
+    pixel_buttons: Vec<button::State>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -123,6 +124,7 @@ impl<'a> ElmApp2 for MyApp<'a> {
                 color_selector_state: vec![button::State::new(); 16],
                 flag_buttons: vec![button::State::new(); 8],
                 sprite_buttons: vec![button::State::new(); 64],
+                pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
             },
             Cmd::none(),
         )
@@ -179,6 +181,7 @@ impl<'a> ElmApp2 for MyApp<'a> {
                     &mut self.color_selector_state,
                     self.flags.get(self.selected_sprite).unwrap(),
                     &mut self.flag_buttons,
+                    &mut self.pixel_buttons,
                 ),
                 Tab::MapEditor => map_view(self.map, 0, 8),
             })
@@ -224,6 +227,7 @@ fn sprite_editor_view<'a>(
     color_selector_state: &'a mut [button::State],
     selected_sprite_flags: u8,
     flag_buttons: &'a mut [button::State],
+    pixel_buttons: &'a mut [button::State],
 ) -> Element<'a, Msg> {
     Tree::new()
         .push(color_selector(
@@ -234,6 +238,7 @@ fn sprite_editor_view<'a>(
             color_selector_state,
             Msg::ColorSelected,
         ))
+        .push(canvas_view(10, 10, pixel_buttons))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
         .into()
 }
@@ -551,4 +556,30 @@ fn pal(c0: u8, c1: u8) -> impl Into<Element<'static, Msg>> {
 
 fn spr(sprite: usize, x: i32, y: i32) -> impl Into<Element<'static, Msg>> {
     DrawFn::new(move |draw| draw.spr(sprite, x, y))
+}
+
+fn canvas_view(x: i32, y: i32, pixel_buttons: &mut [button::State]) -> Element<'_, Msg> {
+    let mut elements = vec![];
+
+    for (y_index, chunk) in pixel_buttons.iter_mut().chunks(8).into_iter().enumerate() {
+        let y = y + (y_index * Sprite::HEIGHT) as i32;
+        for (x_index, button) in chunk.enumerate() {
+            let x = x + (x_index * Sprite::WIDTH) as i32;
+
+            elements.push(
+                Button::new(
+                    x,
+                    y,
+                    Sprite::WIDTH as i32,
+                    Sprite::HEIGHT as i32,
+                    None,
+                    button,
+                    DrawFn::new(|_| {}),
+                )
+                .into(),
+            )
+        }
+    }
+
+    Tree::with_children(elements).into()
 }
