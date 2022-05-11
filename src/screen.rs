@@ -1,6 +1,5 @@
 use crate::editor::Editor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::runtime::cmd::PureCmd;
 use crate::runtime::draw_context::{DrawContext, DrawData};
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
@@ -24,33 +23,8 @@ pub fn run_app(
     mut sprite_sheet: SpriteSheet,
     mut data: DrawData,
 ) {
-    let (mut app, cmd) = Editor::init();
+    let mut app = Editor::init();
     let mut internal_state = InternalState::new();
-
-    // TODO: Tidy up, duplicated code below
-    let mut cmds = vec![cmd];
-    while !cmds.is_empty() {
-        let mut new_messages = vec![];
-
-        let mut state = State::new(
-            &internal_state,
-            assets_path,
-            &mut sprite_sheet,
-            &mut sprite_flags,
-            &mut map,
-        );
-        let mut draw_context = DrawContext::new(&mut state, &mut data);
-        for cmd in cmds.iter_mut() {
-            if let Some(msg) = cmd.run(&mut draw_context) {
-                new_messages.push(msg)
-            }
-        }
-
-        cmds = new_messages
-            .into_iter()
-            .map(|msg| app.update(&msg))
-            .collect();
-    }
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
@@ -101,7 +75,7 @@ pub fn run_app(
             match internal_state.scene {
                 Scene::Editor => {}
                 Scene::App => {
-                    let mut view = app.view(&sprite_flags);
+                    let mut view = app.view(&sprite_flags, &map);
 
                     let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
                     if let Some(event) = event {
@@ -123,25 +97,8 @@ pub fn run_app(
                     view.as_widget().draw(&mut draw_context);
                     drop(view);
 
-                    let mut commands = vec![];
-
                     for msg in msg_queue.into_iter() {
-                        commands.push(app.update(&msg));
-                    }
-
-                    while !commands.is_empty() {
-                        let mut new_messages = vec![];
-
-                        for cmd in commands.iter_mut() {
-                            if let Some(msg) = cmd.run(&mut draw_context) {
-                                new_messages.push(msg)
-                            }
-                        }
-
-                        commands = new_messages
-                            .into_iter()
-                            .map(|msg| app.update(&msg))
-                            .collect();
+                        app.update(&mut sprite_flags, &msg);
                     }
                 }
             }

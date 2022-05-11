@@ -1,6 +1,6 @@
+use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite};
 use crate::runtime::state::Flags;
-use crate::runtime::{cmd::Cmd, map::Map};
 use crate::ui::button::{self, Button};
 use crate::ui::{
     cursor::{self, Cursor},
@@ -11,7 +11,6 @@ use itertools::Itertools;
 
 #[derive(Debug)]
 pub struct Editor {
-    // map: &'a Map,
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
@@ -43,35 +42,31 @@ pub enum Msg {
 }
 
 impl Editor {
-    pub fn init() -> (Self, Cmd<Msg>) {
+    pub fn init() -> Self {
         let selected_sprite = 0;
 
-        (
-            Self {
-                // map,
-                cursor: cursor::State::new(),
-                sprite_button_state: button::State::new(),
-                map_button_state: button::State::new(),
-                tab: Tab::SpriteEditor,
-                selected_color: 0,
-                selected_sprite,
-                selected_sprite_page: 0,
-                tab_buttons: [
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                    button::State::new(),
-                ],
-                color_selector_state: vec![button::State::new(); 16],
-                flag_buttons: vec![button::State::new(); 8],
-                sprite_buttons: vec![button::State::new(); 64],
-                pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
-            },
-            Cmd::none(),
-        )
+        Self {
+            cursor: cursor::State::new(),
+            sprite_button_state: button::State::new(),
+            map_button_state: button::State::new(),
+            tab: Tab::SpriteEditor,
+            selected_color: 0,
+            selected_sprite,
+            selected_sprite_page: 0,
+            tab_buttons: [
+                button::State::new(),
+                button::State::new(),
+                button::State::new(),
+                button::State::new(),
+            ],
+            color_selector_state: vec![button::State::new(); 16],
+            flag_buttons: vec![button::State::new(); 8],
+            sprite_buttons: vec![button::State::new(); 64],
+            pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
+        }
     }
 
-    pub fn update(&mut self, msg: &Msg) -> Cmd<Msg> {
+    pub fn update(&mut self, flags: &mut Flags, msg: &Msg) {
         match msg {
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
@@ -93,16 +88,13 @@ impl Editor {
             Msg::FlagToggled(flag_index) => {
                 let flag_index = *flag_index;
 
-                // let flag_value = self.flags.fget_n(self.selected_sprite, flag_index as u8);
-                // self.flags
-                //     .fset(self.selected_sprite, flag_index, !flag_value);
+                let flag_value = flags.fget_n(self.selected_sprite, flag_index as u8);
+                flags.fset(self.selected_sprite, flag_index, !flag_value);
             }
         }
-
-        Cmd::none()
     }
 
-    pub fn view(&mut self, flags: &Flags) -> Element<'_, Msg> {
+    pub fn view<'a, 'b>(&'a mut self, flags: &'b Flags, map: &'b Map) -> Element<'a, Msg> {
         const BACKGROUND: u8 = 5;
 
         let bottom_bar_text = "THIS IS THE BOT BAR".to_owned();
@@ -124,10 +116,10 @@ impl Editor {
                     &mut self.flag_buttons,
                     &mut self.pixel_buttons,
                 ),
-                Tab::MapEditor => {
-                    Text::new("MAP VIEW".to_owned(), 0, 8, 7).into()
-                    //  map_view(self.map, 0, 8),
-                }
+                Tab::MapEditor => Tree::new()
+                    .push(map_view(map, 0, 8))
+                    .push(Text::new("MAP VIEW".to_owned(), 0, 8, 7))
+                    .into(),
             })
             .push(tools_row(
                 76,
@@ -183,7 +175,7 @@ fn sprite_editor_view<'a>(
         .into()
 }
 
-fn map_view(map: &Map, x: i32, y: i32) -> Element<'_, Msg> {
+fn map_view(map: &Map, x: i32, y: i32) -> Element<'static, Msg> {
     let v: Vec<Element<'_, Msg>> = map
         .iter()
         .chunks(16)
