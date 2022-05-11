@@ -1,5 +1,3 @@
-use std::cell::Cell;
-
 use super::{map::Map, sprite_sheet::SpriteSheet};
 use crate::screen::Keys;
 use itertools::Itertools;
@@ -7,7 +5,7 @@ use ButtonState::*;
 
 #[derive(Debug)]
 pub struct Flags {
-    flags: [Cell<u8>; SpriteSheet::SPRITE_COUNT],
+    flags: [u8; SpriteSheet::SPRITE_COUNT],
 }
 
 impl Flags {
@@ -16,35 +14,29 @@ impl Flags {
     }
 
     pub fn new() -> Self {
-        let flags = vec![Cell::new(0); SpriteSheet::SPRITE_COUNT]
-            .try_into()
-            .unwrap();
+        let flags = [0; SpriteSheet::SPRITE_COUNT];
 
         Self { flags }
     }
 
     pub(crate) fn with_flags(flags: [u8; SpriteSheet::SPRITE_COUNT]) -> Self {
-        Self {
-            flags: flags.map(Cell::new),
-        }
+        Self { flags }
     }
 
     fn len(&self) -> usize {
         self.flags.len()
     }
 
-    fn set(&self, index: usize, value: u8) {
-        self.flags[index].set(value);
+    fn set(&mut self, index: usize, value: u8) {
+        self.flags[index] = value;
     }
 
     pub fn get(&self, index: usize) -> Option<u8> {
         // TODO: Check what pico8 does in cases when the index is out of bounds
-        let cell = self.flags.get(index)?;
-
-        Some(cell.get())
+        self.flags.get(index).copied()
     }
 
-    pub fn fset(&self, sprite: usize, flag: usize, value: bool) -> u8 {
+    pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
         // TODO: Check what pico8 does in these cases:
         assert!(flag <= 7);
 
@@ -87,11 +79,7 @@ impl Flags {
     }
 
     pub(crate) fn serialize(&self) -> String {
-        self.flags
-            .iter()
-            .map(Cell::get)
-            .map(|flag| flag.to_string())
-            .join("\n")
+        self.flags.iter().map(|flag| flag.to_string()).join("\n")
     }
 }
 
@@ -102,7 +90,16 @@ impl Default for Flags {
 }
 
 #[derive(Debug)]
-pub struct State<'map, 'flags> {
+pub struct State<'a> {
+    pub(crate) internal_state: &'a InternalState,
+    pub(crate) sprite_sheet: &'a mut SpriteSheet,
+    pub(crate) sprite_flags: &'a mut Flags,
+    pub(crate) map: &'a mut Map,
+    pub(crate) assets_path: &'static str,
+}
+
+#[derive(Debug)]
+pub struct InternalState {
     left: ButtonState,
     right: ButtonState,
     up: ButtonState,
@@ -114,20 +111,10 @@ pub struct State<'map, 'flags> {
     pub mouse_y: i32,
     mouse_pressed: ButtonState,
     pub(crate) scene: Scene,
-    pub(crate) sprite_sheet: SpriteSheet,
-    pub(crate) sprite_flags: &'flags Flags,
-    pub(crate) map: &'map Map,
-    pub(crate) assets_path: &'static str,
 }
 
-impl<'map, 'flags> State<'map, 'flags> {
-    // TODO: Make pub(crate)
-    pub fn new(
-        assets_path: &'static str,
-        sprite_sheet: SpriteSheet,
-        sprite_flags: &'flags Flags,
-        map: &'map Map,
-    ) -> Self {
+impl InternalState {
+    pub(crate) fn new() -> Self {
         Self {
             left: NotPressed,
             right: NotPressed,
@@ -140,6 +127,44 @@ impl<'map, 'flags> State<'map, 'flags> {
             mouse_y: 64,
             mouse_pressed: NotPressed,
             scene: Scene::initial(),
+        }
+    }
+
+    pub(crate) fn update_keys(&mut self, keys: &Keys) {
+        self.left.update(keys.left);
+        self.right.update(keys.right);
+        self.up.update(keys.up);
+        self.down.update(keys.down);
+        self.x.update(keys.x);
+        self.c.update(keys.c);
+        self.escape.update(keys.escape);
+        self.mouse_pressed.update(keys.mouse);
+    }
+
+    fn button(&self, button: Button) -> &ButtonState {
+        match button {
+            Button::Left => &self.left,
+            Button::Right => &self.right,
+            Button::Up => &self.up,
+            Button::Down => &self.down,
+            Button::X => &self.x,
+            Button::C => &self.c,
+            Button::Mouse => &self.mouse_pressed,
+        }
+    }
+}
+
+impl<'a> State<'a> {
+    // TODO: Make pub(crate)
+    pub fn new(
+        internal_state: &'a InternalState,
+        assets_path: &'static str,
+        sprite_sheet: &'a mut SpriteSheet,
+        sprite_flags: &'a mut Flags,
+        map: &'a mut Map,
+    ) -> Self {
+        Self {
+            internal_state,
             sprite_sheet,
             sprite_flags,
             map,
@@ -170,34 +195,11 @@ impl<'map, 'flags> State<'map, 'flags> {
     }
 
     pub fn btn(&self, button: Button) -> bool {
-        self.button(button).btn()
+        self.internal_state.button(button).btn()
     }
 
     pub fn btnp(&self, button: Button) -> bool {
-        self.button(button).btnp()
-    }
-
-    pub(crate) fn update_keys(&mut self, keys: &Keys) {
-        self.left.update(keys.left);
-        self.right.update(keys.right);
-        self.up.update(keys.up);
-        self.down.update(keys.down);
-        self.x.update(keys.x);
-        self.c.update(keys.c);
-        self.escape.update(keys.escape);
-        self.mouse_pressed.update(keys.mouse);
-    }
-
-    fn button(&self, button: Button) -> &ButtonState {
-        match button {
-            Button::Left => &self.left,
-            Button::Right => &self.right,
-            Button::Up => &self.up,
-            Button::Down => &self.down,
-            Button::X => &self.x,
-            Button::C => &self.c,
-            Button::Mouse => &self.mouse_pressed,
-        }
+        self.internal_state.button(button).btnp()
     }
 }
 

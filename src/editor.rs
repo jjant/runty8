@@ -10,9 +10,8 @@ use crate::ui::{DrawFn, Element, Tree};
 use itertools::Itertools;
 
 #[derive(Debug)]
-pub struct Editor<'a> {
-    map: &'a Map,
-    flags: &'a Flags,
+pub struct Editor {
+    // map: &'a Map,
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
@@ -43,14 +42,13 @@ pub enum Msg {
     FlagToggled(usize),
 }
 
-impl<'a> Editor<'a> {
-    pub fn init((map, flags): (&'a Map, &'a Flags)) -> (Self, Cmd<Msg>) {
+impl Editor {
+    pub fn init() -> (Self, Cmd<Msg>) {
         let selected_sprite = 0;
 
         (
             Self {
-                map,
-                flags,
+                // map,
                 cursor: cursor::State::new(),
                 sprite_button_state: button::State::new(),
                 map_button_state: button::State::new(),
@@ -95,16 +93,16 @@ impl<'a> Editor<'a> {
             Msg::FlagToggled(flag_index) => {
                 let flag_index = *flag_index;
 
-                let flag_value = self.flags.fget_n(self.selected_sprite, flag_index as u8);
-                self.flags
-                    .fset(self.selected_sprite, flag_index, !flag_value);
+                // let flag_value = self.flags.fget_n(self.selected_sprite, flag_index as u8);
+                // self.flags
+                //     .fset(self.selected_sprite, flag_index, !flag_value);
             }
         }
 
         Cmd::none()
     }
 
-    pub fn view(&mut self) -> Element<'_, Msg> {
+    pub fn view(&mut self, flags: &Flags) -> Element<'_, Msg> {
         const BACKGROUND: u8 = 5;
 
         let bottom_bar_text = "THIS IS THE BOT BAR".to_owned();
@@ -122,11 +120,14 @@ impl<'a> Editor<'a> {
                 Tab::SpriteEditor => sprite_editor_view(
                     self.selected_color,
                     &mut self.color_selector_state,
-                    self.flags.get(self.selected_sprite).unwrap(),
+                    flags.get(self.selected_sprite).unwrap(),
                     &mut self.flag_buttons,
                     &mut self.pixel_buttons,
                 ),
-                Tab::MapEditor => map_view(self.map, 0, 8),
+                Tab::MapEditor => {
+                    Text::new("MAP VIEW".to_owned(), 0, 8, 7).into()
+                    //  map_view(self.map, 0, 8),
+                }
             })
             .push(tools_row(
                 76,

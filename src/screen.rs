@@ -3,7 +3,8 @@ use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER
 use crate::runtime::cmd::PureCmd;
 use crate::runtime::draw_context::{DrawContext, DrawData};
 use crate::runtime::map::Map;
-use crate::runtime::state::{Flags, Scene};
+use crate::runtime::sprite_sheet::SpriteSheet;
+use crate::runtime::state::{Flags, InternalState, Scene};
 use crate::ui::DispatchEvent;
 use crate::State;
 
@@ -17,17 +18,27 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
 pub fn run_app(
-    flags: (&'static Map, &'static Flags),
-    mut state: State<'static, 'static>,
+    assets_path: &'static str,
+    mut map: Map,
+    mut sprite_flags: Flags,
+    mut sprite_sheet: SpriteSheet,
     mut data: DrawData,
 ) {
-    let (mut app, cmd) = Editor::init(flags);
+    let (mut app, cmd) = Editor::init();
+    let mut internal_state = InternalState::new();
 
     // TODO: Tidy up, duplicated code below
     let mut cmds = vec![cmd];
     while !cmds.is_empty() {
         let mut new_messages = vec![];
 
+        let mut state = State::new(
+            &internal_state,
+            assets_path,
+            &mut sprite_sheet,
+            &mut sprite_flags,
+            &mut map,
+        );
         let mut draw_context = DrawContext::new(&mut state, &mut data);
         for cmd in cmds.iter_mut() {
             if let Some(msg) = cmd.run(&mut draw_context) {
@@ -71,7 +82,7 @@ pub fn run_app(
             scale_factor,
             logical_size,
             control_flow,
-            &mut state,
+            &mut internal_state,
             &mut keys,
         );
 
@@ -82,25 +93,33 @@ pub fn run_app(
         let mut target = display.draw();
         target.clear_color(1.0, 0.0, 0.0, 1.0);
 
-        let mut draw_context = DrawContext::new(&mut state, &mut data);
+        // let mut state = State::new(assets_path, &mut sprite_sheet, &mut sprite_flags, &mut map);
         let mut msg_queue = vec![];
         {
-            draw_context.state.update_keys(&keys);
+            internal_state.update_keys(&keys);
 
-            match draw_context.state.scene {
+            match internal_state.scene {
                 Scene::Editor => {}
                 Scene::App => {
-                    let mut view = app.view();
+                    let mut view = app.view(&sprite_flags);
 
                     let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
                     if let Some(event) = event {
                         view.as_widget_mut().on_event(
                             event,
-                            (draw_context.state.mouse_x, draw_context.state.mouse_y),
+                            (internal_state.mouse_x, internal_state.mouse_y),
                             dispatch_event,
                         );
                     }
 
+                    let mut state = State::new(
+                        &internal_state,
+                        assets_path,
+                        &mut sprite_sheet,
+                        &mut sprite_flags,
+                        &mut map,
+                    );
+                    let mut draw_context = DrawContext::new(&mut state, &mut data);
                     view.as_widget().draw(&mut draw_context);
                     drop(view);
 
@@ -126,8 +145,8 @@ pub fn run_app(
                     }
                 }
             }
-            if draw_context.state.escape.btnp() {
-                draw_context.state.scene.flip();
+            if internal_state.escape.btnp() {
+                internal_state.scene.flip();
             }
 
             keys.reset();
@@ -157,7 +176,7 @@ fn handle_event(
     hidpi_factor: f64,
     window_size: LogicalSize<f64>,
     control_flow: &mut ControlFlow,
-    state: &mut State,
+    state: &mut InternalState,
     keys: &mut Keys,
 ) -> Option<Event> {
     match event {

@@ -1,14 +1,9 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use runty8::runtime::{
-    draw_context::DrawData,
-    map::Map,
-    sprite_sheet::SpriteSheet,
-    state::{Flags, State},
-};
+use runty8::runtime::{draw_context::DrawData, map::Map, sprite_sheet::SpriteSheet, state::Flags};
 
 fn create_directory() -> &'static str {
-    let buf = Path::new(file!()).with_extension("");
+    // let buf = Path::new(file!()).with_extension("");
     let buf = Path::new("src/bin/ui_demo").to_path_buf();
     let dir_name = buf.to_str().unwrap();
 
@@ -51,12 +46,11 @@ fn create_sprite_sheet(assets_path: &str) -> SpriteSheet {
 fn main() {
     let assets_path = create_directory();
 
-    let map: &'static Map = Box::leak(Box::new(Map::new()));
-    let sprite_flags: &'static Flags = Box::leak(Box::new(create_sprite_flags(assets_path)));
+    let map: Map = Map::new();
+    let sprite_flags: Flags = create_sprite_flags(assets_path);
     let sprite_sheet = create_sprite_sheet(assets_path);
 
-    let state = State::new(assets_path, sprite_sheet, sprite_flags, map);
     let draw_data = DrawData::new();
 
-    runty8::screen::run_app((map, sprite_flags), state, draw_data);
+    runty8::screen::run_app(assets_path, map, sprite_flags, sprite_sheet, draw_data);
 }
