@@ -238,7 +238,7 @@ fn sprite_editor_view<'a>(
             color_selector_state,
             Msg::ColorSelected,
         ))
-        .push(canvas_view(10, 10, pixel_buttons))
+        .push(canvas_view(7, 10, pixel_buttons))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
         .into()
 }
@@ -562,9 +562,9 @@ fn canvas_view(x: i32, y: i32, pixel_buttons: &mut [button::State]) -> Element<'
     let mut elements = vec![];
 
     for (y_index, chunk) in pixel_buttons.iter_mut().chunks(8).into_iter().enumerate() {
-        let y = y + (y_index * Sprite::HEIGHT) as i32;
+        let y = y + 1 + (y_index * Sprite::HEIGHT) as i32;
         for (x_index, button) in chunk.enumerate() {
-            let x = x + (x_index * Sprite::WIDTH) as i32;
+            let x = x + 1 + (x_index * Sprite::WIDTH) as i32;
 
             elements.push(
                 Button::new(
@@ -581,5 +581,10 @@ fn canvas_view(x: i32, y: i32, pixel_buttons: &mut [button::State]) -> Element<'
         }
     }
 
-    Tree::with_children(elements).into()
+    let highlight = DrawFn::new(move |draw| {
+        draw.palt(None);
+        draw.rect(x, y, x + 64 + 1, y + 64 + 1, 0)
+    });
+
+    Tree::with_children(elements).push(highlight).into()
 }
