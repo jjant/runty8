@@ -98,7 +98,7 @@ pub fn run_app(
                     drop(view);
 
                     for msg in msg_queue.into_iter() {
-                        app.update(&mut sprite_flags, &msg);
+                        app.update(&mut sprite_flags, &mut sprite_sheet, &msg);
                     }
                 }
             }

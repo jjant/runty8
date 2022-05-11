@@ -39,6 +39,8 @@ pub enum Msg {
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
+    // TODO: Improve
+    SpriteEdited { x: usize, y: usize },
 }
 
 impl Editor {
@@ -66,7 +68,7 @@ impl Editor {
         }
     }
 
-    pub fn update(&mut self, flags: &mut Flags, msg: &Msg) {
+    pub fn update(&mut self, flags: &mut Flags, sprite_sheet: &mut SpriteSheet, msg: &Msg) {
         match msg {
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
@@ -90,6 +92,11 @@ impl Editor {
 
                 let flag_value = flags.fget_n(self.selected_sprite, flag_index as u8);
                 flags.fset(self.selected_sprite, flag_index, !flag_value);
+            }
+            &Msg::SpriteEdited { x, y } => {
+                let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
+
+                sprite.pset(x as isize, y as isize, self.selected_color);
             }
         }
     }
@@ -522,7 +529,10 @@ fn canvas_view<'a, 'b>(
                     y,
                     Sprite::WIDTH as i32,
                     Sprite::HEIGHT as i32,
-                    None,
+                    Some(Msg::SpriteEdited {
+                        x: x_index,
+                        y: y_index,
+                    }),
                     button,
                     DrawFn::new(move |draw| {
                         draw.rectfill(0, 0, 7, 7, pixel_color);
