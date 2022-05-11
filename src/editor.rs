@@ -1,5 +1,5 @@
 use crate::runtime::map::Map;
-use crate::runtime::sprite_sheet::{Color, Sprite};
+use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
 use crate::runtime::state::Flags;
 use crate::ui::button::{self, Button};
 use crate::ui::{
@@ -94,7 +94,12 @@ impl Editor {
         }
     }
 
-    pub fn view<'a, 'b>(&'a mut self, flags: &'b Flags, map: &'b Map) -> Element<'a, Msg> {
+    pub fn view<'a, 'b>(
+        &'a mut self,
+        flags: &'b Flags,
+        map: &'b Map,
+        sprite_sheet: &'b SpriteSheet,
+    ) -> Element<'a, Msg> {
         const BACKGROUND: u8 = 5;
 
         let bottom_bar_text = "THIS IS THE BOT BAR".to_owned();
@@ -113,6 +118,7 @@ impl Editor {
                     self.selected_color,
                     &mut self.color_selector_state,
                     flags.get(self.selected_sprite).unwrap(),
+                    sprite_sheet.get_sprite(self.selected_sprite),
                     &mut self.flag_buttons,
                     &mut self.pixel_buttons,
                 ),
@@ -154,10 +160,11 @@ fn top_bar<'a>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn sprite_editor_view<'a>(
+fn sprite_editor_view<'a, 'b>(
     selected_color: u8,
     color_selector_state: &'a mut [button::State],
     selected_sprite_flags: u8,
+    selected_sprite: &'b Sprite,
     flag_buttons: &'a mut [button::State],
     pixel_buttons: &'a mut [button::State],
 ) -> Element<'a, Msg> {
@@ -170,7 +177,7 @@ fn sprite_editor_view<'a>(
             color_selector_state,
             Msg::ColorSelected,
         ))
-        .push(canvas_view(7, 10, pixel_buttons))
+        .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
         .into()
 }
@@ -490,12 +497,23 @@ fn spr(sprite: usize, x: i32, y: i32) -> impl Into<Element<'static, Msg>> {
     DrawFn::new(move |draw| draw.spr(sprite, x, y))
 }
 
-fn canvas_view(x: i32, y: i32, pixel_buttons: &mut [button::State]) -> Element<'_, Msg> {
+fn canvas_view<'a, 'b>(
+    x: i32,
+    y: i32,
+    pixel_buttons: &'a mut [button::State],
+    sprite: &'b Sprite,
+) -> Element<'a, Msg> {
     let mut elements = vec![];
 
-    for (y_index, chunk) in pixel_buttons.iter_mut().chunks(8).into_iter().enumerate() {
+    for (y_index, chunk) in pixel_buttons
+        .iter_mut()
+        .zip(sprite.iter())
+        .chunks(8)
+        .into_iter()
+        .enumerate()
+    {
         let y = y + 1 + (y_index * Sprite::HEIGHT) as i32;
-        for (x_index, button) in chunk.enumerate() {
+        for (x_index, (button, pixel_color)) in chunk.enumerate() {
             let x = x + 1 + (x_index * Sprite::WIDTH) as i32;
 
             elements.push(
@@ -506,7 +524,9 @@ fn canvas_view(x: i32, y: i32, pixel_buttons: &mut [button::State]) -> Element<'
                     Sprite::HEIGHT as i32,
                     None,
                     button,
-                    DrawFn::new(|_| {}),
+                    DrawFn::new(move |draw| {
+                        draw.rectfill(0, 0, 7, 7, pixel_color);
+                    }),
                 )
                 .into(),
             )

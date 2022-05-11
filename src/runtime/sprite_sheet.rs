@@ -151,6 +151,10 @@ impl Sprite {
             .chunks_mut(Sprite::WIDTH)
             .for_each(|row| row.rotate_right(1));
     }
+
+    pub(crate) fn iter(&self) -> impl Iterator<Item = Color> + '_ {
+        self.sprite.iter().copied()
+    }
 }
 
 #[cfg(test)]

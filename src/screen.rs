@@ -75,7 +75,7 @@ pub fn run_app(
             match internal_state.scene {
                 Scene::Editor => {}
                 Scene::App => {
-                    let mut view = app.view(&sprite_flags, &map);
+                    let mut view = app.view(&sprite_flags, &map, &sprite_sheet);
 
                     let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
                     if let Some(event) = event {
