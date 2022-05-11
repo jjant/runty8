@@ -1,5 +1,4 @@
-use crate::app::DevApp;
-use crate::editor::SpriteEditor;
+// use crate::editor::SpriteEditor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::{DrawContext, DrawData};
 use crate::runtime::map::Map;
@@ -44,7 +43,7 @@ pub fn run_app<T: App + 'static>() {
     let program =
         glium::Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-    let mut editor = SpriteEditor::init();
+    // let mut editor = SpriteEditor::init();
 
     let mut keys = Keys::new();
 
@@ -77,10 +76,9 @@ pub fn run_app<T: App + 'static>() {
 
             match state.scene {
                 Scene::Editor => {
-                    let mut draw_context = DrawContext::new(&mut state, &mut draw_data);
-
-                    editor.draw(&mut draw_context);
-                    editor.update(&mut state);
+                    // let mut draw_context = DrawContext::new(&mut state, &mut draw_data);
+                    // editor.draw(&mut draw_context);
+                    // editor.update(&mut state);
                 }
                 Scene::App => {
                     let mut draw_context = DrawContext::new(&mut state, &mut draw_data);

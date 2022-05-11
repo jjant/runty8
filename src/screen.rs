@@ -1,10 +1,10 @@
-use crate::app::DevApp;
-use crate::editor::SpriteEditor;
+use crate::editor::Editor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::cmd::PureCmd;
 use crate::runtime::draw_context::{DrawContext, DrawData};
-use crate::runtime::state::Scene;
-use crate::ui::{DispatchEvent, ElmApp2};
+use crate::runtime::map::Map;
+use crate::runtime::state::{Flags, Scene};
+use crate::ui::DispatchEvent;
 use crate::State;
 
 use crate::{Event, MouseButton, MouseEvent};
@@ -16,12 +16,12 @@ use glium::uniform;
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
-pub fn run_app<T: ElmApp2 + 'static>(
-    flags: T::Flags,
+pub fn run_app(
+    flags: (&'static Map, &'static Flags),
     mut state: State<'static, 'static>,
     mut data: DrawData,
 ) {
-    let (mut app, cmd) = T::init(flags);
+    let (mut app, cmd) = Editor::init(flags);
 
     // TODO: Tidy up, duplicated code below
     let mut cmds = vec![cmd];
@@ -60,8 +60,6 @@ pub fn run_app<T: ElmApp2 + 'static>(
     let program =
         glium::Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-    let mut editor = SpriteEditor::init();
-
     let mut keys = Keys::new();
 
     let fps = 30_u64;
@@ -90,10 +88,7 @@ pub fn run_app<T: ElmApp2 + 'static>(
             draw_context.state.update_keys(&keys);
 
             match draw_context.state.scene {
-                Scene::Editor => {
-                    editor.draw(&mut draw_context);
-                    editor.update(draw_context.state);
-                }
+                Scene::Editor => {}
                 Scene::App => {
                     let mut view = app.view();
 

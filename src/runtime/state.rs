@@ -277,7 +277,7 @@ pub enum Scene {
 
 impl Scene {
     fn initial() -> Self {
-        Scene::Editor
+        Scene::App
     }
 
     pub fn flip(&mut self) {
