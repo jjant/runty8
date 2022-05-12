@@ -1,8 +1,11 @@
 use std::path::Path;
 
-use runty8::runtime::{draw_context::DrawData, map::Map, sprite_sheet::SpriteSheet, state::Flags};
+use runty8::{
+    runtime::{draw_context::DrawContext, state::State},
+    App,
+};
 
-fn create_directory() -> &'static str {
+fn create_directory() -> String {
     // let buf = Path::new(file!()).with_extension("");
     let buf = Path::new("src/bin/ui_demo").to_path_buf();
     let dir_name = buf.to_str().unwrap();
@@ -11,46 +14,26 @@ fn create_directory() -> &'static str {
         println!("Couldn't create directory, error: {:?}", e);
     };
 
-    Box::leak(Box::from(dir_name))
-}
-
-fn create_sprite_flags(assets_path: &str) -> Flags {
-    if let Ok(content) = std::fs::read_to_string(&format!(
-        "{}{}{}",
-        assets_path,
-        std::path::MAIN_SEPARATOR,
-        Flags::file_name()
-    )) {
-        Flags::deserialize(&content).unwrap()
-    } else {
-        Flags::new()
-    }
-}
-
-fn create_sprite_sheet(assets_path: &str) -> SpriteSheet {
-    let path = format!(
-        "{}{}{}",
-        assets_path,
-        std::path::MAIN_SEPARATOR,
-        SpriteSheet::file_name()
-    );
-
-    if let Ok(content) = std::fs::read_to_string(&path) {
-        SpriteSheet::deserialize(&content).unwrap()
-    } else {
-        println!("Couldn't read spreadsheet from {}", path);
-        SpriteSheet::new()
-    }
+    dir_name.to_owned()
 }
 
 fn main() {
     let assets_path = create_directory();
 
-    let map: Map = Map::new();
-    let sprite_flags: Flags = create_sprite_flags(assets_path);
-    let sprite_sheet = create_sprite_sheet(assets_path);
+    runty8::run_app::<EmptyApp>(assets_path);
+}
 
-    let draw_data = DrawData::new();
+struct EmptyApp;
 
-    runty8::screen::run_app(assets_path, map, sprite_flags, sprite_sheet, draw_data);
+impl App for EmptyApp {
+    fn init() -> Self {
+        Self
+    }
+
+    fn update(&mut self, _: &State) {}
+
+    fn draw(&self, draw: &mut DrawContext) {
+        draw.cls();
+        draw.print("EMPTY", 0, 0, 7);
+    }
 }

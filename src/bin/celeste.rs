@@ -1,8 +1,28 @@
 #![feature(drain_filter)]
+use std::path::Path;
+
 use rand::Rng;
 use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
-use runty8::{app, App};
+use runty8::App;
+
+// Deduplicate this code.
+fn create_directory() -> String {
+    let buf = Path::new(file!()).with_extension("");
+    let dir_name = buf.to_str().unwrap();
+
+    if let Err(e) = std::fs::create_dir(dir_name) {
+        println!("Couldn't create directory, error: {:?}", e);
+    };
+
+    dir_name.to_owned()
+}
+
+fn main() {
+    let assets_path = create_directory();
+
+    runty8::run_app::<GameState>(assets_path)
+}
 
 struct Cloud {
     x: f32,
@@ -375,11 +395,6 @@ impl GameState {
 const K_DOWN: Button = Button::Down;
 const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
-
-fn main() {
-    println!(file!());
-    app::pico8::run_app::<GameState>();
-}
 
 struct GameState {
     room: Vec2<i32>,

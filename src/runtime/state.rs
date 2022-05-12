@@ -95,7 +95,7 @@ pub struct State<'a> {
     pub(crate) sprite_sheet: &'a mut SpriteSheet,
     pub(crate) sprite_flags: &'a mut Flags,
     pub(crate) map: &'a mut Map,
-    pub(crate) assets_path: &'static str,
+    pub(crate) assets_path: &'a str,
 }
 
 #[derive(Debug)]
@@ -158,7 +158,7 @@ impl<'a> State<'a> {
     // TODO: Make pub(crate)
     pub fn new(
         internal_state: &'a InternalState,
-        assets_path: &'static str,
+        assets_path: &'a str,
         sprite_sheet: &'a mut SpriteSheet,
         sprite_flags: &'a mut Flags,
         map: &'a mut Map,

@@ -5,7 +5,7 @@ use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::runtime::state::{Flags, InternalState, Scene};
 use crate::ui::DispatchEvent;
-use crate::State;
+use crate::{App, State};
 
 use crate::{Event, MouseButton, MouseEvent};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
@@ -16,14 +16,15 @@ use glium::uniform;
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
-pub fn run_app(
-    assets_path: &'static str,
+pub fn run_app<T: App + 'static>(
+    assets_path: String,
     mut map: Map,
     mut sprite_flags: Flags,
     mut sprite_sheet: SpriteSheet,
-    mut data: DrawData,
+    mut draw_data: DrawData,
 ) {
-    let mut app = Editor::init();
+    let mut app = T::init();
+    let mut editor = Editor::init();
     let mut internal_state = InternalState::new();
 
     let event_loop = glutin::event_loop::EventLoop::new();
@@ -67,15 +68,26 @@ pub fn run_app(
         let mut target = display.draw();
         target.clear_color(1.0, 0.0, 0.0, 1.0);
 
-        // let mut state = State::new(assets_path, &mut sprite_sheet, &mut sprite_flags, &mut map);
         let mut msg_queue = vec![];
         {
             internal_state.update_keys(&keys);
 
             match internal_state.scene {
-                Scene::Editor => {}
+                // TODO: App is refreshed too much (check celeste)
                 Scene::App => {
-                    let mut view = app.view(&sprite_flags, &map, &sprite_sheet);
+                    let mut state = State::new(
+                        &internal_state,
+                        &assets_path,
+                        &mut sprite_sheet,
+                        &mut sprite_flags,
+                        &mut map,
+                    );
+                    let mut draw_context = DrawContext::new(&mut state, &mut draw_data);
+                    app.draw(&mut draw_context);
+                    app.update(&state);
+                }
+                Scene::Editor => {
+                    let mut view = editor.view(&sprite_flags, &map, &sprite_sheet);
 
                     let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
                     if let Some(event) = event {
@@ -88,17 +100,17 @@ pub fn run_app(
 
                     let mut state = State::new(
                         &internal_state,
-                        assets_path,
+                        &assets_path,
                         &mut sprite_sheet,
                         &mut sprite_flags,
                         &mut map,
                     );
-                    let mut draw_context = DrawContext::new(&mut state, &mut data);
+                    let mut draw_context = DrawContext::new(&mut state, &mut draw_data);
                     view.as_widget().draw(&mut draw_context);
                     drop(view);
 
                     for msg in msg_queue.into_iter() {
-                        app.update(&mut sprite_flags, &mut sprite_sheet, &msg);
+                        editor.update(&mut sprite_flags, &mut sprite_sheet, &msg);
                     }
                 }
             }
@@ -109,7 +121,7 @@ pub fn run_app(
             keys.reset();
         }
 
-        let image = RawImage2d::from_raw_rgb(data.buffer.to_vec(), (128, 128));
+        let image = RawImage2d::from_raw_rgb(draw_data.buffer.to_vec(), (128, 128));
         let texture = SrgbTexture2d::new(&display, image).unwrap();
         let uniforms = uniform! {
             tex: Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
