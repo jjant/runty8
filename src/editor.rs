@@ -539,6 +539,7 @@ fn canvas_view<'a, 'b>(
                         draw.rectfill(0, 0, 7, 7, pixel_color);
                     }),
                 )
+                .event_on_press()
                 .into(),
             )
         }
