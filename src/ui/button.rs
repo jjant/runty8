@@ -118,18 +118,21 @@ impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
 
                 self.state.pressed = false;
             }
-            Mouse(Move { .. }) => {
-                if self.contains(cursor_position.0, cursor_position.1)
-                    && self.active_mode == ActiveMode::Press
-                    && self.state.mouse_pressed
-                    && !self.state.pressed
-                {
-                    self.state.pressed = true;
-                    if let Some(on_press) = self.on_press {
-                        dispatch_event.call(on_press);
+            Mouse(Move { .. }) => match self.active_mode {
+                ActiveMode::Press => {
+                    if self.contains(cursor_position.0, cursor_position.1) {
+                        if self.state.mouse_pressed && !self.state.pressed {
+                            self.state.pressed = true;
+                            if let Some(on_press) = self.on_press {
+                                dispatch_event.call(on_press);
+                            }
+                        }
+                    } else {
+                        self.state.pressed = false;
                     }
                 }
-            }
+                ActiveMode::Release => {}
+            },
             _ => {}
         }
     }
