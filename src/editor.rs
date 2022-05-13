@@ -289,6 +289,7 @@ fn color_selector<'a>(
                 draw.palt(Some(0));
             }),
         )
+        .event_on_press()
         .into();
         v.push(button);
     }
