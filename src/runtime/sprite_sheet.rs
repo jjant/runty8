@@ -120,8 +120,15 @@ impl Sprite {
         unsafe { &mut *(sprite as *mut [u8] as *mut Self) }
     }
 
+    pub(crate) fn set(&mut self, index: usize, color: Color) {
+        self.sprite[index] = color;
+    }
+
     pub fn pset(&mut self, x: isize, y: isize, color: Color) {
-        self.sprite[Self::index(x, y).unwrap()] = color;
+        // TODO: is unwrapping here ok? Why?
+        let index = Self::index(x, y).unwrap();
+
+        self.set(index, color);
     }
 
     pub fn pget(&self, x: isize, y: isize) -> Color {
@@ -150,6 +157,10 @@ impl Sprite {
         self.sprite
             .chunks_mut(Sprite::WIDTH)
             .for_each(|row| row.rotate_right(1));
+    }
+
+    pub(crate) fn iter(&self) -> impl Iterator<Item = Color> + '_ {
+        self.sprite.iter().copied()
     }
 }
 
