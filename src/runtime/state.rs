@@ -1,5 +1,5 @@
 use super::{map::Map, sprite_sheet::SpriteSheet};
-use crate::screen::Keys;
+use crate::screen::{Keys, Resources};
 use itertools::Itertools;
 use ButtonState::*;
 
@@ -155,14 +155,14 @@ impl InternalState {
 }
 
 impl<'a> State<'a> {
-    // TODO: Make pub(crate)
-    pub fn new(
-        internal_state: &'a InternalState,
-        assets_path: &'a str,
-        sprite_sheet: &'a mut SpriteSheet,
-        sprite_flags: &'a mut Flags,
-        map: &'a mut Map,
-    ) -> Self {
+    pub(crate) fn new(internal_state: &'a InternalState, resources: &'a mut Resources) -> Self {
+        let Resources {
+            sprite_sheet,
+            sprite_flags,
+            map,
+            assets_path,
+        } = resources;
+
         Self {
             internal_state,
             sprite_sheet,
