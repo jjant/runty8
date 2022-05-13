@@ -414,6 +414,7 @@ fn sprite_view(
                     draw.spr(sprite, 0, 0);
                 }),
             )
+            .event_on_press()
             .into(),
         );
     }
