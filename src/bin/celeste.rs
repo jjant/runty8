@@ -196,7 +196,7 @@ impl App for GameState {
             .copied()
             .filter_map(|mut object| {
                 object.move_(state, &self.objects, self.room);
-                let should_destroy = object.type_.update();
+                let should_destroy = object.object_type.update();
 
                 if should_destroy {
                     None
@@ -302,7 +302,8 @@ impl App for GameState {
 
         // Platforms/big chest
         for object in self.objects.iter() {
-            if object.type_ == ObjectType::Platform || object.type_ == ObjectType::BigChest {
+            if object.object_type == ObjectType::Platform {
+                //|| object.object_type == ObjectType::BigChest {
                 object.draw(draw, self);
             }
         }
@@ -314,7 +315,8 @@ impl App for GameState {
 
         // Draw objects
         for object in &self.objects {
-            if object.type_ != ObjectType::Platform && object.type_ != ObjectType::BigChest {
+            if object.object_type != ObjectType::Platform {
+                //&& object.object_type != ObjectType::BigChest {
                 object.draw(draw, self);
             }
         }
@@ -368,8 +370,12 @@ impl App for GameState {
         }
 
         if level_index(self) == 30 {
-            if let Some(p) = self.objects.iter().find(|o| o.type_ == ObjectType::Player) {
-                let diff = f32::min(24., 40. - f32::abs(p.x + 4. - 64.)).floor() as i32;
+            if let Some(p) = self
+                .objects
+                .iter()
+                .find(|object| object.object_type == ObjectType::Player)
+            {
+                let diff = f32::min(24., 40. - f32::abs(p.base_object.x + 4. - 64.)).floor() as i32;
                 draw.rectfill(0, 0, diff, 128, 0);
                 draw.rectfill(128 - diff, 0, 128, 128, 0);
             }
@@ -843,74 +849,83 @@ struct Spring {
     hide_for: i32,
 }
 
+#[derive(PartialEq, Clone, Copy)]
 struct BaseObject {
     x: f32,
     y: f32,
-    spr: f32,
-    delay: i32,
+    hitbox: Hitbox,
+    spr: f32, // hack they use
+    spd: Vec2<f32>,
+    rem: Vec2<f32>,
+    last: f32,
+    dir: i32, // not sure if all objects use this?
+    // obj.solids in original source
+    is_solid: bool,
+    collideable: bool,
+    flip: Vec2<bool>,
 }
 
-impl Spring {
-    fn init() -> Self {
-        Self {
-            hide_in: 0,
-            hide_for: 0,
-        }
-    }
+// impl Spring {
+//     fn init() -> Self {
+//         Self {
+//             hide_in: 0,
+//             hide_for: 0,
+//         }
+//     }
 
-    fn update(&mut self, object: &mut BaseObject) {
-        if self.hide_for > 0 {
-            self.hide_for -= 1;
+//     fn update(&mut self, object: &mut BaseObject) {
+//         if self.hide_for > 0 {
+//             self.hide_for -= 1;
 
-            if self.hide_for <= 0 {
-                object.spr = 18.;
-                object.delay = 0;
-            }
-        } else if object.spr == 18. {
-            // TODO: Borrowchecker madness
-            // let hit = object.collide(player);
-            //
-            // if let Some(hit) = hit.and_then(|hit| hit.spd.y >= 0) {
-            //     object.spr = 19.;
-            //     hit.y = object.y - 4.;
-            //     hit.spd.x *= 0.2;
-            //     hit.spd.y = -3;
-            // hit.djump = game_state.max_djump;
-            // object.delay = 10;
-            //
-            // init_object(smoke,this.x,this.y)
-            //
-            // -- breakable below us
-            // local below=this.collide(fall_floor,0,1)
-            // if below~=nil then
-            //     break_fall_floor(below)
-            // end
-            //
-            // psfx(8)
-            // }
-        } else if object.delay > 0 {
-            object.delay -= 1;
+//             if self.hide_for <= 0 {
+//                 object.spr = 18.;
+//                 object.delay = 0;
+//             }
+//         } else if object.spr == 18. {
+//             // TODO: Borrowchecker madness
+//             // let hit = object.collide(player);
+//             //
+//             // if let Some(hit) = hit.and_then(|hit| hit.spd.y >= 0) {
+//             //     object.spr = 19.;
+//             //     hit.y = object.y - 4.;
+//             //     hit.spd.x *= 0.2;
+//             //     hit.spd.y = -3;
+//             // hit.djump = game_state.max_djump;
+//             // object.delay = 10;
+//             //
+//             // init_object(smoke,this.x,this.y)
+//             //
+//             // -- breakable below us
+//             // local below=this.collide(fall_floor,0,1)
+//             // if below~=nil then
+//             //     break_fall_floor(below)
+//             // end
+//             //
+//             // psfx(8)
+//             // }
+//         } else if object.delay > 0 {
+//             object.delay -= 1;
 
-            if object.delay <= 0 {
-                object.spr = 18.;
-            }
-        }
+//             if object.delay <= 0 {
+//                 object.spr = 18.;
+//             }
+//         }
 
-        // begin hiding
-        if self.hide_in > 0 {
-            self.hide_in -= 1;
+//         // begin hiding
+//         if self.hide_in > 0 {
+//             self.hide_in -= 1;
 
-            if self.hide_in <= 0 {
-                self.hide_for = 60;
-                object.spr = 0.;
-            }
-        }
-    }
+//             if self.hide_in <= 0 {
+//                 self.hide_for = 60;
+//                 object.spr = 0.;
+//             }
+//         }
+//     }
 
-    fn break_spring(&mut self) {
-        self.hide_in = 15;
-    }
-}
+//     fn break_spring(&mut self) {
+//         self.hide_in = 15;
+//     }
+// }
 
 // balloon = {
 //     tile=22,
@@ -1366,7 +1381,7 @@ impl RoomTitle {
 
 // -----------------------
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 struct Hitbox {
     x: f32,
     y: f32,
@@ -1376,37 +1391,24 @@ struct Hitbox {
 
 #[derive(PartialEq, Clone, Copy)]
 struct Object {
-    x: f32,
-    y: f32,
-    hitbox: Hitbox,
-    type_: ObjectType,
-    spr: f32, // hack they use
-    spd: Vec2<f32>,
-    rem: Vec2<f32>,
-    last: f32,
-    dir: i32, // not sure if all objects use this?
-    // obj.solids in original source
-    is_solid: bool,
-    collideable: bool,
-    flip: Vec2<bool>,
+    base_object: BaseObject,
+    object_type: ObjectType,
 }
 
 impl Object {
     fn init(game_state: &GameState, kind: ObjectKind, x: f32, y: f32) -> Option<Self> {
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
-        if kind.if_not_fruit() && game_state.got_fruit[1 + level_index(game_state) as usize] {
+        if dbg!(&kind).if_not_fruit() && game_state.got_fruit[1 + level_index(game_state) as usize]
+        {
             return None;
         }
 
-        let mut object = Self {
+        let mut base_object = BaseObject {
             x,
             y,
-            type_: todo!(),
             collideable: true,
             is_solid: true,
-            // TODO: figure out if we need an option here
-            spr: kind.tile().map(|t| t as f32).unwrap_or(-42.),
             hitbox: Hitbox {
                 x: 0.,
                 y: 0.,
@@ -1418,34 +1420,40 @@ impl Object {
             last: 0.,
             dir: 0,
             flip: Vec2 { x: false, y: false },
+            // TODO: figure out if we need an option here
+            spr: kind.tile().map(|t| t as f32).unwrap_or(-42.),
         };
+        let object_type = ObjectKind::create(&kind, &mut base_object);
 
-        kind.init(&mut object);
+        // kind.init(&mut object);
 
-        Some(object)
+        Some(Self {
+            base_object,
+            object_type,
+        })
     }
 
     fn draw(&self, draw: &mut DrawContext, game_state: &GameState) {
-        match self.type_ {
-            ObjectType::Platform => todo!(),
-            ObjectType::BigChest => todo!(),
+        match self.object_type {
+            // ObjectType::Platform => todo!(),
+            // ObjectType::BigChest => todo!(),
             ObjectType::Player => todo!(),
-            ObjectType::Smoke => todo!(),
-            ObjectType::LifeUp => todo!(),
-            ObjectType::Fruit => todo!(),
-            ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => todo!(),
-            ObjectType::FallFloor => todo!(),
-            ObjectType::Key => todo!(),
+            // ObjectType::Smoke => todo!(),
+            // ObjectType::LifeUp => todo!(),
+            // ObjectType::Fruit => todo!(),
+            // ObjectType::Orb => todo!(),
+            // ObjectType::FakeWall => todo!(),
+            // ObjectType::FallFloor => todo!(),
+            // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state),
             _ => {
-                if self.spr > 0. {
+                if self.base_object.spr > 0. {
                     // TODO: Implement version with many arguments
-                    // draw.spr(self.spr, self.x, self.y, 1, 1, self.flip.x, self.flip.y);
+                    // draw.spr(self.base_object.spr, self.base_object.x, self.base_object.y, 1, 1, self.base_object.flip.x, self.base_object.flip.y);
                     draw.spr(
-                        self.spr.floor() as usize,
-                        self.x.floor() as i32,
-                        self.y.floor() as i32,
+                        self.base_object.spr.floor() as usize,
+                        self.base_object.x.floor() as i32,
+                        self.base_object.y.floor() as i32,
                     );
                 }
             }
@@ -1453,19 +1461,19 @@ impl Object {
     }
 
     fn move_(&mut self, state: &State, objects: &[Object], room: Vec2<i32>) {
-        let ox = self.spd.x;
-        let oy = self.spd.y;
+        let ox = self.base_object.spd.x;
+        let oy = self.base_object.spd.y;
 
         // [x] get move amount
-        self.rem.x += ox;
-        let amount_x = (self.rem.x as f32 + 0.5).floor();
-        self.rem.x -= amount_x;
+        self.base_object.rem.x += ox;
+        let amount_x = (self.base_object.rem.x as f32 + 0.5).floor();
+        self.base_object.rem.x -= amount_x;
         self.move_x(state, objects, room, amount_x as i32, 0);
 
         // [y] get move amount
-        self.rem.y += oy;
-        let amount_y = (self.rem.y as f32 + 0.5).floor();
-        self.rem.y -= amount_y;
+        self.base_object.rem.y += oy;
+        let amount_y = (self.base_object.rem.y as f32 + 0.5).floor();
+        self.base_object.rem.y -= amount_y;
         self.move_y(state, objects, room, amount_y as i32);
     }
 
@@ -1477,38 +1485,38 @@ impl Object {
         amount: i32,
         start: i32,
     ) {
-        if self.is_solid {
+        if self.base_object.is_solid {
             let step = amount.signum();
 
             for _ in start..=amount.abs() {
                 if !self.is_solid(state, objects, room, step, 0) {
-                    self.x += step as f32;
+                    self.base_object.x += step as f32;
                 } else {
-                    self.spd.x = 0.;
-                    self.rem.x = 0.;
+                    self.base_object.spd.x = 0.;
+                    self.base_object.rem.x = 0.;
                     break;
                 }
             }
         } else {
-            self.x += amount as f32;
+            self.base_object.x += amount as f32;
         }
     }
 
     fn move_y(&mut self, state: &State, objects: &[Object], room: Vec2<i32>, amount: i32) {
-        if self.is_solid {
+        if self.base_object.is_solid {
             let step = amount.signum();
 
             for _ in 0..=amount.abs() {
                 if !self.is_solid(state, objects, room, 0, step) {
-                    self.y += step as f32;
+                    self.base_object.y += step as f32;
                 } else {
-                    self.spd.y = 0.;
-                    self.rem.y = 0.;
+                    self.base_object.spd.y = 0.;
+                    self.base_object.rem.y = 0.;
                     break;
                 }
             }
         } else {
-            self.y += amount as f32;
+            self.base_object.y += amount as f32;
         }
     }
 
@@ -1530,12 +1538,13 @@ impl Object {
         solid_at(
             state,
             room,
-            (self.x + self.hitbox.x + ox as f32).floor() as i32,
-            (self.y + self.hitbox.y + oy as f32).floor() as i32,
-            self.hitbox.w,
-            self.hitbox.h,
-        ) || self.check(objects, &ObjectType::FallFloor, ox, oy)
-            || self.check(objects, &ObjectType::FakeWall, ox, oy)
+            (self.base_object.x + self.base_object.hitbox.x + ox as f32).floor() as i32,
+            (self.base_object.y + self.base_object.hitbox.y + oy as f32).floor() as i32,
+            self.base_object.hitbox.w,
+            self.base_object.hitbox.h,
+        )
+        // || self.check(objects, &ObjectType::FallFloor, ox, oy)
+        //     || self.check(objects, &ObjectType::FakeWall, ox, oy)
     }
 
     fn check(&self, objects: &[Object], type_: &ObjectType, ox: i32, oy: i32) -> bool {
@@ -1551,16 +1560,26 @@ impl Object {
     ) -> Option<(usize, &'a Object)> {
         for (index, other) in objects.iter().enumerate() {
             if !std::ptr::eq(other, self)
-                && other.type_ == self.type_
-                && other.collideable
-                && other.x + other.hitbox.x + other.hitbox.w as f32
-                    > self.x + self.hitbox.x + ox as f32
-                && other.y + other.hitbox.y + other.hitbox.h as f32
-                    > self.y + self.hitbox.y + oy as f32
-                && other.x + other.hitbox.x
-                    < self.x + self.hitbox.x + self.hitbox.w as f32 + ox as f32
-                && other.y + other.hitbox.y
-                    < self.y + self.hitbox.y + self.hitbox.h as f32 + oy as f32
+                && other.object_type == self.object_type
+                && other.base_object.collideable
+                && other.base_object.x
+                    + other.base_object.hitbox.x
+                    + other.base_object.hitbox.w as f32
+                    > self.base_object.x + self.base_object.hitbox.x + ox as f32
+                && other.base_object.y
+                    + other.base_object.hitbox.y
+                    + other.base_object.hitbox.h as f32
+                    > self.base_object.y + self.base_object.hitbox.y + oy as f32
+                && other.base_object.x + other.base_object.hitbox.x
+                    < self.base_object.x
+                        + self.base_object.hitbox.x
+                        + self.base_object.hitbox.w as f32
+                        + ox as f32
+                && other.base_object.y + other.base_object.hitbox.y
+                    < self.base_object.y
+                        + self.base_object.hitbox.y
+                        + self.base_object.hitbox.h as f32
+                        + oy as f32
             {
                 return Some((index, other));
             }
@@ -1592,34 +1611,34 @@ fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> b
 #[derive(PartialEq, Clone, Copy)]
 enum ObjectType {
     Platform,
-    BigChest,
+    // BigChest,
     Player,
-    Smoke,
-    LifeUp,
-    Fruit,
-    Orb,
-    FakeWall,
-    FallFloor,
-    Key,
+    // Smoke,
+    // LifeUp,
+    // Fruit,
+    // Orb,
+    // FakeWall,
+    // FallFloor,
+    // Key,
     RoomTitle(RoomTitle),
 }
 
 impl ObjectType {
     // TODO: Figure out what exactly needs to go here
-    const TYPES: &'static [ObjectType] = &[Self::BigChest];
+    // const TYPES: &'static [ObjectType] = &[Self::BigChest];
 
     fn init(&self, object: &mut Object) {
         match self {
             ObjectType::Platform => todo!(),
-            ObjectType::BigChest => todo!(),
+            // ObjectType::BigChest => todo!(),
             ObjectType::Player => todo!(),
-            ObjectType::Smoke => Smoke::init(object),
-            ObjectType::LifeUp => todo!(),
-            ObjectType::Fruit => Fruit::init(object),
-            ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => todo!(),
-            ObjectType::FallFloor => todo!(),
-            ObjectType::Key => todo!(),
+            // ObjectType::Smoke => Smoke::init(object),
+            // ObjectType::LifeUp => todo!(),
+            // ObjectType::Fruit => Fruit::init(object),
+            // ObjectType::Orb => todo!(),
+            // ObjectType::FakeWall => todo!(),
+            // ObjectType::FallFloor => todo!(),
+            // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(_) => todo!(),
         }
     }
@@ -1627,15 +1646,15 @@ impl ObjectType {
     fn tile(&self) -> Option<i32> {
         match self {
             ObjectType::Platform => todo!(),
-            ObjectType::BigChest => Some(96),
+            // ObjectType::BigChest => Some(96),
             ObjectType::Player => todo!(),
-            ObjectType::Smoke => todo!(),
-            ObjectType::LifeUp => todo!(),
-            ObjectType::Fruit => Some(26),
-            ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => Some(64),
-            ObjectType::FallFloor => Some(23),
-            ObjectType::Key => Some(8),
+            // ObjectType::Smoke => todo!(),
+            // ObjectType::LifeUp => todo!(),
+            // ObjectType::Fruit => Some(26),
+            // ObjectType::Orb => todo!(),
+            // ObjectType::FakeWall => Some(64),
+            // ObjectType::FallFloor => Some(23),
+            // ObjectType::Key => Some(8),
             ObjectType::RoomTitle(_) => None,
         }
     }
@@ -1643,15 +1662,15 @@ impl ObjectType {
     fn update(&mut self) -> bool {
         match self {
             ObjectType::Platform => todo!(),
-            ObjectType::BigChest => todo!(),
+            // ObjectType::BigChest => todo!(),
             ObjectType::Player => todo!(),
-            ObjectType::Smoke => todo!(),
-            ObjectType::LifeUp => todo!(),
-            ObjectType::Fruit => todo!(),
-            ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => todo!(),
-            ObjectType::FallFloor => todo!(),
-            ObjectType::Key => todo!(),
+            // ObjectType::Smoke => todo!(),
+            // ObjectType::LifeUp => todo!(),
+            // ObjectType::Fruit => todo!(),
+            // ObjectType::Orb => todo!(),
+            // ObjectType::FakeWall => todo!(),
+            // ObjectType::FallFloor => todo!(),
+            // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(rt) => rt.update(),
         }
     }
@@ -1662,10 +1681,10 @@ impl Object {
         ice_at(
             state,
             room,
-            (self.x + self.hitbox.x + ox).floor() as i32,
-            (self.y + self.hitbox.y + oy).floor() as i32,
-            self.hitbox.w,
-            self.hitbox.h,
+            (self.base_object.x + self.base_object.hitbox.x + ox).floor() as i32,
+            (self.base_object.y + self.base_object.hitbox.y + oy).floor() as i32,
+            self.base_object.hitbox.w,
+            self.base_object.hitbox.h,
         )
     }
 }
@@ -1683,8 +1702,8 @@ fn kill_player(obj: &Object, game_state: &mut GameState) {
         let angle = dir / 8.;
 
         game_state.dead_particles.push(DeadParticle {
-            x: obj.x + 4.,
-            y: obj.y + 4.,
+            x: obj.base_object.x + 4.,
+            y: obj.base_object.y + 4.,
             t: 10,
             spd: Vec2 {
                 x: (angle).sin() * 3.,
@@ -1751,12 +1770,12 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
             if tile == 11 {
                 let mut platform =
                     Object::init(game_state, ObjectKind::Platform, ftx * 8., fty * 8.).unwrap();
-                platform.dir = -1;
+                platform.base_object.dir = -1;
                 game_state.objects.push(platform);
             } else if tile == 12 {
                 let mut platform =
                     Object::init(game_state, ObjectKind::Platform, ftx * 8., fty * 8.).unwrap();
-                platform.dir = 1;
+                platform.base_object.dir = 1;
                 game_state.objects.push(platform);
             } else {
                 for kind in ObjectKind::TYPES.iter().copied() {
@@ -1943,12 +1962,12 @@ b302b211000000110092b100000000a3b1b1b1b1b1b10011111232110000b342000000a282125284
 struct Platform {}
 
 impl Platform {
-    fn init(this: &mut Object) {
-        this.x -= 4.;
-        this.is_solid = false;
-        this.hitbox.w = 16;
-        this.last = this.x;
-    }
+    // fn init(this: &mut Object) {
+    //     this.x -= 4.;
+    //     this.is_solid = false;
+    //     this.hitbox.w = 16;
+    //     this.last = this.x;
+    // }
 
     fn update(
         self_: &mut Object,
@@ -1956,13 +1975,13 @@ impl Platform {
         objects: &[Object],
         room: Vec2<i32>,
     ) -> Option<(usize, Object)> {
-        self_.spd.x = self_.dir as f32 * 0.65;
-        if self_.x < -16. {
-            self_.x = 128.;
-        } else if self_.x > 128. {
-            self_.x = -16.;
+        self_.base_object.spd.x = self_.base_object.dir as f32 * 0.65;
+        if self_.base_object.x < -16. {
+            self_.base_object.x = 128.;
+        } else if self_.base_object.x > 128. {
+            self_.base_object.x = -16.;
         }
-        self_.last = self_.x;
+        self_.base_object.last = self_.base_object.x;
 
         let ret = if !self_.check(objects, &ObjectType::Player, 0, 0) {
             let (index, hit) = self_.collide(objects, &ObjectType::Player, 0, -1)?;
@@ -1971,7 +1990,7 @@ impl Platform {
                 state,
                 objects,
                 room,
-                (self_.x - self_.last).floor() as i32,
+                (self_.base_object.x - self_.base_object.last).floor() as i32,
                 1,
             );
 
@@ -1984,31 +2003,39 @@ impl Platform {
     }
 
     fn draw(self_: &Object, draw: &mut DrawContext) {
-        draw.spr(11, self_.x.floor() as i32, self_.y.floor() as i32 - 1);
-        draw.spr(12, self_.x.floor() as i32 + 8, self_.y.floor() as i32 - 1)
+        draw.spr(
+            11,
+            self_.base_object.x.floor() as i32,
+            self_.base_object.y.floor() as i32 - 1,
+        );
+        draw.spr(
+            12,
+            self_.base_object.x.floor() as i32 + 8,
+            self_.base_object.y.floor() as i32 - 1,
+        )
     }
 }
-struct Smoke;
+// struct Smoke;
 
-impl Smoke {
-    fn init(this: &mut Object) {
-        this.spr = 29.;
-        this.spd.y = -0.1;
-        this.spd.x = 0.3 + rnd(0.2);
-        this.x += -1. + rnd(2.);
-        this.y += -1. + rnd(2.);
-        this.flip.x = maybe();
-        this.flip.y = maybe();
-        this.is_solid = false;
-    }
+// impl Smoke {
+//     fn init(this: &mut Object) {
+//         this.spr = 29.;
+//         this.spd.y = -0.1;
+//         this.spd.x = 0.3 + rnd(0.2);
+//         this.x += -1. + rnd(2.);
+//         this.y += -1. + rnd(2.);
+//         this.flip.x = maybe();
+//         this.flip.y = maybe();
+//         this.is_solid = false;
+//     }
 
-    fn update(self_: &mut Object) -> bool {
-        self_.spr += 0.2;
+//     fn update(self_: &mut Object) -> bool {
+//         self_.spr += 0.2;
 
-        // destroy if
-        self_.spr >= 32.
-    }
-}
+//         // destroy if
+//         self_.spr >= 32.
+//     }
+// }
 
 struct Fruit;
 
@@ -2018,20 +2045,21 @@ impl Fruit {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum ObjectKind {
     PlayerSpawn,
-    Spring,
-    Balloon,
-    FallFloor,
-    Fruit,
-    FlyFruit,
-    FakeWall,
-    Key,
-    Chest,
-    Message,
-    BigChest,
-    Flag,
+    // Spring,
+    // Balloon,
+    // FallFloor,
+    // Fruit,
+    // FlyFruit,
+    // FakeWall,
+    // Key,
+    // Chest,
+    // Message,
+    // BigChest,
+    // Flag,
+
     // Non-tile-instantiable
     RoomTitle,
     Platform,
@@ -2043,63 +2071,82 @@ impl ObjectKind {
     // see line 1135 of source.p8
     const TYPES: &'static [Self] = &[
         ObjectKind::PlayerSpawn,
-        ObjectKind::Spring,
-        ObjectKind::Balloon,
-        ObjectKind::FallFloor,
-        ObjectKind::Fruit,
-        ObjectKind::FlyFruit,
-        ObjectKind::FakeWall,
-        ObjectKind::Key,
-        ObjectKind::Chest,
-        ObjectKind::Message,
-        ObjectKind::BigChest,
-        ObjectKind::Flag,
+        // ObjectKind::Spring,
+        // ObjectKind::Balloon,
+        // ObjectKind::FallFloor,
+        // ObjectKind::Fruit,
+        // ObjectKind::FlyFruit,
+        // ObjectKind::FakeWall,
+        // ObjectKind::Key,
+        // ObjectKind::Chest,
+        // ObjectKind::Message,
+        // ObjectKind::BigChest,
+        // ObjectKind::Flag,
     ];
 
     fn init(&self, object: &mut Object) {
         match self {
             ObjectKind::PlayerSpawn => todo!(),
-            ObjectKind::Spring => todo!(),
-            ObjectKind::Balloon => todo!(),
-            ObjectKind::FallFloor => todo!(),
-            ObjectKind::Fruit => todo!(),
-            ObjectKind::FlyFruit => todo!(),
-            ObjectKind::FakeWall => todo!(),
-            ObjectKind::Key => todo!(),
-            ObjectKind::Chest => todo!(),
-            ObjectKind::Message => todo!(),
-            ObjectKind::BigChest => todo!(),
-            ObjectKind::Flag => todo!(),
+            // ObjectKind::Spring => todo!(),
+            // ObjectKind::Balloon => todo!(),
+            // ObjectKind::FallFloor => todo!(),
+            // ObjectKind::Fruit => todo!(),
+            // ObjectKind::FlyFruit => todo!(),
+            // ObjectKind::FakeWall => todo!(),
+            // ObjectKind::Key => todo!(),
+            // ObjectKind::Chest => todo!(),
+            // ObjectKind::Message => todo!(),
+            // ObjectKind::BigChest => todo!(),
+            // ObjectKind::Flag => todo!(),
             ObjectKind::RoomTitle => todo!(),
             ObjectKind::Platform => todo!(),
         }
     }
 
+    fn create(&self, object: &mut BaseObject) -> ObjectType {
+        match self {
+            ObjectKind::PlayerSpawn => todo!(),
+            // ObjectKind::Spring => todo!(),
+            // ObjectKind::Balloon => todo!(),
+            // ObjectKind::FallFloor => todo!(),
+            // ObjectKind::Fruit => todo!(),
+            // ObjectKind::FlyFruit => todo!(),
+            // ObjectKind::FakeWall => todo!(),
+            // ObjectKind::Key => todo!(),
+            // ObjectKind::Chest => todo!(),
+            // ObjectKind::Message => todo!(),
+            // ObjectKind::BigChest => todo!(),
+            // ObjectKind::Flag => todo!(),
+            ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle { delay: 5 }),
+            ObjectKind::Platform => todo!(),
+        }
+    }
     fn tile(&self) -> Option<i32> {
         match self {
             ObjectKind::PlayerSpawn => Some(1),
-            ObjectKind::Spring => Some(18),
-            ObjectKind::Balloon => Some(22),
-            ObjectKind::FallFloor => Some(23),
-            ObjectKind::Fruit => Some(26),
-            ObjectKind::FlyFruit => Some(28),
-            ObjectKind::FakeWall => Some(64),
-            ObjectKind::Key => Some(8),
-            ObjectKind::Chest => Some(20),
-            ObjectKind::Message => Some(86),
-            ObjectKind::BigChest => Some(96),
-            ObjectKind::Flag => Some(118),
+            // ObjectKind::Spring => Some(18),
+            // ObjectKind::Balloon => Some(22),
+            // ObjectKind::FallFloor => Some(23),
+            // ObjectKind::Fruit => Some(26),
+            // ObjectKind::FlyFruit => Some(28),
+            // ObjectKind::FakeWall => Some(64),
+            // ObjectKind::Key => Some(8),
+            // ObjectKind::Chest => Some(20),
+            // ObjectKind::Message => Some(86),
+            // ObjectKind::BigChest => Some(96),
+            // ObjectKind::Flag => Some(118),
             _ => None,
         }
     }
 
     fn if_not_fruit(&self) -> bool {
+        #[allow(clippy::match_single_binding)]
         match self {
-            ObjectKind::Fruit => true,
-            ObjectKind::FlyFruit => true,
-            ObjectKind::FakeWall => true,
-            ObjectKind::Key => true,
-            ObjectKind::Chest => true,
+            // ObjectKind::Fruit => true,
+            // ObjectKind::FlyFruit => true,
+            // ObjectKind::FakeWall => true,
+            // ObjectKind::Key => true,
+            // ObjectKind::Chest => true,
             _ => false,
         }
     }
