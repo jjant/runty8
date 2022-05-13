@@ -1,5 +1,4 @@
 #![allow(clippy::new_without_default)]
-pub mod app;
 mod draw;
 pub mod editor;
 mod font;
@@ -7,13 +6,19 @@ pub mod graphics;
 pub mod runtime;
 pub mod screen;
 pub mod ui;
-pub use app::App;
 use runtime::{
-    draw_context::DrawData,
+    draw_context::{DrawContext, DrawData},
     map::Map,
     sprite_sheet::{Color, Sprite, SpriteSheet},
     state::{Flags, State},
 };
+
+/// A regular pico8 app
+pub trait App {
+    fn init() -> Self;
+    fn update(&mut self, state: &State);
+    fn draw(&self, draw_context: &mut DrawContext);
+}
 
 #[derive(Clone, Copy)]
 pub enum MouseButton {

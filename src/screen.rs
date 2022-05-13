@@ -234,7 +234,7 @@ pub(crate) struct Resources {
     pub(crate) map: Map,
 }
 
-fn update_app<'a, 'event>(
+fn update_app<'a>(
     app: &'a mut (impl App + 'static),
     editor: &'a mut Editor,
     internal_state: &'a InternalState,
