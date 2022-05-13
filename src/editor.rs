@@ -535,6 +535,7 @@ fn canvas_view<'a, 'b>(
                     }),
                     button,
                     DrawFn::new(move |draw| {
+                        draw.palt(None);
                         draw.rectfill(0, 0, 7, 7, pixel_color);
                     }),
                 )
