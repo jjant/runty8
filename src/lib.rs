@@ -71,7 +71,15 @@ fn create_sprite_sheet(assets_path: &str) -> SpriteSheet {
     }
 }
 
+fn create_directory(path: &str) {
+    if let Err(e) = std::fs::create_dir(path) {
+        println!("Couldn't create directory {}, error: {:?}", path, e);
+    };
+}
+
 pub fn run_app<T: App + 'static>(assets_path: String) {
+    create_directory(&assets_path);
+
     let map: Map = Map::new();
     let sprite_flags: Flags = create_sprite_flags(&assets_path);
     let sprite_sheet = create_sprite_sheet(&assets_path);

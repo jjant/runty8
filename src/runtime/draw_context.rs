@@ -9,7 +9,7 @@ type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
 
 // TODO: Make pub(crate)
-pub struct DrawData {
+pub(crate) struct DrawData {
     pub(crate) buffer: Buffer,
     transparent_color: Option<Color>,
     draw_palette: [Color; 16],

@@ -12,7 +12,7 @@ pub struct DispatchEvent<'a, Msg> {
 }
 
 impl<'a, Msg> DispatchEvent<'a, Msg> {
-    pub fn new(queue: &'a mut Vec<Msg>) -> Self {
+    pub(crate) fn new(queue: &'a mut Vec<Msg>) -> Self {
         Self { queue }
     }
 

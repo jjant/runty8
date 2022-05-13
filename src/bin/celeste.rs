@@ -6,22 +6,16 @@ use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
 use runty8::App;
 
-// Deduplicate this code.
-fn create_directory() -> String {
+// TODO: Deduplicate this code.
+fn assets_path() -> String {
     let buf = Path::new(file!()).with_extension("");
     let dir_name = buf.to_str().unwrap();
-
-    if let Err(e) = std::fs::create_dir(dir_name) {
-        println!("Couldn't create directory, error: {:?}", e);
-    };
 
     dir_name.to_owned()
 }
 
 fn main() {
-    let assets_path = create_directory();
-
-    runty8::run_app::<GameState>(assets_path)
+    runty8::run_app::<GameState>(assets_path())
 }
 
 struct Cloud {
