@@ -37,6 +37,14 @@ impl Flags {
         self.flags.get(index).copied()
     }
 
+    // Pico8's fset(n, v)
+    pub fn fset_all(&mut self, sprite: usize, flags: u8) -> u8 {
+        self.set(sprite, flags);
+
+        flags
+    }
+
+    // Pico8's fset(n, f, v)
     pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
         // TODO: Check what pico8 does in these cases:
         assert!(flag <= 7);
@@ -79,7 +87,7 @@ impl Flags {
         Ok(Self::with_flags(flags_array))
     }
 
-    pub(crate) fn serialize(&self) -> String {
+    pub fn serialize(&self) -> String {
         self.flags.iter().map(|flag| flag.to_string()).join("\n")
     }
 }
