@@ -10,6 +10,11 @@ pub struct SpriteSheet {
 
 impl SpriteSheet {
     pub const SPRITES_PER_ROW: usize = 16;
+
+    /// This is kind of a lie.
+    /// The pico8 sprite sheet supports 128 "real" sprites
+    /// The other 128 share memory with the map,
+    /// and will override its data if used
     pub const SPRITE_COUNT: usize = 256;
 
     pub fn file_name() -> &'static str {
@@ -140,20 +145,28 @@ impl Sprite {
         (x + y * (Sprite::WIDTH as isize)).try_into().ok()
     }
 
+    // TODO: Use
+    #[allow(dead_code)]
     pub(crate) fn shift_up(&mut self) {
         self.sprite.rotate_left(8);
     }
 
+    // TODO: Use
+    #[allow(dead_code)]
     pub(crate) fn shift_down(&mut self) {
         self.sprite.rotate_right(8);
     }
 
+    // TODO: Use
+    #[allow(dead_code)]
     pub(crate) fn shift_left(&mut self) {
         self.sprite
             .chunks_mut(Sprite::WIDTH)
             .for_each(|row| row.rotate_left(1));
     }
 
+    // TODO: Use
+    #[allow(dead_code)]
     pub(crate) fn shift_right(&mut self) {
         self.sprite
             .chunks_mut(Sprite::WIDTH)
