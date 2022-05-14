@@ -23,6 +23,8 @@ pub struct Editor {
     flag_buttons: Vec<button::State>,
     sprite_buttons: Vec<button::State>,
     pixel_buttons: Vec<button::State>,
+    selected_tool: usize,
+    tool_buttons: Vec<button::State>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -39,8 +41,8 @@ pub enum Msg {
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
-    // TODO: Improve
-    SpriteEdited { x: usize, y: usize },
+    SpriteEdited { x: usize, y: usize }, // TODO: Improve
+    ToolSelected(usize),
 }
 
 impl Editor {
@@ -65,6 +67,8 @@ impl Editor {
             flag_buttons: vec![button::State::new(); 8],
             sprite_buttons: vec![button::State::new(); 64],
             pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
+            selected_tool: 0,
+            tool_buttons: vec![button::State::new(); 2],
         }
     }
 
@@ -97,6 +101,9 @@ impl Editor {
                 let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
 
                 sprite.pset(x as isize, y as isize, self.selected_color);
+            }
+            &Msg::ToolSelected(selected_tool) => {
+                self.selected_tool = selected_tool;
             }
         }
     }
@@ -139,6 +146,8 @@ impl Editor {
                 self.selected_sprite,
                 self.selected_sprite_page,
                 &mut self.tab_buttons,
+                self.selected_tool,
+                &mut self.tool_buttons,
             ))
             .push(sprite_view(
                 self.selected_sprite,
@@ -326,17 +335,46 @@ fn color_selector<'a>(
     Tree::with_children(v).into()
 }
 
-fn tools_row(
+fn tools_row<'a>(
     y: i32,
     sprite: usize,
     selected_tab: usize,
-    tab_buttons: &mut [button::State],
-) -> Element<'_, Msg> {
+    tab_buttons: &'a mut [button::State],
+    selected_tool: usize,
+    tool_buttons: &'a mut [button::State],
+) -> Element<'a, Msg> {
     let mut children = vec![DrawFn::new(move |draw| {
         const HEIGHT: i32 = 11;
         draw.rectfill(0, y, 127, y + HEIGHT - 1, 5)
     })
     .into()];
+
+    const TOOLS: &[usize] = &[15, 31];
+
+    for (tool_index, tool_button) in tool_buttons.iter_mut().enumerate() {
+        let spr = TOOLS[tool_index];
+
+        let x = (9 + 8 * tool_index) as i32;
+        let y = y + 2;
+        children.push(
+            Button::new(
+                x,
+                y,
+                8,
+                8,
+                Some(Msg::ToolSelected(tool_index)),
+                tool_button,
+                DrawFn::new(move |draw| {
+                    if selected_tool == tool_index {
+                        draw.pal(13, 7);
+                    }
+                    draw.spr(spr, 0, 0);
+                    draw.pal(13, 13);
+                }),
+            )
+            .into(),
+        );
+    }
 
     for (sprite_tab, tab_button_state) in tab_buttons.iter_mut().enumerate() {
         let base_sprite = if selected_tab == sprite_tab { 33 } else { 17 };
