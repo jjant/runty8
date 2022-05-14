@@ -1585,7 +1585,6 @@ impl Object {
 fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
     for i in 0.max(x / 8)..=(15.min((x + w - 1) / 8)) {
         for j in 0.max(y / 8)..=(15.min((y + h - 1) / 8)) {
-            // TODO: Implement api: `fget`
             if state.fget_n(tile_at(room, i, j) as usize, flag as u8) {
                 return true;
             }
