@@ -25,6 +25,7 @@ pub struct Editor {
     pixel_buttons: Vec<button::State>,
     selected_tool: usize,
     tool_buttons: Vec<button::State>,
+    bottom_bar_text: String,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -38,6 +39,7 @@ pub enum Msg {
     SpriteTabClicked,
     MapButtonClicked,
     ColorSelected(usize),
+    ColorHovered(usize),
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
@@ -69,6 +71,7 @@ impl Editor {
             pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
             selected_tool: 0,
             tool_buttons: vec![button::State::new(); 2],
+            bottom_bar_text: "".to_owned(),
         }
     }
 
@@ -105,6 +108,9 @@ impl Editor {
             &Msg::ToolSelected(selected_tool) => {
                 self.selected_tool = selected_tool;
             }
+            &Msg::ColorHovered(color) => {
+                self.bottom_bar_text = format!("COLOUR {}", color);
+            }
         }
     }
 
@@ -115,8 +121,6 @@ impl Editor {
         sprite_sheet: &'b SpriteSheet,
     ) -> Element<'a, Msg> {
         const BACKGROUND: u8 = 5;
-
-        let bottom_bar_text = "THIS IS THE BOT BAR".to_owned();
 
         Tree::new()
             .push(DrawFn::new(|draw| {
@@ -138,7 +142,7 @@ impl Editor {
                 ),
                 Tab::MapEditor => Tree::new()
                     .push(map_view(map, 0, 8))
-                    .push(Text::new("MAP VIEW".to_owned(), 0, 8, 7))
+                    .push(Text::new("MAP VIEW", 0, 8, 7))
                     .into(),
             })
             .push(tools_row(
@@ -155,7 +159,7 @@ impl Editor {
                 &mut self.sprite_buttons,
                 87,
             ))
-            .push(bottom_bar(bottom_bar_text))
+            .push(bottom_bar(&self.bottom_bar_text))
             .push(Cursor::new(&mut self.cursor))
             .into()
     }
@@ -192,6 +196,7 @@ fn sprite_editor_view<'a, 'b>(
             selected_color,
             color_selector_state,
             Msg::ColorSelected,
+            Msg::ColorHovered,
         ))
         .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
@@ -270,6 +275,7 @@ fn color_selector<'a>(
     selected_color: u8,
     states: &'a mut [button::State],
     on_press: impl (Fn(usize) -> Msg) + Copy + 'static,
+    on_hover: impl (Fn(usize) -> Msg) + Copy + 'static,
 ) -> Element<'_, Msg> {
     let mut v = Vec::with_capacity(16);
 
@@ -299,6 +305,7 @@ fn color_selector<'a>(
             }),
         )
         .event_on_press()
+        .on_hover(on_hover(index))
         .into();
         v.push(button);
     }
@@ -472,7 +479,7 @@ fn sprite_view(
     Tree::with_children(children).into()
 }
 
-fn bottom_bar(text: String) -> Element<'static, Msg> {
+fn bottom_bar(text: &str) -> Element<'_, Msg> {
     const X: i32 = 0;
     const Y: i32 = 121;
     const BAR_WIDTH: i32 = 128;
