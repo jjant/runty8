@@ -58,6 +58,20 @@ impl Ppm {
         }
     }
 
+    // Plain PPM format (P3)
+    pub fn serialize(&self) -> String {
+        let header = format!("P3\n{} {}\n255", self.width, self.height);
+        let body = self
+            .data
+            .iter()
+            .copied()
+            .map(|component| format!(" {component} "))
+            .join("");
+
+        format!("{header}\n{body}")
+    }
+
+    // Raw PPM format (P6)
     pub fn write_file(&self, filename: &str) -> std::io::Result<()> {
         let path = Path::new(filename);
         let mut file = File::create(&path)?;
