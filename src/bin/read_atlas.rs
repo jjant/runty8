@@ -3,21 +3,46 @@ use std::{collections::HashMap, fs::File};
 use runty8::editor::serialize::Ppm;
 use runty8::runtime::draw_context::COLORS;
 use runty8::runtime::sprite_sheet::{Color, SpriteSheet};
+use runty8::runtime::state::Flags;
+
+const DIR_NAME: &str = "assets";
 
 fn main() {
-    let atlas_colors = load_atlas_colors("assets/atlas.png");
+    let sprite_sheet = build_sprite_sheet();
+    serialize_sprite_sheet(&sprite_sheet);
 
-    let sprite_sheet = build_sprite_sheet(&atlas_colors);
-
-    const FILE_NAME: &str = "assets/sprite_sheet";
-
-    Ppm::from_sprite_sheet(&sprite_sheet)
-        .write_file(&format!("{}.ppm", FILE_NAME))
-        .unwrap();
-
-    std::fs::write(&format!("{}.txt", FILE_NAME), &sprite_sheet.serialize()).unwrap();
+    let flags = build_flags();
+    serialize_flags(&flags);
 }
 
+/* FLAGS */
+const FLAGS: [u8; 128] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
+    4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, //
+    3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 2, 2, 0, 0, 0, //
+    3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 2, 2, 2, 2, 2, //
+    0, 0, 19, 19, 19, 19, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, //
+    0, 0, 19, 19, 19, 19, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, //
+    0, 0, 19, 19, 19, 19, 0, 4, 4, 2, 2, 2, 2, 2, 2, 2, //
+    0, 0, 19, 19, 19, 19, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2,
+];
+
+fn build_flags() -> Flags {
+    let mut flags = Flags::new();
+
+    for (sprite, flag) in FLAGS.into_iter().enumerate() {
+        flags.fset_all(sprite, flag);
+    }
+
+    flags
+}
+
+fn serialize_flags(flags: &Flags) {
+    let flags_file_name = format!("{DIR_NAME}/sprite_flags.txt");
+    write_and_log(&flags_file_name, &flags.serialize());
+}
+
+/* SPRITE SHEET */
 fn load_atlas_colors(file_name: &str) -> Vec<u8> {
     let color_map = color_map();
 
@@ -49,7 +74,8 @@ fn load_atlas_colors(file_name: &str) -> Vec<u8> {
         .collect::<Vec<Color>>()
 }
 
-fn build_sprite_sheet(colors: &[Color]) -> SpriteSheet {
+fn build_sprite_sheet() -> SpriteSheet {
+    let colors = load_atlas_colors("assets/atlas.png");
     let mut sprite_sheet = SpriteSheet::new();
 
     for (y, pixel_rows) in colors.chunks(128).into_iter().enumerate() {
@@ -61,6 +87,19 @@ fn build_sprite_sheet(colors: &[Color]) -> SpriteSheet {
     sprite_sheet
 }
 
+fn serialize_sprite_sheet(sprite_sheet: &SpriteSheet) {
+    const FILE_NAME: &str = "sprite_sheet";
+    write_and_log(
+        &format!("{DIR_NAME}/{FILE_NAME}.ppm"),
+        &Ppm::from_sprite_sheet(sprite_sheet).serialize(),
+    );
+
+    write_and_log(
+        &format!("{DIR_NAME}/{FILE_NAME}.txt"),
+        &sprite_sheet.serialize(),
+    );
+}
+
 /// Look up from RGB color to Pico8 index
 /// e.g, 0xFF004D -> 8 (Pico8 red)
 fn color_map() -> HashMap<u32, Color> {
@@ -70,4 +109,11 @@ fn color_map() -> HashMap<u32, Color> {
             .enumerate()
             .map(|(index, color)| (color, index as u8)),
     )
+}
+
+/* UTILS */
+fn write_and_log(file_name: &str, contents: &str) {
+    print!("Writing {file_name}... ");
+    std::fs::write(&file_name, contents).unwrap();
+    println!("success.")
 }
