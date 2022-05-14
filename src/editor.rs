@@ -1,3 +1,4 @@
+pub mod serialize;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
 use crate::runtime::state::Flags;

@@ -9,6 +9,7 @@ pub struct SpriteSheet {
 }
 
 impl SpriteSheet {
+    pub const SPRITES_PER_ROW: usize = 16;
     pub const SPRITE_COUNT: usize = 256;
 
     pub fn file_name() -> &'static str {
