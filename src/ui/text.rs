@@ -4,16 +4,16 @@ use crate::{runtime::draw_context::DrawContext, Color};
 
 use super::{DispatchEvent, Widget};
 
-pub struct Text<Msg> {
+pub struct Text<'a, Msg> {
+    text: &'a str,
     x: i32,
     y: i32,
-    text: String,
     color: Color,
     pd: PhantomData<Msg>,
 }
 
-impl<Msg> Text<Msg> {
-    pub fn new(text: String, x: i32, y: i32, color: Color) -> Self {
+impl<'a, Msg> Text<'a, Msg> {
+    pub fn new(text: &'a str, x: i32, y: i32, color: Color) -> Self {
         Self {
             x,
             y,
@@ -24,7 +24,7 @@ impl<Msg> Text<Msg> {
     }
 }
 
-impl<'a, Msg: Copy + Debug> Widget for Text<Msg> {
+impl<'a, Msg: Copy + Debug> Widget for Text<'a, Msg> {
     type Msg = Msg;
 
     fn on_event(
