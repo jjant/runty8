@@ -5,7 +5,7 @@ use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::runtime::state::{Flags, InternalState, Scene};
 use crate::ui::DispatchEvent;
-use crate::{App, State};
+use crate::{App, Key, KeyboardEvent, State};
 
 use crate::{Event, MouseButton, MouseEvent};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
@@ -162,8 +162,7 @@ fn handle_event(
                 Some(Event::Mouse(mouse_event))
             }
             glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                handle_key(input, keys);
-                None
+                handle_key(input, keys).map(Event::Keyboard)
             }
             _ => None,
         },
@@ -179,22 +178,28 @@ fn handle_event(
     }
 }
 
-fn handle_key(input: &KeyboardInput, keys: &mut Keys) {
-    if let Some(key) = input.virtual_keycode {
-        let key_ref = match key {
-            VirtualKeyCode::X => &mut keys.x,
-            VirtualKeyCode::C => &mut keys.c,
-            VirtualKeyCode::Left => &mut keys.left,
-            VirtualKeyCode::Up => &mut keys.up,
-            VirtualKeyCode::Right => &mut keys.right,
-            VirtualKeyCode::Down => &mut keys.down,
-            VirtualKeyCode::Escape => &mut keys.escape,
+fn handle_key(input: &KeyboardInput, keys: &mut Keys) -> Option<KeyboardEvent> {
+    let key = input.virtual_keycode?;
 
-            _ => return,
-        };
+    let mut other = None;
+    let key_ref = match key {
+        VirtualKeyCode::X => &mut keys.x,
+        VirtualKeyCode::C => &mut keys.c,
+        VirtualKeyCode::Left => &mut keys.left,
+        VirtualKeyCode::Up => &mut keys.up,
+        VirtualKeyCode::Right => &mut keys.right,
+        VirtualKeyCode::Down => &mut keys.down,
+        VirtualKeyCode::Escape => &mut keys.escape,
+        _ => &mut other,
+    };
+    *key_ref = Some(input.state == ElementState::Pressed);
 
-        *key_ref = Some(input.state == ElementState::Pressed);
-    }
+    let runty8_key = Key::from_virtual_keycode(key)?;
+
+    Some(match input.state {
+        ElementState::Pressed => KeyboardEvent::Down(runty8_key),
+        ElementState::Released => KeyboardEvent::Up(runty8_key),
+    })
 }
 
 pub(crate) struct Keys {
@@ -259,6 +264,7 @@ fn update_app<'a>(
 
             let mut msg_queue = vec![];
             let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
+
             if let Some(event) = event {
                 view.as_widget_mut().on_event(
                     event,
@@ -272,6 +278,9 @@ fn update_app<'a>(
             view.as_widget().draw(&mut draw_context);
             drop(view);
 
+            if let Some(sub_msg) = event.and_then(|e| editor.subscriptions(&e)) {
+                msg_queue.push(sub_msg);
+            }
             for msg in msg_queue.into_iter() {
                 editor.update(
                     &mut resources.sprite_flags,

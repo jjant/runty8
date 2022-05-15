@@ -8,6 +8,7 @@ use crate::ui::{
     text::Text,
 };
 use crate::ui::{DrawFn, Element, Tree};
+use crate::{Event, Key, KeyboardEvent};
 use itertools::Itertools;
 
 #[derive(Debug)]
@@ -46,6 +47,7 @@ pub enum Msg {
     FlagToggled(usize),
     SpriteEdited { x: usize, y: usize }, // TODO: Improve
     ToolSelected(usize),
+    SerializeRequested,
 }
 
 impl Editor {
@@ -112,6 +114,9 @@ impl Editor {
             &Msg::ColorHovered(color) => {
                 self.bottom_bar_text = format!("COLOUR {}", color);
             }
+            Msg::SerializeRequested => {
+                println!("Serialize clicked")
+            }
         }
     }
 
@@ -163,6 +168,14 @@ impl Editor {
             .push(bottom_bar(&self.bottom_bar_text))
             .push(Cursor::new(&mut self.cursor))
             .into()
+    }
+
+    pub fn subscriptions(&self, event: &Event) -> Option<Msg> {
+        match event {
+            Event::Mouse(_) => None,
+            Event::Keyboard(KeyboardEvent::Down(Key::X)) => Some(Msg::SerializeRequested),
+            Event::Keyboard(_) => None,
+        }
     }
 }
 

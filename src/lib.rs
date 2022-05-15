@@ -6,6 +6,7 @@ pub mod graphics;
 pub mod runtime;
 pub mod screen;
 pub mod ui;
+use glium::glutin::event::VirtualKeyCode;
 use runtime::{
     draw_context::{DrawContext, DrawData},
     map::Map,
@@ -20,7 +21,7 @@ pub trait App {
     fn draw(&self, draw_context: &mut DrawContext);
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum MouseButton {
     // TODO: Handle other mouse buttons? idk
     Left,
@@ -28,7 +29,7 @@ pub enum MouseButton {
     Middle,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum MouseEvent {
     // Current position of the mouse
     // NOT delta
@@ -37,9 +38,80 @@ pub enum MouseEvent {
     Up(MouseButton),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
+pub enum Key {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+}
+
+impl Key {
+    pub(crate) fn from_virtual_keycode(key: VirtualKeyCode) -> Option<Self> {
+        match key {
+            VirtualKeyCode::A => Some(Self::A),
+            VirtualKeyCode::B => Some(Self::B),
+            VirtualKeyCode::C => Some(Self::C),
+            VirtualKeyCode::D => Some(Self::D),
+            VirtualKeyCode::E => Some(Self::E),
+            VirtualKeyCode::F => Some(Self::F),
+            VirtualKeyCode::G => Some(Self::G),
+            VirtualKeyCode::H => Some(Self::H),
+            VirtualKeyCode::I => Some(Self::I),
+            VirtualKeyCode::J => Some(Self::J),
+            VirtualKeyCode::K => Some(Self::K),
+            VirtualKeyCode::L => Some(Self::L),
+            VirtualKeyCode::M => Some(Self::M),
+            VirtualKeyCode::N => Some(Self::N),
+            VirtualKeyCode::O => Some(Self::O),
+            VirtualKeyCode::P => Some(Self::P),
+            VirtualKeyCode::Q => Some(Self::Q),
+            VirtualKeyCode::R => Some(Self::R),
+            VirtualKeyCode::S => Some(Self::S),
+            VirtualKeyCode::T => Some(Self::T),
+            VirtualKeyCode::U => Some(Self::U),
+            VirtualKeyCode::V => Some(Self::V),
+            VirtualKeyCode::W => Some(Self::W),
+            VirtualKeyCode::X => Some(Self::X),
+            VirtualKeyCode::Y => Some(Self::Y),
+            VirtualKeyCode::Z => Some(Self::Z),
+            // VirtualKeyCode::Escape => todo!(),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug)]
+pub enum KeyboardEvent {
+    Up(Key),
+    Down(Key),
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum Event {
     Mouse(MouseEvent),
+    Keyboard(KeyboardEvent),
 }
 
 fn create_sprite_flags(assets_path: &str) -> Flags {
