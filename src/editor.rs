@@ -38,7 +38,7 @@ enum Tab {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Msg {
+pub(crate) enum Msg {
     SpriteTabClicked,
     MapButtonClicked,
     ColorSelected(usize),
@@ -49,6 +49,7 @@ pub enum Msg {
     SpriteEdited { x: usize, y: usize }, // TODO: Improve
     ToolSelected(usize),
     SerializeRequested,
+    ShiftSprite(ShiftDirection),
 }
 
 impl Editor {
@@ -79,7 +80,7 @@ impl Editor {
         }
     }
 
-    pub fn update(
+    pub(crate) fn update(
         &mut self,
         assets_path: &str,
         flags: &mut Flags,
@@ -127,10 +128,14 @@ impl Editor {
                 serialize(assets_path, sprite_sheet);
                 serialize(assets_path, map);
             }
+            Msg::ShiftSprite(shift_direction) => {
+                let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
+                shift_direction.shift(sprite);
+            }
         }
     }
 
-    pub fn view<'a, 'b>(
+    pub(crate) fn view<'a, 'b>(
         &'a mut self,
         flags: &'b Flags,
         map: &'b Map,
@@ -180,10 +185,13 @@ impl Editor {
             .into()
     }
 
-    pub fn subscriptions(&self, event: &Event) -> Option<Msg> {
+    pub(crate) fn subscriptions(&self, event: &Event) -> Option<Msg> {
         match event {
             Event::Mouse(_) => None,
             Event::Keyboard(KeyboardEvent::Down(Key::X)) => Some(Msg::SerializeRequested),
+            Event::Keyboard(KeyboardEvent::Down(key)) => {
+                ShiftDirection::from_key(key).map(Msg::ShiftSprite)
+            }
             Event::Keyboard(_) => None,
         }
     }
@@ -645,3 +653,33 @@ pub static MOUSE_SPRITE: &[Color] = &[
 //     0, 0, 0, 1, 0, 0, 0, 0, //
 //     0, 0, 0, 0, 0, 0, 0, 0, //
 // ];
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum ShiftDirection {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl ShiftDirection {
+    fn from_key(key: &Key) -> Option<Self> {
+        use ShiftDirection::*;
+
+        match key {
+            Key::W => Some(Up),
+            Key::D => Some(Right),
+            Key::S => Some(Down),
+            Key::A => Some(Left),
+            _ => None,
+        }
+    }
+    fn shift(&self, sprite: &mut Sprite) {
+        match self {
+            ShiftDirection::Up => sprite.shift_up(),
+            ShiftDirection::Down => sprite.shift_down(),
+            ShiftDirection::Left => sprite.shift_left(),
+            ShiftDirection::Right => sprite.shift_right(),
+        }
+    }
+}
