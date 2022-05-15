@@ -1,10 +1,10 @@
 use rand::Rng;
 use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
-use runty8::{app, App};
+use runty8::App;
 
 fn main() {
-    app::pico8::run_app::<Confetti>();
+    runty8::run_app::<Confetti>("".to_owned());
 }
 
 struct Confetti {
@@ -23,13 +23,12 @@ impl App for Confetti {
     }
 
     fn update(&mut self, state: &State) {
-        self.mouse_x = state.mouse_x;
-        self.mouse_y = state.mouse_y;
+        (self.mouse_x, self.mouse_y) = state.mouse();
 
         if state.btn(Button::Mouse) {
             for _ in 0..10 {
                 self.particles
-                    .push(Particle::new(state.mouse_x as f32, state.mouse_y as f32));
+                    .push(Particle::new(self.mouse_x as f32, self.mouse_y as f32));
             }
         }
 

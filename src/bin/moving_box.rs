@@ -1,9 +1,9 @@
 use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
-use runty8::{app, App};
+use runty8::App;
 
 fn main() {
-    app::pico8::run_app::<ExampleApp>();
+    runty8::run_app::<ExampleApp>("".to_owned());
 }
 
 pub struct ExampleApp {

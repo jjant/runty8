@@ -66,6 +66,13 @@ impl InternalState {
     }
 }
 
+// Temporary?
+impl<'a> State<'a> {
+    pub fn mouse(&self) -> (i32, i32) {
+        (self.internal_state.mouse_x, self.internal_state.mouse_y)
+    }
+}
+
 impl<'a> State<'a> {
     pub(crate) fn new(internal_state: &'a InternalState, resources: &'a mut Resources) -> Self {
         let Resources {
