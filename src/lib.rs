@@ -56,20 +56,19 @@ fn create_sprite_flags(assets_path: &str) -> Flags {
 }
 
 fn create_map(assets_path: &str) -> Map {
-    // let path = format!(
-    //     "{}{}{}",
-    //     assets_path,
-    //     std::path::MAIN_SEPARATOR,
-    //     Map::file_name()
-    // );
+    let path = format!(
+        "{}{}{}",
+        assets_path,
+        std::path::MAIN_SEPARATOR,
+        Map::file_name()
+    );
 
-    // if let Ok(content) = std::fs::read_to_string(&path) {
-    //     Map::deserialize(&content).unwrap()
-    // } else {
-    //     println!("Couldn't read spreadsheet from {}", path);
-    //     Map::new()
-    // }
-    Map::new()
+    if let Ok(content) = std::fs::read_to_string(&path) {
+        Map::deserialize(&content).unwrap()
+    } else {
+        println!("Couldn't read spreadsheet from {}", path);
+        Map::new()
+    }
 }
 
 fn create_sprite_sheet(assets_path: &str) -> SpriteSheet {
@@ -103,6 +102,5 @@ pub fn run_app<T: App + 'static>(assets_path: String) {
 
     let draw_data = DrawData::new();
 
-    println!("{}", map.serialize());
     crate::screen::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
 }
