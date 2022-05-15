@@ -1,5 +1,8 @@
 use super::{map::Map, sprite_sheet::SpriteSheet};
-use crate::screen::{Keys, Resources};
+use crate::{
+    editor::serialize::Serialize,
+    screen::{Keys, Resources},
+};
 use itertools::Itertools;
 use ButtonState::*;
 
@@ -9,10 +12,6 @@ pub struct Flags {
 }
 
 impl Flags {
-    pub fn file_name() -> &'static str {
-        "sprite_flags.txt"
-    }
-
     pub fn new() -> Self {
         let flags = [0; SpriteSheet::SPRITE_COUNT];
 
@@ -86,8 +85,14 @@ impl Flags {
 
         Ok(Self::with_flags(flags_array))
     }
+}
 
-    pub fn serialize(&self) -> String {
+impl Serialize for Flags {
+    fn file_name() -> String {
+        "sprite_flags.txt".to_owned()
+    }
+
+    fn serialize(&self) -> String {
         self.flags.iter().map(|flag| flag.to_string()).join("\n")
     }
 }

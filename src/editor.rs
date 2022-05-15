@@ -10,6 +10,7 @@ use crate::ui::{
 use crate::ui::{DrawFn, Element, Tree};
 use crate::{Event, Key, KeyboardEvent};
 use itertools::Itertools;
+use serialize::serialize;
 
 #[derive(Debug)]
 pub struct Editor {
@@ -78,7 +79,14 @@ impl Editor {
         }
     }
 
-    pub fn update(&mut self, flags: &mut Flags, sprite_sheet: &mut SpriteSheet, msg: &Msg) {
+    pub fn update(
+        &mut self,
+        assets_path: &str,
+        flags: &mut Flags,
+        sprite_sheet: &mut SpriteSheet,
+        map: &mut Map,
+        msg: &Msg,
+    ) {
         match msg {
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
@@ -115,7 +123,9 @@ impl Editor {
                 self.bottom_bar_text = format!("COLOUR {}", color);
             }
             Msg::SerializeRequested => {
-                println!("Serialize clicked")
+                serialize(assets_path, flags);
+                serialize(assets_path, sprite_sheet);
+                serialize(assets_path, map);
             }
         }
     }

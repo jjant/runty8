@@ -1,3 +1,5 @@
+use crate::editor::serialize::Serialize;
+
 use super::sprite_sheet::Sprite;
 use itertools::Itertools;
 
@@ -53,16 +55,6 @@ impl Map {
 
 impl Map {
     // TODO: Make sure this works
-    pub(crate) fn serialize(&self) -> String {
-        self.map
-            .iter()
-            .chunks(Map::WIDTH_SPRITES)
-            .into_iter()
-            .map(|chunk| chunk.map(|n| format!("{:X}", n)).join(" "))
-            .join("\n")
-    }
-
-    // TODO: Make sure this works
     pub(crate) fn deserialize(str: &str) -> Result<Self, &'static str> {
         let map: [SpriteId; Self::MAP_SIZE] = str
             .as_bytes()
@@ -76,9 +68,21 @@ impl Map {
 
         Ok(Self { map })
     }
+}
 
-    pub(crate) fn file_name() -> &'static str {
-        "map.txt"
+impl Serialize for Map {
+    fn file_name() -> String {
+        "map.txt".to_owned()
+    }
+
+    // TODO: Make sure this works
+    fn serialize(&self) -> String {
+        self.map
+            .iter()
+            .chunks(Map::WIDTH_SPRITES)
+            .into_iter()
+            .map(|chunk| chunk.map(|n| format!("{:X}", n)).join(" "))
+            .join("\n")
     }
 }
 

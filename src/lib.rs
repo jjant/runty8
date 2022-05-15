@@ -6,6 +6,7 @@ pub mod graphics;
 pub mod runtime;
 pub mod screen;
 pub mod ui;
+use crate::editor::serialize::Serialize;
 use glium::glutin::event::VirtualKeyCode;
 use runtime::{
     draw_context::{DrawContext, DrawData},
@@ -175,4 +176,11 @@ pub fn run_app<T: App + 'static>(assets_path: String) {
     let draw_data = DrawData::new();
 
     crate::screen::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
+}
+
+/* UTILS */
+pub fn write_and_log(file_name: &str, contents: &str) {
+    print!("Writing {file_name}... ");
+    std::fs::write(&file_name, contents).unwrap();
+    println!("success.")
 }

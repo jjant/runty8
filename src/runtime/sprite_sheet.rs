@@ -3,6 +3,8 @@ pub type Color = u8; // Actually a u4
 use itertools::Itertools;
 use std::{fs::File, io::Read};
 
+use crate::editor::serialize::Serialize;
+
 #[derive(Debug)]
 pub struct SpriteSheet {
     pub(crate) sprite_sheet: Vec<Color>,
@@ -16,10 +18,6 @@ impl SpriteSheet {
     /// The other 128 share memory with the map,
     /// and will override its data if used
     pub const SPRITE_COUNT: usize = 256;
-
-    pub fn file_name() -> &'static str {
-        "sprite_sheet.txt"
-    }
 
     #[allow(dead_code)]
     pub fn new() -> Self {
@@ -70,15 +68,6 @@ impl SpriteSheet {
         sprite * Sprite::WIDTH * Sprite::HEIGHT
     }
 
-    pub fn serialize(&self) -> String {
-        let lines = self.sprite_sheet.chunks(128).map(|chunk| {
-            Itertools::intersperse(chunk.iter().map(|n| format!("{:X}", n)), "".to_owned())
-                .collect()
-        });
-
-        Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
-    }
-
     pub fn deserialize(str: &str) -> Result<Self, String> {
         let sprite_sheet = str
             .as_bytes()
@@ -89,6 +78,21 @@ impl SpriteSheet {
             .collect();
 
         Self::with_vec(sprite_sheet)
+    }
+}
+
+impl Serialize for SpriteSheet {
+    fn file_name() -> String {
+        "sprite_sheet.txt".to_owned()
+    }
+
+    fn serialize(&self) -> String {
+        let lines = self.sprite_sheet.chunks(128).map(|chunk| {
+            Itertools::intersperse(chunk.iter().map(|n| format!("{:X}", n)), "".to_owned())
+                .collect()
+        });
+
+        Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
     }
 }
 

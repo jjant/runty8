@@ -5,6 +5,17 @@ use crate::runtime::sprite_sheet::SpriteSheet;
 use std::io::Write;
 use std::{fs::File, path::Path};
 
+pub fn serialize<T: Serialize>(assets_path: &str, serializable: &T) {
+    let file_path = format!("{assets_path}/{}", T::file_name());
+    crate::write_and_log(&file_path, &serializable.serialize());
+}
+
+pub trait Serialize {
+    fn file_name() -> String;
+
+    fn serialize(&self) -> String;
+}
+
 pub struct Ppm {
     height: usize,
     width: usize,
@@ -58,8 +69,24 @@ impl Ppm {
         }
     }
 
+    // Raw PPM format (P6)
+    pub fn write_file(&self, filename: &str) -> std::io::Result<()> {
+        let path = Path::new(filename);
+        let mut file = File::create(&path)?;
+        let header = format!("P6 {} {} 255\n", self.width, self.height);
+        file.write_all(header.as_bytes())?;
+        file.write_all(&self.data)?;
+        Ok(())
+    }
+}
+
+impl Serialize for Ppm {
+    fn file_name() -> String {
+        "sprite_sheet.ppm".to_owned()
+    }
+
     // Plain PPM format (P3)
-    pub fn serialize(&self) -> String {
+    fn serialize(&self) -> String {
         let header = format!("P3\n{} {}\n255", self.width, self.height);
         let body = self
             .data
@@ -69,15 +96,5 @@ impl Ppm {
             .join("");
 
         format!("{header}\n{body}")
-    }
-
-    // Raw PPM format (P6)
-    pub fn write_file(&self, filename: &str) -> std::io::Result<()> {
-        let path = Path::new(filename);
-        let mut file = File::create(&path)?;
-        let header = format!("P6 {} {} 255\n", self.width, self.height);
-        file.write_all(header.as_bytes())?;
-        file.write_all(&self.data)?;
-        Ok(())
     }
 }

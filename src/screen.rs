@@ -283,8 +283,10 @@ fn update_app<'a>(
             }
             for msg in msg_queue.into_iter() {
                 editor.update(
+                    &resources.assets_path,
                     &mut resources.sprite_flags,
                     &mut resources.sprite_sheet,
+                    &mut resources.map,
                     &msg,
                 );
             }

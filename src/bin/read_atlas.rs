@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs::File};
 
-use runty8::editor::serialize::Ppm;
+use runty8::editor::serialize::{serialize, Ppm};
 use runty8::runtime::draw_context::COLORS;
 use runty8::runtime::sprite_sheet::{Color, SpriteSheet};
 use runty8::runtime::state::Flags;
@@ -9,10 +9,13 @@ const DIR_NAME: &str = "assets";
 
 fn main() {
     let sprite_sheet = build_sprite_sheet();
-    serialize_sprite_sheet(&sprite_sheet);
+    serialize(DIR_NAME, &sprite_sheet);
+
+    let sprite_sheet_ppm = Ppm::from_sprite_sheet(&sprite_sheet);
+    serialize(DIR_NAME, &sprite_sheet_ppm);
 
     let flags = build_flags();
-    serialize_flags(&flags);
+    serialize(DIR_NAME, &flags);
 }
 
 /* FLAGS */
@@ -35,11 +38,6 @@ fn build_flags() -> Flags {
     }
 
     flags
-}
-
-fn serialize_flags(flags: &Flags) {
-    let flags_file_name = format!("{DIR_NAME}/sprite_flags.txt");
-    write_and_log(&flags_file_name, &flags.serialize());
 }
 
 /* SPRITE SHEET */
@@ -87,19 +85,6 @@ fn build_sprite_sheet() -> SpriteSheet {
     sprite_sheet
 }
 
-fn serialize_sprite_sheet(sprite_sheet: &SpriteSheet) {
-    const FILE_NAME: &str = "sprite_sheet";
-    write_and_log(
-        &format!("{DIR_NAME}/{FILE_NAME}.ppm"),
-        &Ppm::from_sprite_sheet(sprite_sheet).serialize(),
-    );
-
-    write_and_log(
-        &format!("{DIR_NAME}/{FILE_NAME}.txt"),
-        &sprite_sheet.serialize(),
-    );
-}
-
 /// Look up from RGB color to Pico8 index
 /// e.g, 0xFF004D -> 8 (Pico8 red)
 fn color_map() -> HashMap<u32, Color> {
@@ -109,11 +94,4 @@ fn color_map() -> HashMap<u32, Color> {
             .enumerate()
             .map(|(index, color)| (color, index as u8)),
     )
-}
-
-/* UTILS */
-fn write_and_log(file_name: &str, contents: &str) {
-    print!("Writing {file_name}... ");
-    std::fs::write(&file_name, contents).unwrap();
-    println!("success.")
 }
