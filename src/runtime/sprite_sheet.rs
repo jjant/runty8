@@ -1,7 +1,6 @@
 pub type Color = u8; // Actually a u4
 
 use itertools::Itertools;
-use std::{fs::File, io::Read};
 
 use crate::editor::serialize::Serialize;
 
@@ -96,23 +95,6 @@ impl Serialize for SpriteSheet {
     }
 }
 
-// TODO: Make a more reliable version of this.
-// TODO: Improve capacity calculation? It's kinda flakey
-pub(crate) fn deserialize(file_name: &str) -> Result<SpriteSheet, String> {
-    println!("[Editor] Deserialising sprite sheet from: {}", file_name);
-    let capacity = 128 * 128 + 128;
-    let mut file_contents = String::with_capacity(capacity);
-    let mut file = File::open(file_name).map_err(|_| "Couldn't OPEN file")?;
-
-    file.read_to_string(&mut file_contents)
-        .map_err(|_| "Couldn't READ file")?;
-
-    let sprite_sheet = SpriteSheet::deserialize(&file_contents)?;
-
-    println!("[Editor] Deserialising successful");
-    Ok(sprite_sheet)
-}
-
 #[repr(transparent)]
 pub struct Sprite {
     pub sprite: [Color],
@@ -149,28 +131,20 @@ impl Sprite {
         (x + y * (Sprite::WIDTH as isize)).try_into().ok()
     }
 
-    // TODO: Use
-    #[allow(dead_code)]
     pub(crate) fn shift_up(&mut self) {
         self.sprite.rotate_left(8);
     }
 
-    // TODO: Use
-    #[allow(dead_code)]
     pub(crate) fn shift_down(&mut self) {
         self.sprite.rotate_right(8);
     }
 
-    // TODO: Use
-    #[allow(dead_code)]
     pub(crate) fn shift_left(&mut self) {
         self.sprite
             .chunks_mut(Sprite::WIDTH)
             .for_each(|row| row.rotate_left(1));
     }
 
-    // TODO: Use
-    #[allow(dead_code)]
     pub(crate) fn shift_right(&mut self) {
         self.sprite
             .chunks_mut(Sprite::WIDTH)
