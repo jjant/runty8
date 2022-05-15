@@ -2,20 +2,20 @@ use std::{collections::HashMap, fs::File};
 
 use runty8::editor::serialize::{serialize, Ppm};
 use runty8::runtime::draw_context::COLORS;
+use runty8::runtime::flags::Flags;
 use runty8::runtime::sprite_sheet::{Color, SpriteSheet};
-use runty8::runtime::state::Flags;
 
-const DIR_NAME: &str = "assets";
+const ASSETS_PATH: &str = "assets";
 
 fn main() {
     let sprite_sheet = build_sprite_sheet();
-    serialize(DIR_NAME, &sprite_sheet);
+    serialize(ASSETS_PATH, &sprite_sheet);
 
     let sprite_sheet_ppm = Ppm::from_sprite_sheet(&sprite_sheet);
-    serialize(DIR_NAME, &sprite_sheet_ppm);
+    serialize(ASSETS_PATH, &sprite_sheet_ppm);
 
     let flags = build_flags();
-    serialize(DIR_NAME, &flags);
+    serialize(ASSETS_PATH, &flags);
 }
 
 /* FLAGS */

@@ -1,7 +1,7 @@
 pub mod serialize;
+use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
-use crate::runtime::state::Flags;
 use crate::ui::button::{self, Button};
 use crate::ui::{
     cursor::{self, Cursor},

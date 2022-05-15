@@ -1,9 +1,10 @@
 use crate::editor::Editor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::{DrawContext, DrawData};
+use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
-use crate::runtime::state::{Flags, InternalState, Scene};
+use crate::runtime::state::{InternalState, Scene};
 use crate::ui::DispatchEvent;
 use crate::{App, Key, KeyboardEvent, State};
 

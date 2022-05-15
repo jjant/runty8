@@ -1,107 +1,6 @@
-use super::{map::Map, sprite_sheet::SpriteSheet};
-use crate::{
-    editor::serialize::Serialize,
-    screen::{Keys, Resources},
-};
-use itertools::Itertools;
+use super::{flags::Flags, map::Map, sprite_sheet::SpriteSheet};
+use crate::screen::{Keys, Resources};
 use ButtonState::*;
-
-#[derive(Debug)]
-pub struct Flags {
-    flags: [u8; SpriteSheet::SPRITE_COUNT],
-}
-
-impl Flags {
-    pub fn new() -> Self {
-        let flags = [0; SpriteSheet::SPRITE_COUNT];
-
-        Self { flags }
-    }
-
-    pub(crate) fn with_flags(flags: [u8; SpriteSheet::SPRITE_COUNT]) -> Self {
-        Self { flags }
-    }
-
-    fn len(&self) -> usize {
-        self.flags.len()
-    }
-
-    #[allow(clippy::only_used_in_recursion)] // clippy is wrong
-    fn set(&mut self, index: usize, value: u8) {
-        self.flags[index] = value;
-    }
-
-    pub fn get(&self, index: usize) -> Option<u8> {
-        // TODO: Check what pico8 does in cases when the index is out of bounds
-        self.flags.get(index).copied()
-    }
-
-    // Pico8's fset(n, v)
-    pub fn fset_all(&mut self, sprite: usize, flags: u8) -> u8 {
-        self.set(sprite, flags);
-
-        flags
-    }
-
-    // Pico8's fset(n, f, v)
-    pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
-        // TODO: Check what pico8 does in these cases:
-        assert!(flag <= 7);
-
-        let value = value as u8;
-        let mut flags = self.get(sprite).unwrap();
-        flags = (flags & !(1u8 << flag)) | (value << flag);
-
-        self.set(sprite, flags);
-
-        flags
-    }
-
-    pub fn fget_n(&self, sprite: usize, flag: u8) -> bool {
-        // TODO: Check what pico8 does in these cases:
-        assert!(sprite < self.len());
-        assert!(flag <= 7);
-
-        let res = (self.get(sprite).unwrap() & (1 << flag)) >> flag;
-        assert!(res == 0 || res == 1);
-
-        res != 0
-    }
-
-    pub fn deserialize(file_contents: &str) -> Result<Self, String> {
-        let flags_vec: Result<Vec<u8>, String> = file_contents
-            .lines()
-            .map(|line| line.parse::<u8>().map_err(|e| format!("{:?}", e)))
-            .collect();
-
-        let flags_array: [u8; SpriteSheet::SPRITE_COUNT] =
-            flags_vec?.try_into().map_err(|v: Vec<u8>| {
-                format!(
-                    "Incorrect number of elements, needed: {}, got: {}",
-                    SpriteSheet::SPRITE_COUNT,
-                    v.len()
-                )
-            })?;
-
-        Ok(Self::with_flags(flags_array))
-    }
-}
-
-impl Serialize for Flags {
-    fn file_name() -> String {
-        "sprite_flags.txt".to_owned()
-    }
-
-    fn serialize(&self) -> String {
-        self.flags.iter().map(|flag| flag.to_string()).join("\n")
-    }
-}
-
-impl Default for Flags {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 #[derive(Debug)]
 pub struct State<'a> {
@@ -109,7 +8,6 @@ pub struct State<'a> {
     pub(crate) sprite_sheet: &'a mut SpriteSheet,
     pub(crate) sprite_flags: &'a mut Flags,
     pub(crate) map: &'a mut Map,
-    pub(crate) assets_path: &'a str,
 }
 
 #[derive(Debug)]
@@ -174,7 +72,7 @@ impl<'a> State<'a> {
             sprite_sheet,
             sprite_flags,
             map,
-            assets_path,
+            ..
         } = resources;
 
         Self {
@@ -182,7 +80,6 @@ impl<'a> State<'a> {
             sprite_sheet,
             sprite_flags,
             map,
-            assets_path,
         }
     }
 

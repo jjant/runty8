@@ -10,9 +10,10 @@ use crate::editor::serialize::Serialize;
 use glium::glutin::event::VirtualKeyCode;
 use runtime::{
     draw_context::{DrawContext, DrawData},
+    flags::Flags,
     map::Map,
     sprite_sheet::{Color, Sprite, SpriteSheet},
-    state::{Flags, State},
+    state::State,
 };
 
 /// A regular pico8 app
