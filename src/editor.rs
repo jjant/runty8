@@ -29,6 +29,8 @@ pub struct Editor {
     selected_tool: usize,
     tool_buttons: Vec<button::State>,
     bottom_bar_text: String,
+    map_buttons: Vec<button::State>,
+    hovered_map_button: usize,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -50,6 +52,7 @@ pub(crate) enum Msg {
     ToolSelected(usize),
     SerializeRequested,
     ShiftSprite(ShiftDirection),
+    MapSpriteHovered(usize),
 }
 
 impl Editor {
@@ -77,6 +80,8 @@ impl Editor {
             selected_tool: 0,
             tool_buttons: vec![button::State::new(); 2],
             bottom_bar_text: "".to_owned(),
+            map_buttons: vec![button::State::new(); 144],
+            hovered_map_button: 0,
         }
     }
 
@@ -132,6 +137,9 @@ impl Editor {
                 let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
                 shift_direction.shift(sprite);
             }
+            &Msg::MapSpriteHovered(sprite) => {
+                self.hovered_map_button = sprite;
+            }
         }
     }
 
@@ -162,7 +170,13 @@ impl Editor {
                     &mut self.pixel_buttons,
                 ),
                 Tab::MapEditor => Tree::new()
-                    .push(map_view(map, 0, 8))
+                    .push(map_view(
+                        map,
+                        0,
+                        8,
+                        &mut self.map_buttons,
+                        self.hovered_map_button,
+                    ))
                     .push(Text::new("MAP VIEW", 0, 8, 7))
                     .into(),
             })
@@ -235,25 +249,53 @@ fn sprite_editor_view<'a, 'b>(
         .into()
 }
 
-fn map_view(map: &Map, x: i32, y: i32) -> Element<'static, Msg> {
-    let v: Vec<Element<'_, Msg>> = map
+fn map_view<'a, 'b>(
+    map: &'a Map,
+    x: i32,
+    y: i32,
+    map_buttons: &'b mut [button::State],
+    hovered_map_button: usize,
+) -> Element<'b, Msg> {
+    let mut v: Vec<Element<'_, Msg>> = map
         .iter()
+        .zip(map_buttons)
         .chunks(16)
         .into_iter()
-        .take(9)
+        .take(9) // 9 rows
         .enumerate()
         .flat_map(|(row_index, row)| {
-            row.into_iter().enumerate().map(move |(col_index, sprite)| {
-                DrawFn::new(move |draw| {
+            row.into_iter()
+                .enumerate()
+                .map(move |(col_index, (sprite, state))| {
                     let x = x as usize + col_index * 8;
                     let y = y as usize + row_index * 8;
 
-                    draw.spr(sprite.into(), x as i32, y as i32);
+                    Button::new(
+                        x as i32,
+                        y as i32,
+                        8,
+                        8,
+                        None,
+                        state,
+                        DrawFn::new(move |draw| {
+                            draw.spr(sprite.into(), 0, 0);
+                        }),
+                    )
+                    .on_hover(Msg::MapSpriteHovered(col_index + row_index * 16))
+                    .into()
                 })
-                .into()
-            })
         })
         .collect();
+
+    // Draw highlight
+    let col_index = hovered_map_button % 16;
+    let row_index = hovered_map_button / 16;
+    let x = x as usize + col_index * 8;
+    let y = y as usize + row_index * 8;
+    v.push(
+        DrawFn::new(move |draw| draw.rect(x as i32, y as i32, (x + 7) as i32, (y + 7) as i32, 7))
+            .into(),
+    );
 
     Tree::with_children(v).into()
 }
