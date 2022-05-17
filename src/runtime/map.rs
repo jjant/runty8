@@ -8,7 +8,7 @@ type SpriteId = u8;
 #[derive(Debug, Clone)]
 pub struct Map {
     // Don't really want the size to change
-    map: [SpriteId; Self::MAP_SIZE],
+    pub(crate) map: [SpriteId; Self::MAP_SIZE],
 }
 
 impl Map {
@@ -30,6 +30,16 @@ impl Map {
         map[2] = 1;
 
         Map { map }
+    }
+
+    pub fn from_slice(v: &[SpriteId]) -> Self {
+        let mut m = Self::new();
+
+        for (i, s) in v.iter().copied().enumerate() {
+            m.map[i] = s;
+        }
+
+        m
     }
 
     pub(crate) fn mget(&self, cel_x: usize, cel_y: usize) -> u8 {

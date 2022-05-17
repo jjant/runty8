@@ -10,13 +10,17 @@ use runty8::runtime::sprite_sheet::{Color, SpriteSheet};
 const ASSETS_PATH: &str = "assets";
 
 fn main() {
-    dbg!(parse_thingy().into_iter().max());
-
     let sprite_sheet = build_sprite_sheet();
     serialize(ASSETS_PATH, &sprite_sheet);
 
-    let sprite_sheet_ppm = Ppm::from_sprite_sheet(&sprite_sheet);
-    serialize(ASSETS_PATH, &sprite_sheet_ppm);
+    let sprites = parse_thingy();
+    let map = Map::from_slice(&sprites);
+    let map_ppm = Ppm::from_map(&map, &sprite_sheet);
+    serialize(ASSETS_PATH, &map);
+    serialize(ASSETS_PATH, &map_ppm);
+
+    // let sprite_sheet_ppm = Ppm::from_sprite_sheet(&sprite_sheet);
+    // serialize(ASSETS_PATH, &sprite_sheet_ppm);
 
     let flags = build_flags();
     serialize(ASSETS_PATH, &flags);
@@ -103,14 +107,14 @@ fn color_map() -> HashMap<u32, Color> {
 fn parse_thingy() -> Vec<u8> {
     let str = DATA.replace('\n', "");
     let len = str.len();
-    let h_len = len / 2;
+    let half_len = len / 2;
     DATA.chars()
         .filter_map(|x| x.to_digit(16).map(|d| d as u8))
         .enumerate()
         .tuples()
         .map(|((i, high), (_, low))| {
-            // WTF? https://github.com/NoelFB/Celeste/blob/master/Source/PICO-8/Emulator.cs#L206
-            if i < h_len {
+            // WTF? After the middle, bytes are in reverse order. idk
+            if i < half_len {
                 high << 4 | low
             } else {
                 low << 4 | high
@@ -119,7 +123,8 @@ fn parse_thingy() -> Vec<u8> {
         .collect()
 }
 
-#[allow(dead_code)]
+// Each pair of characters is a number in hex:
+// 0x23, 0x31, 0x25
 const DATA: &str = r#"2331252548252532323232323300002425262425252631323232252628282824252525252525323328382828312525253232323233000000313232323232323232330000002432323233313232322525252525482525252525252526282824252548252525262828282824254825252526282828283132323225482525252525
 252331323232332900002829000000242526313232332828002824262a102824254825252526002a2828292810244825282828290000000028282900000000002810000000372829000000002a2831482525252525482525323232332828242525254825323338282a283132252548252628382828282a2a2831323232322525
 252523201028380000002a0000003d24252523201028292900282426003a382425252548253300002900002a0031252528382900003a676838280000000000003828393e003a2800000000000028002425253232323232332122222328282425252532332828282900002a283132252526282828282900002a28282838282448
