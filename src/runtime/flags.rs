@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use itertools::Itertools;
 
 use crate::editor::serialize::Serialize;
@@ -6,6 +8,17 @@ use crate::runtime::sprite_sheet::SpriteSheet;
 #[derive(Debug)]
 pub struct Flags {
     flags: [u8; SpriteSheet::SPRITE_COUNT],
+}
+impl Display for Flags {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            &self
+                .flags
+                .chunks(16)
+                .map(|chunk| chunk.iter().map(|c| format!("{:0>8b}", c)).join(" "))
+                .join("\n"),
+        )
+    }
 }
 
 impl Flags {
