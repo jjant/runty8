@@ -18,71 +18,36 @@ fn main() {
     runty8::run_app::<GameState>(assets_path())
 }
 
-struct Cloud {
-    x: f32,
-    y: f32,
-    spd: f32,
-    w: f32,
-}
-
-impl Cloud {
-    fn update(&mut self) {
-        self.x += self.spd;
-
-        if self.x > 128. {
-            self.x = -self.w;
-            self.y = rnd(128. - 8.);
-        }
-    }
-}
-
-struct Particle {
-    x: f32,
-    y: f32,
-    s: i32,
-    spd: f32,
-    off: f32,
-    c: i32,
-}
-
-impl Particle {
-    fn update(&mut self) {
-        self.x += self.spd;
-
-        self.y += self.off.sin();
-        self.off += (0.05_f32).min(self.spd / 32.);
-        if self.x > 128. + 4. {
-            self.x = -4.;
-            self.y = rnd(128.);
-        }
-    }
-}
-struct DeadParticle {
-    x: f32,
-    y: f32,
-    spd: Vec2<f32>,
-    t: i32,
-}
-
-impl DeadParticle {
-    fn update(&mut self) -> bool {
-        self.x += self.spd.x;
-        self.y += self.spd.y;
-        self.t -= 1;
-
-        // Remove if
-        self.t <= 0
-    }
-}
-
-#[derive(PartialEq, Clone, Copy)]
-struct Vec2<T> {
-    x: T,
-    y: T,
-}
-
-fn rnd(max: f32) -> f32 {
-    rand::thread_rng().gen_range(0.0..max)
+struct GameState {
+    room: Vec2<i32>,
+    frames: i32,
+    deaths: i32,
+    max_djump: i32,
+    start_game: bool,
+    start_game_flash: i32,
+    objects: Vec<Object>,
+    // types: Vec<_>,
+    freeze: i32,
+    shake: i32,
+    will_restart: bool,
+    delay_restart: i32,
+    got_fruit: Vec<bool>,
+    #[allow(dead_code)]
+    sfx_timer: i32,
+    has_key: bool,
+    #[allow(dead_code)]
+    has_dashed: bool,
+    #[allow(dead_code)]
+    pause_player: bool,
+    flash_bg: bool,
+    new_bg: bool,
+    music_timer: i32,
+    clouds: Vec<Cloud>,
+    seconds: i32,
+    minutes: i32,
+    particles: Vec<Particle>,
+    // Particles created when the player dies
+    dead_particles: Vec<DeadParticle>,
 }
 
 impl App for GameState {
@@ -291,8 +256,7 @@ impl App for GameState {
         }
 
         // Draw bg terrain
-        // TODO: Implement `map` api
-        // draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 4);
+        draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 4);
 
         // Platforms/big chest
         for object in self.objects.iter() {
@@ -302,10 +266,9 @@ impl App for GameState {
             }
         }
 
-        // draw terrain
-        // TODO: Implement map API
-        // let off = if is_title(self) { -4 } else { 0 };
-        // map(self.room.x * 16, self.room.y * 16, off, 0, 16, 16, 2);
+        // Draw terrain
+        let off = if is_title(self) { -4 } else { 0 };
+        draw.map(self.room.x * 16, self.room.y * 16, off, 0, 16, 16, 2);
 
         // Draw objects
         for object in &self.objects {
@@ -316,8 +279,7 @@ impl App for GameState {
         }
 
         // Draw fg terrain
-        // TODO
-        // map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 8);
+        draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 8);
 
         // Particles
         for p in &self.particles {
@@ -376,6 +338,72 @@ impl App for GameState {
         }
     }
 }
+struct Cloud {
+    x: f32,
+    y: f32,
+    spd: f32,
+    w: f32,
+}
+
+impl Cloud {
+    fn update(&mut self) {
+        self.x += self.spd;
+
+        if self.x > 128. {
+            self.x = -self.w;
+            self.y = rnd(128. - 8.);
+        }
+    }
+}
+
+struct Particle {
+    x: f32,
+    y: f32,
+    s: i32,
+    spd: f32,
+    off: f32,
+    c: i32,
+}
+
+impl Particle {
+    fn update(&mut self) {
+        self.x += self.spd;
+
+        self.y += self.off.sin();
+        self.off += (0.05_f32).min(self.spd / 32.);
+        if self.x > 128. + 4. {
+            self.x = -4.;
+            self.y = rnd(128.);
+        }
+    }
+}
+struct DeadParticle {
+    x: f32,
+    y: f32,
+    spd: Vec2<f32>,
+    t: i32,
+}
+
+impl DeadParticle {
+    fn update(&mut self) -> bool {
+        self.x += self.spd.x;
+        self.y += self.spd.y;
+        self.t -= 1;
+
+        // Remove if
+        self.t <= 0
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+struct Vec2<T> {
+    x: T,
+    y: T,
+}
+
+fn rnd(max: f32) -> f32 {
+    rand::thread_rng().gen_range(0.0..max)
+}
 
 impl GameState {
     fn begin_game(&mut self) {
@@ -396,38 +424,6 @@ const K_DOWN: Button = Button::Down;
 const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
 
-struct GameState {
-    room: Vec2<i32>,
-    frames: i32,
-    deaths: i32,
-    max_djump: i32,
-    start_game: bool,
-    start_game_flash: i32,
-    objects: Vec<Object>,
-    // types: Vec<_>,
-    freeze: i32,
-    shake: i32,
-    will_restart: bool,
-    delay_restart: i32,
-    got_fruit: Vec<bool>,
-    #[allow(dead_code)]
-    sfx_timer: i32,
-    has_key: bool,
-    #[allow(dead_code)]
-    has_dashed: bool,
-    #[allow(dead_code)]
-    pause_player: bool,
-    flash_bg: bool,
-    new_bg: bool,
-    music_timer: i32,
-    clouds: Vec<Cloud>,
-    seconds: i32,
-    minutes: i32,
-    particles: Vec<Particle>,
-    // Particles created when the player dies
-    dead_particles: Vec<DeadParticle>,
-}
-
 fn title_screen(game_state: &mut GameState) {
     game_state.got_fruit = vec![false; 30];
     game_state.frames = 0;
@@ -443,6 +439,7 @@ fn level_index(game_state: &GameState) -> i32 {
     game_state.room.x % 8 + game_state.room.y * 8
 }
 
+/// Starting title screen
 fn is_title(game_state: &GameState) -> bool {
     level_index(game_state) == 31
 }
