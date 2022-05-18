@@ -272,32 +272,30 @@ fn map_view<'a, 'b>(
         .take(9) // 9 rows
         .enumerate()
         .flat_map(|(row_index, row)| {
-            row.into_iter()
-                .enumerate()
-                .map(move |(col_index, (state))| {
-                    let sprite = map.mget(col_index, row_index);
-                    let x = x as usize + col_index * 8;
-                    let y = y as usize + row_index * 8;
+            row.into_iter().enumerate().map(move |(col_index, state)| {
+                let sprite = map.mget(col_index as i32, row_index as i32);
+                let x = x as usize + col_index * 8;
+                let y = y as usize + row_index * 8;
 
-                    Button::new(
-                        x as i32,
-                        y as i32,
-                        8,
-                        8,
-                        None,
-                        state,
-                        DrawFn::new(move |draw| {
-                            draw.palt(None);
-                            if show_sprites_in_map {
-                                draw.spr(sprite.into(), 0, 0);
-                            } else {
-                                draw.print(&format!("{:0>2X}", sprite), 0, 1, 7);
-                            }
-                        }),
-                    )
-                    .on_hover(Msg::MapSpriteHovered(col_index + row_index * 16))
-                    .into()
-                })
+                Button::new(
+                    x as i32,
+                    y as i32,
+                    8,
+                    8,
+                    None,
+                    state,
+                    DrawFn::new(move |draw| {
+                        draw.palt(None);
+                        if show_sprites_in_map {
+                            draw.spr(sprite.into(), 0, 0);
+                        } else {
+                            draw.print(&format!("{:0>2X}", sprite), 0, 1, 7);
+                        }
+                    }),
+                )
+                .on_hover(Msg::MapSpriteHovered(col_index + row_index * 16))
+                .into()
+            })
         })
         .collect();
 

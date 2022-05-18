@@ -42,12 +42,12 @@ impl Map {
         m
     }
 
-    pub(crate) fn mget(&self, cel_x: usize, cel_y: usize) -> u8 {
-        let index = cel_x + cel_y * Map::WIDTH_SPRITES;
-        // TODO: Handle like pico8
-        assert!(index <= self.map.len());
+    pub(crate) fn mget(&self, cel_x: i32, cel_y: i32) -> u8 {
+        let index = Self::index(cel_x, cel_y);
 
-        self.map[index]
+        // TODO: Handle like pico8
+        // TODO2: I think it returns 0 if outside bounds?
+        index.map(|index| self.map[index]).unwrap_or(0)
     }
 
     pub(crate) fn mset(&mut self, cel_x: usize, cel_y: usize, sprite: u8) {
@@ -60,6 +60,18 @@ impl Map {
 
     pub fn iter(&self) -> impl Iterator<Item = SpriteId> + '_ {
         self.map.iter().copied()
+    }
+
+    fn index(x: i32, y: i32) -> Option<usize> {
+        if x >= 0
+            && (x as usize) < Map::WIDTH_SPRITES
+            && y >= 0
+            && (y as usize) < Map::HEIGHT_SPRITES
+        {
+            Some(x as usize + y as usize * Map::WIDTH_SPRITES)
+        } else {
+            None
+        }
     }
 }
 

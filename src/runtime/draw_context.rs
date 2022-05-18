@@ -221,6 +221,33 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         self.line(x0, y1, x1, y1, color);
         self.line(x1, y0, x1, y1, color);
     }
+
+    /// https://pico-8.fandom.com/wiki/Map
+    #[allow(clippy::too_many_arguments)]
+    pub fn map(
+        &mut self,
+        cell_x: i32,
+        cell_y: i32,
+        screen_x: i32,
+        screen_y: i32,
+        cell_w: i32,
+        cell_h: i32,
+        layer: u8,
+    ) {
+        // TODO: Handle like pico8
+        let screen_x: usize = screen_x.try_into().unwrap();
+        let screen_y: usize = screen_y.try_into().unwrap();
+
+        for (i_x, map_x) in (cell_x..=(cell_x + cell_w)).enumerate() {
+            for (i_y, map_y) in (cell_y..=(cell_y + cell_h)).enumerate() {
+                let spr = self.state.map.mget(dbg!(map_x), dbg!(map_y));
+                let x = screen_x + 8 * i_x;
+                let y = screen_y + 8 * i_y;
+
+                self.spr(spr as usize, x as i32, y as i32);
+            }
+        }
+    }
 }
 
 fn get_color(index: Color) -> u32 {

@@ -6,7 +6,7 @@ use ButtonState::*;
 pub struct State<'a> {
     pub(crate) internal_state: &'a InternalState,
     pub(crate) sprite_sheet: &'a mut SpriteSheet,
-    pub(crate) sprite_flags: &'a mut Flags,
+    pub sprite_flags: &'a mut Flags,
     pub(crate) map: &'a mut Map,
 }
 
@@ -90,7 +90,7 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn mget(&self, cel_x: usize, cel_y: usize) -> u8 {
+    pub fn mget(&self, cel_x: i32, cel_y: i32) -> u8 {
         self.map.mget(cel_x, cel_y)
     }
 
