@@ -31,6 +31,7 @@ pub struct Editor {
     bottom_bar_text: String,
     map_buttons: Vec<button::State>,
     hovered_map_button: usize,
+    show_sprites_in_map: bool,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -53,6 +54,7 @@ pub(crate) enum Msg {
     SerializeRequested,
     ShiftSprite(ShiftDirection),
     MapSpriteHovered(usize),
+    SwitchMapMode,
 }
 
 impl Editor {
@@ -82,6 +84,7 @@ impl Editor {
             bottom_bar_text: "".to_owned(),
             map_buttons: vec![button::State::new(); 144],
             hovered_map_button: 0,
+            show_sprites_in_map: false,
         }
     }
 
@@ -140,6 +143,9 @@ impl Editor {
             &Msg::MapSpriteHovered(sprite) => {
                 self.hovered_map_button = sprite;
             }
+            Msg::SwitchMapMode => {
+                self.show_sprites_in_map = !self.show_sprites_in_map;
+            }
         }
     }
 
@@ -176,8 +182,8 @@ impl Editor {
                         8,
                         &mut self.map_buttons,
                         self.hovered_map_button,
+                        self.show_sprites_in_map,
                     ))
-                    .push(Text::new("MAP VIEW", 0, 8, 7))
                     .into(),
             })
             .push(tools_row(
@@ -203,6 +209,7 @@ impl Editor {
         match event {
             Event::Mouse(_) => None,
             Event::Keyboard(KeyboardEvent::Down(Key::X)) => Some(Msg::SerializeRequested),
+            Event::Keyboard(KeyboardEvent::Down(Key::C)) => Some(Msg::SwitchMapMode),
             Event::Keyboard(KeyboardEvent::Down(key)) => {
                 ShiftDirection::from_key(key).map(Msg::ShiftSprite)
             }
@@ -255,10 +262,11 @@ fn map_view<'a, 'b>(
     y: i32,
     map_buttons: &'b mut [button::State],
     hovered_map_button: usize,
+    show_sprites_in_map: bool,
 ) -> Element<'b, Msg> {
-    let mut v: Vec<Element<'_, Msg>> = map
-        .iter()
-        .zip(map_buttons)
+    let mut v: Vec<Element<'_, Msg>> = map_buttons
+        .iter_mut()
+        // .zip(map)
         .chunks(16)
         .into_iter()
         .take(9) // 9 rows
@@ -266,7 +274,8 @@ fn map_view<'a, 'b>(
         .flat_map(|(row_index, row)| {
             row.into_iter()
                 .enumerate()
-                .map(move |(col_index, (sprite, state))| {
+                .map(move |(col_index, (state))| {
+                    let sprite = map.mget(col_index, row_index);
                     let x = x as usize + col_index * 8;
                     let y = y as usize + row_index * 8;
 
@@ -278,7 +287,12 @@ fn map_view<'a, 'b>(
                         None,
                         state,
                         DrawFn::new(move |draw| {
-                            draw.spr(sprite.into(), 0, 0);
+                            draw.palt(None);
+                            if show_sprites_in_map {
+                                draw.spr(sprite.into(), 0, 0);
+                            } else {
+                                draw.print(&format!("{:0>2X}", sprite), 0, 1, 7);
+                            }
                         }),
                     )
                     .on_hover(Msg::MapSpriteHovered(col_index + row_index * 16))
