@@ -240,10 +240,14 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         for (i_x, map_x) in (cell_x..=(cell_x + cell_w)).enumerate() {
             for (i_y, map_y) in (cell_y..=(cell_y + cell_h)).enumerate() {
                 let spr = self.state.map.mget(map_x, map_y);
-                let x = screen_x + 8 * i_x as i32;
-                let y = screen_y + 8 * i_y as i32;
+                let flags = self.fget(spr.into());
 
-                self.spr(spr as usize, x, y);
+                if flags & layer == layer {
+                    let x = screen_x + 8 * i_x as i32;
+                    let y = screen_y + 8 * i_y as i32;
+
+                    self.spr(spr as usize, x, y);
+                }
             }
         }
     }
