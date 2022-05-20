@@ -461,7 +461,7 @@ struct Player {
     hitbox: Hitbox,
     spr_off: f32,
     was_on_ground: bool,
-    hair: Vec<HairElement>,
+    hair: Hair,
 }
 
 impl Player {
@@ -489,21 +489,18 @@ impl Player {
         }
     }
 
-    fn create_hair(x: f32, y: f32) -> Vec<HairElement> {
-        let mut vec = Vec::with_capacity(5);
-
-        for i in 0..=4 {
-            vec.push(HairElement {
+    fn create_hair(x: f32, y: f32) -> Hair {
+        Hair {
+            segments: [0, 1, 2, 3, 4].map(|index| HairElement {
                 x,
                 y,
-                size: i32::max(1, i32::min(2, 3 - i)),
-            })
+                size: i32::max(1, i32::min(2, 3 - index)),
+            }),
         }
-
-        vec
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct HairElement {
     x: f32,
     y: f32,
@@ -2071,7 +2068,13 @@ impl ObjectKind {
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
+struct Hair {
+    segments: [HairElement; 5],
+}
+
+#[derive(PartialEq, Clone, Copy, Debug)]
 struct PlayerSpawn {
+    hair: Hair,
     delay: i32,
     target: Vec2<f32>,
     state: PlayerSpawnState,
@@ -2098,9 +2101,9 @@ impl PlayerSpawn {
         base_object.y = 128.0;
         base_object.spd.y = -4.0;
         base_object.is_solid = false;
-        // create_hair(this)
 
         Self {
+            hair: Player::create_hair(base_object.x, base_object.y),
             delay: 0,
             target,
             state: Jumping,
