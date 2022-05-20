@@ -220,7 +220,7 @@ impl App for GameState {
             } else if self.start_game_flash > 0 {
                 c = 1;
             } else {
-                c = 0
+                c = 0;
             }
 
             if c < 10 {
@@ -240,6 +240,7 @@ impl App for GameState {
         } else if self.new_bg {
             bg_col = 2;
         }
+
         draw.rectfill(0, 0, 128, 128, bg_col);
 
         // Clouds

@@ -73,22 +73,26 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         }
     }
 
-    fn set_pixel(
+    fn set_pixel_with_transparency(
         buffer: &mut [Color],
         draw_palette: &[Color; 16],
         transparent_color: Option<Color>,
         index: usize,
         color: Color,
     ) {
-        // https://pico-8.fandom.com/wiki/Pal
-        let color = draw_palette[color as usize];
-        let c = get_color(color);
-
         if let Some(transparent_color) = transparent_color {
             if color == transparent_color {
                 return;
             }
         }
+
+        DrawContext::set_pixel(buffer, draw_palette, index, color);
+    }
+
+    fn set_pixel(buffer: &mut [Color], draw_palette: &[Color; 16], index: usize, color: Color) {
+        // https://pico-8.fandom.com/wiki/Pal
+        let color = draw_palette[color as usize];
+        let c = get_color(color);
 
         #[allow(clippy::identity_op)]
         {
@@ -100,7 +104,6 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
             buffer[NUM_COMPONENTS * index + 2] = b;
         }
     }
-
     fn index(&self, x: i32, y: i32) -> Option<usize> {
         let x_in_bounds = 0 <= x && x < WIDTH as i32;
         let y_in_bounds = 0 <= y && y < WIDTH as i32;
@@ -127,7 +130,7 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
             for j in 0..8 {
                 let (x, y) = self.apply_camera(x + i, y + j);
                 if let Some(index) = self.index(x, y) {
-                    Self::set_pixel(
+                    Self::set_pixel_with_transparency(
                         &mut self.data.buffer,
                         &self.data.draw_palette,
                         self.data.transparent_color,
@@ -157,8 +160,8 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
 
     pub fn reset_pal(&mut self) {
         self.data.draw_palette = ORIGINAL_PALETTE;
-        // pal() makes colors opaque
-        self.palt(None);
+        // pal() resets transparency to default
+        self.palt(Some(0));
     }
 
     pub fn pal(&mut self, c0: Color, c1: Color) {
@@ -169,13 +172,7 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
         let (x, y) = self.apply_camera(x, y);
         if let Some(index) = self.index(x, y) {
-            Self::set_pixel(
-                &mut self.data.buffer,
-                &self.data.draw_palette,
-                self.data.transparent_color,
-                index,
-                color,
-            );
+            Self::set_pixel(&mut self.data.buffer, &self.data.draw_palette, index, color);
         }
     }
 
