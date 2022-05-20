@@ -18,13 +18,13 @@ fn main() {
 struct EmptyApp;
 
 impl App for EmptyApp {
-    fn init() -> Self {
+    fn init(_: &State) -> Self {
         Self
     }
 
     fn update(&mut self, _: &State) {}
 
-    fn draw(&self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut DrawContext) {
         draw.cls();
         draw.print("EMPTY", 0, 0, 7);
     }

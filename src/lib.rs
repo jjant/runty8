@@ -20,7 +20,7 @@ use runtime::{
 pub trait App {
     fn init(state: &State) -> Self;
     fn update(&mut self, state: &State);
-    fn draw(&self, draw_context: &mut DrawContext);
+    fn draw(&mut self, draw_context: &mut DrawContext);
 }
 
 #[derive(Clone, Copy, Debug)]

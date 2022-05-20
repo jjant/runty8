@@ -14,7 +14,7 @@ struct Confetti {
 }
 
 impl App for Confetti {
-    fn init() -> Self {
+    fn init(_: &State) -> Self {
         Self {
             particles: vec![],
             mouse_x: 64,
@@ -44,7 +44,7 @@ impl App for Confetti {
         }
     }
 
-    fn draw(&self, draw_context: &mut DrawContext) {
+    fn draw(&mut self, draw_context: &mut DrawContext) {
         draw_context.cls();
 
         let text_x = 3;

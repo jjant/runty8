@@ -1,7 +1,7 @@
 use crate::{draw, font};
 
 use super::sprite_sheet::{Color, Sprite};
-use super::state::State;
+use super::state::{Button, State};
 
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
@@ -122,6 +122,10 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
 
 // Pico8 api
 impl<'a, 'resources> DrawContext<'a, 'resources> {
+    pub fn btn(&self, button: Button) -> bool {
+        self.state.btn(button)
+    }
+
     pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
         let sprite = self.state.sprite_sheet.get_sprite(sprite);
         let buffer = &sprite.sprite;

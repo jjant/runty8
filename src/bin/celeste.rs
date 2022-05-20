@@ -26,7 +26,6 @@ struct GameState {
     start_game: bool,
     start_game_flash: i32,
     objects: Vec<Object>,
-    // types: Vec<_>,
     freeze: i32,
     shake: i32,
     will_restart: bool,
@@ -151,11 +150,14 @@ impl App for GameState {
         // Update each object?
         self.objects = self
             .objects
-            .iter()
-            .copied()
+            .clone()
+            .into_iter()
             .filter_map(|mut object| {
                 object.move_(state, &self.objects, self.room);
-                let should_destroy = object.object_type.update(&mut object.base_object, state);
+                let should_destroy =
+                    object
+                        .object_type
+                        .update(&mut object.base_object, self, state);
 
                 if should_destroy {
                     None
@@ -191,7 +193,7 @@ impl App for GameState {
         }
     }
 
-    fn draw(&self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut DrawContext) {
         draw.camera(0, 0);
         if self.shake > 0 {
             draw.camera(
@@ -260,24 +262,37 @@ impl App for GameState {
         draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 4);
 
         // Platforms/big chest
-        for object in self.objects.iter() {
-            if object.object_type == ObjectType::Platform {
-                //|| object.object_type == ObjectType::BigChest {
-                object.draw(draw, self);
-            }
-        }
+        // TODO: Unify code somehow, loop below is identical, with a different if-check
+        self.objects = self
+            .objects
+            .iter()
+            .copied()
+            .map(|mut object| {
+                if object.object_type == ObjectType::Platform {
+                    //|| object.object_type == ObjectType::BigChest {
+                    object.draw(draw, self);
+                }
+                object
+            })
+            .collect();
 
         // Draw terrain
         let off = if is_title(self) { -4 } else { 0 };
         draw.map(self.room.x * 16, self.room.y * 16, off, 0, 16, 16, 2);
 
         // Draw objects
-        for object in &self.objects {
-            if object.object_type != ObjectType::Platform {
-                //&& object.object_type != ObjectType::BigChest {
-                object.draw(draw, self);
-            }
-        }
+        self.objects = self
+            .objects
+            .iter()
+            .copied()
+            .map(|mut object| {
+                if object.object_type != ObjectType::Platform {
+                    //&& object.object_type != ObjectType::BigChest {
+                    object.draw(draw, self);
+                }
+                object
+            })
+            .collect();
 
         // Draw fg terrain
         draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 8);
@@ -445,9 +460,7 @@ fn is_title(game_state: &GameState) -> bool {
     level_index(game_state) == 31
 }
 
-// -- player entity --
-// -------------------
-
+#[allow(dead_code)]
 struct Player {
     p_jump: bool,
     p_dash: bool,
@@ -728,7 +741,6 @@ fn psfx(game_state: &GameState, num: i32) {
     }
 }
 
-#[allow(dead_code)]
 fn set_hair_color(draw: &mut DrawContext, frames: i32, djump: i32) {
     let c = if djump == 1 {
         8
@@ -739,38 +751,6 @@ fn set_hair_color(draw: &mut DrawContext, frames: i32, djump: i32) {
     };
 
     draw.pal(8, c as u8);
-}
-
-#[allow(dead_code)]
-fn draw_hair(
-    state: &State,
-    draw: &mut DrawContext,
-    x: f32,
-    y: f32,
-    hair: &mut [HairElement],
-    facing: i32,
-) {
-    let mut last = Vec2 {
-        x: x + (4 - facing * 2) as f32,
-        y: y + (if state.btn(K_DOWN) { 4. } else { 3. }),
-    };
-
-    for hair_element in hair {
-        hair_element.x += (last.x - hair_element.x) / 1.5;
-        hair_element.y += (last.y + 0.5 - hair_element.y) / 1.5;
-
-        draw.circfill(
-            hair_element.x.floor() as i32,
-            hair_element.y.floor() as i32,
-            hair_element.size,
-            8,
-        );
-
-        last = Vec2 {
-            x: hair_element.x,
-            y: hair_element.y,
-        };
-    }
 }
 
 #[allow(dead_code)]
@@ -1422,8 +1402,11 @@ impl Object {
         })
     }
 
-    fn draw(&self, draw: &mut DrawContext, game_state: &GameState) {
-        match self.object_type {
+    fn draw(&mut self, draw: &mut DrawContext, game_state: &GameState) {
+        match &mut self.object_type {
+            ObjectType::PlayerSpawn(player_spawn) => {
+                player_spawn.draw(&mut self.base_object, game_state, draw)
+            }
             // ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
             ObjectType::Player => {
@@ -1634,9 +1617,16 @@ impl ObjectType {
     // TODO: Figure out what exactly needs to go here
     // const TYPES: &'static [ObjectType] = &[Self::BigChest];
 
-    fn update(&mut self, base_object: &mut BaseObject, state: &State) -> bool {
+    fn update(
+        &mut self,
+        base_object: &mut BaseObject,
+        game_state: &mut GameState,
+        state: &State,
+    ) -> bool {
         match self {
-            ObjectType::PlayerSpawn(player_spawn) => player_spawn.update(base_object, state),
+            ObjectType::PlayerSpawn(player_spawn) => {
+                player_spawn.update(base_object, game_state, state)
+            }
             ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
             ObjectType::Player => {
@@ -2072,6 +2062,32 @@ struct Hair {
     segments: [HairElement; 5],
 }
 
+impl Hair {
+    fn draw(&mut self, draw: &mut DrawContext, x: f32, y: f32, facing: i32) {
+        let mut last = Vec2 {
+            x: x + (4 - facing * 2) as f32,
+            y: y + (if draw.btn(K_DOWN) { 4. } else { 3. }),
+        };
+
+        for hair_element in self.segments.iter_mut() {
+            hair_element.x += (last.x - hair_element.x) / 1.5;
+            hair_element.y += (last.y + 0.5 - hair_element.y) / 1.5;
+
+            draw.circfill(
+                hair_element.x.floor() as i32,
+                hair_element.y.floor() as i32,
+                hair_element.size,
+                8,
+            );
+
+            last = Vec2 {
+                x: hair_element.x,
+                y: hair_element.y,
+            };
+        }
+    }
+}
+
 #[derive(PartialEq, Clone, Copy, Debug)]
 struct PlayerSpawn {
     hair: Hair,
@@ -2110,7 +2126,12 @@ impl PlayerSpawn {
         }
     }
 
-    fn update(&mut self, base_object: &mut BaseObject, state: &State) -> bool {
+    fn update(
+        &mut self,
+        base_object: &mut BaseObject,
+        game_state: &mut GameState,
+        _: &State,
+    ) -> bool {
         match self.state {
             PlayerSpawnState::Jumping => {
                 if base_object.y < self.target.y + 16.0 {
@@ -2133,7 +2154,7 @@ impl PlayerSpawn {
                     self.state = PlayerSpawnState::Landing;
                     self.delay = 5;
                     // TODO: Integrate this screen shake
-                    // shake = 5;
+                    game_state.shake = 5;
                     // init_object(smoke, this.x, base_object.y + 4);
                     // sfx(5);
                 }
@@ -2142,12 +2163,37 @@ impl PlayerSpawn {
             PlayerSpawnState::Landing => {
                 self.delay -= 1;
                 base_object.spr = 6.0;
+                // TODO: Init player on destroy
                 //     if this.delay<0 then
                 //         destroy_object(this)
                 //         init_object(player,this.x,this.y)
                 //     end
-                false
+
+                let should_destroy = self.delay < 0;
+
+                should_destroy
             }
         }
+    }
+
+    fn draw(
+        &mut self,
+        base_object: &mut BaseObject,
+        game_state: &GameState,
+        draw: &mut DrawContext,
+    ) {
+        set_hair_color(draw, game_state.frames, game_state.max_djump);
+
+        self.hair.draw(draw, base_object.x, base_object.y, 1);
+        draw.spr(
+            base_object.spr.floor() as usize,
+            base_object.x.floor() as i32,
+            base_object.y.floor() as i32,
+            // 1,
+            // 1,
+            // base_object.flip.x,
+            // base_object.flip.y,
+        );
+        unset_hair_color(draw);
     }
 }

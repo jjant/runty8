@@ -65,7 +65,7 @@ impl MouseState {
 }
 
 impl App for StressLines {
-    fn init() -> Self {
+    fn init(_: &State) -> Self {
         Self {
             mouse: MouseState::new(64, 64),
         }
@@ -87,7 +87,7 @@ impl App for StressLines {
         // }
     }
 
-    fn draw(&self, draw_context: &mut DrawContext) {
+    fn draw(&mut self, draw_context: &mut DrawContext) {
         draw_context.cls();
 
         // Diagonal line
