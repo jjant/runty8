@@ -51,7 +51,7 @@ struct GameState {
 }
 
 impl App for GameState {
-    fn init() -> Self {
+    fn init(state: &State) -> Self {
         let clouds = (0..=16)
             .into_iter()
             .map(|_| Cloud {
@@ -102,7 +102,7 @@ impl App for GameState {
             dead_particles: vec![],
         };
 
-        title_screen(&mut gs);
+        title_screen(&mut gs, state);
 
         gs
     }
@@ -144,7 +144,7 @@ impl App for GameState {
             self.delay_restart -= 1;
             if self.delay_restart <= 0 {
                 self.will_restart = false;
-                load_room(self, self.room.x, self.room.y);
+                load_room(self, state, self.room.x, self.room.y);
             }
         }
 
@@ -155,7 +155,7 @@ impl App for GameState {
             .copied()
             .filter_map(|mut object| {
                 object.move_(state, &self.objects, self.room);
-                let should_destroy = object.object_type.update();
+                let should_destroy = object.object_type.update(&mut object.base_object, state);
 
                 if should_destroy {
                     None
@@ -185,7 +185,7 @@ impl App for GameState {
             if self.start_game {
                 self.start_game_flash -= 1;
                 if self.start_game_flash <= -30 {
-                    self.begin_game();
+                    self.begin_game(state);
                 }
             }
         }
@@ -407,25 +407,25 @@ fn rnd(max: f32) -> f32 {
 }
 
 impl GameState {
-    fn begin_game(&mut self) {
+    fn begin_game(&mut self, state: &State) {
         self.frames = 0;
         self.seconds = 0;
         self.minutes = 0;
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, 0, 0);
+        load_room(self, state, 0, 0);
     }
 }
 
-// k_left=0
-// k_right=1
+const K_LEFT: Button = Button::Left;
+const K_RIGHT: Button = Button::Right;
 // k_up=2
 const K_DOWN: Button = Button::Down;
 const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
 
-fn title_screen(game_state: &mut GameState) {
+fn title_screen(game_state: &mut GameState, state: &State) {
     game_state.got_fruit = vec![false; 30];
     game_state.frames = 0;
     game_state.deaths = 0;
@@ -433,7 +433,7 @@ fn title_screen(game_state: &mut GameState) {
     game_state.start_game = false;
     game_state.start_game_flash = 0;
     // music(40,0,7)
-    load_room(game_state, 7, 3)
+    load_room(game_state, state, 7, 3)
 }
 
 fn level_index(game_state: &GameState) -> i32 {
@@ -1429,7 +1429,25 @@ impl Object {
         match self.object_type {
             // ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
-            ObjectType::Player => todo!(),
+            ObjectType::Player => {
+                // if this.x<-1 or this.x>121 then
+                //     this.x=clamp(this.x,-1,121)
+                //     this.spd.x=0
+                // end
+
+                // set_hair_color(this.djump)
+                // draw_hair(this,this.flip.x and -1 or 1)
+                draw.spr(
+                    self.base_object.spr.floor() as usize,
+                    self.base_object.x.floor() as i32,
+                    self.base_object.y.floor() as i32,
+                    // 1,
+                    // 1,
+                    // self.base_object.flip.x,
+                    // self.base_object.flip.y,
+                )
+                // unset_hair_color()
+            }
             // ObjectType::Smoke => todo!(),
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
@@ -1583,7 +1601,7 @@ impl Object {
 fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
     for i in 0.max(x / 8)..=(15.min((x + w - 1) / 8)) {
         for j in 0.max(y / 8)..=(15.min((y + h - 1) / 8)) {
-            if state.fget_n(tile_at(room, i, j) as usize, flag as u8) {
+            if state.fget_n(tile_at(state, room, i, j) as usize, flag as u8) {
                 return true;
             }
         }
@@ -1591,8 +1609,8 @@ fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, 
     false
 }
 
-fn tile_at(room: Vec2<i32>, x: i32, y: i32) -> i32 {
-    mget(room.x * 16 + x, room.y * 16 + y)
+fn tile_at(state: &State, room: Vec2<i32>, x: i32, y: i32) -> i32 {
+    state.mget(room.x * 16 + x, room.y * 16 + y).into()
 }
 
 fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
@@ -1650,11 +1668,52 @@ impl ObjectType {
         }
     }
 
-    fn update(&mut self) -> bool {
+    fn update(&mut self, base_object: &mut BaseObject, state: &State) -> bool {
         match self {
             ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
-            ObjectType::Player => todo!(),
+            ObjectType::Player => {
+                let input = if state.btn(K_RIGHT) {
+                    1
+                } else if state.btn(K_LEFT) {
+                    -1
+                } else {
+                    0
+                } as f32;
+
+                // -- move
+                // part
+                let mut maxrun = 1.0;
+                let mut accel = 0.6;
+                let mut deccel = 0.15;
+
+                let on_ground = true;
+                let on_ice = false;
+                if !on_ground {
+                    accel = 0.4;
+                } else if on_ice {
+                    accel = 0.05;
+
+                    if input == (if base_object.flip.x { -1.0 } else { 1.0 }) {
+                        accel = 0.05;
+                    }
+                }
+
+                if base_object.spd.x.abs() > maxrun {
+                    base_object.spd.x = appr(
+                        base_object.spd.x,
+                        base_object.spd.x.signum() * maxrun,
+                        deccel,
+                    );
+                } else {
+                    base_object.spd.x = appr(base_object.spd.x, input * maxrun, accel);
+                }
+
+                // TODO: Update
+
+                // dont destroy
+                false
+            }
             // ObjectType::Smoke => todo!(),
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
@@ -1716,7 +1775,7 @@ fn restart_room(game_state: &mut GameState) {
     game_state.delay_restart = 15;
 }
 
-fn next_room(game_state: &mut GameState) {
+fn next_room(game_state: &mut GameState, state: &State) {
     let room = game_state.room;
 
     #[allow(clippy::if_same_then_else)]
@@ -1730,18 +1789,13 @@ fn next_room(game_state: &mut GameState) {
         // music(30, 500, 7)
     }
     if room.x == 7 {
-        load_room(game_state, 0, room.y + 1);
+        load_room(game_state, state, 0, room.y + 1);
     } else {
-        load_room(game_state, room.x + 1, room.y);
+        load_room(game_state, state, room.x + 1, room.y);
     }
 }
 
-fn mget(x: i32, y: i32) -> i32 {
-    // todo!()
-    0
-}
-
-fn load_room(game_state: &mut GameState, x: i32, y: i32) {
+fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
     game_state.has_dashed = false;
     game_state.has_key = false;
 
@@ -1752,13 +1806,14 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
     game_state.room.x = x;
     game_state.room.y = y;
 
+    println!("Begin game {} {}", x, y);
     for tx in 0..=15 {
         for ty in 0..=15 {
             // entities
             let ftx = tx as f32;
             let fty = ty as f32;
-            let tile = mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
-            if tile == 11 {
+            let tile = state.mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
+            if dbg!(tile) == 11 {
                 let mut platform =
                     Object::init(game_state, ObjectKind::Platform, ftx * 8., fty * 8.).unwrap();
                 platform.base_object.dir = -1;
@@ -1770,7 +1825,7 @@ fn load_room(game_state: &mut GameState, x: i32, y: i32) {
                 game_state.objects.push(platform);
             } else {
                 for kind in ObjectKind::TYPES.iter().copied() {
-                    if kind.tile() == Some(tile) {
+                    if kind.tile() == Some(tile.into()) {
                         if let Some(object) = Object::init(game_state, kind, ftx * 8., fty * 8.) {
                             game_state.objects.push(object);
                         }
@@ -1998,7 +2053,18 @@ impl ObjectKind {
 
     fn create(&self, object: &mut BaseObject) -> ObjectType {
         match self {
-            ObjectKind::PlayerSpawn => todo!(),
+            ObjectKind::PlayerSpawn => {
+                //  sfx(4)
+                object.spr = 3.0;
+                // this.target= {x=this.x,y=this.y}
+                // this.y=128
+                // this.spd.y=-4
+                // this.state=0
+                // this.delay=0
+                // this.solids=false
+                // create_hair(this)
+                ObjectType::Player
+            }
             // ObjectKind::Spring => todo!(),
             // ObjectKind::Balloon => todo!(),
             // ObjectKind::FallFloor => todo!(),

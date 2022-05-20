@@ -24,9 +24,16 @@ pub(crate) fn run_app<T: App + 'static>(
     sprite_sheet: SpriteSheet,
     mut draw_data: DrawData,
 ) {
-    let mut app = T::init();
-    let mut editor = Editor::init();
     let mut internal_state = InternalState::new();
+    let mut resources = Resources {
+        assets_path,
+        sprite_flags,
+        sprite_sheet,
+        map,
+    };
+    let state = State::new(&internal_state, &mut resources);
+    let mut app = T::init(&state);
+    let mut editor = Editor::init();
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
@@ -52,12 +59,6 @@ pub(crate) fn run_app<T: App + 'static>(
     let fps = 60_u64;
     let nanoseconds_per_frame = 1_000_000_000 / fps;
 
-    let mut resources = Resources {
-        assets_path,
-        sprite_flags,
-        sprite_sheet,
-        map,
-    };
     event_loop.run(move |glutin_event, _, control_flow| {
         let event: Option<Event> = handle_event(
             &glutin_event,

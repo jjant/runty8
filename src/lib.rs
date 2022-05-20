@@ -18,7 +18,7 @@ use runtime::{
 
 /// A regular pico8 app
 pub trait App {
-    fn init() -> Self;
+    fn init(state: &State) -> Self;
     fn update(&mut self, state: &State);
     fn draw(&self, draw_context: &mut DrawContext);
 }
