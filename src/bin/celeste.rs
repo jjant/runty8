@@ -396,7 +396,7 @@ impl DeadParticle {
     }
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 struct Vec2<T> {
     x: T,
     y: T,
@@ -1622,6 +1622,7 @@ enum ObjectType {
     Platform,
     // BigChest,
     Player,
+    PlayerSpawn(PlayerSpawn),
     // Smoke,
     // LifeUp,
     // Fruit,
@@ -1636,40 +1637,9 @@ impl ObjectType {
     // TODO: Figure out what exactly needs to go here
     // const TYPES: &'static [ObjectType] = &[Self::BigChest];
 
-    fn init(&self, object: &mut Object) {
-        match self {
-            ObjectType::Platform => todo!(),
-            // ObjectType::BigChest => todo!(),
-            ObjectType::Player => todo!(),
-            // ObjectType::Smoke => Smoke::init(object),
-            // ObjectType::LifeUp => todo!(),
-            // ObjectType::Fruit => Fruit::init(object),
-            // ObjectType::Orb => todo!(),
-            // ObjectType::FakeWall => todo!(),
-            // ObjectType::FallFloor => todo!(),
-            // ObjectType::Key => todo!(),
-            ObjectType::RoomTitle(_) => todo!(),
-        }
-    }
-
-    fn tile(&self) -> Option<i32> {
-        match self {
-            ObjectType::Platform => todo!(),
-            // ObjectType::BigChest => Some(96),
-            ObjectType::Player => todo!(),
-            // ObjectType::Smoke => todo!(),
-            // ObjectType::LifeUp => todo!(),
-            // ObjectType::Fruit => Some(26),
-            // ObjectType::Orb => todo!(),
-            // ObjectType::FakeWall => Some(64),
-            // ObjectType::FallFloor => Some(23),
-            // ObjectType::Key => Some(8),
-            ObjectType::RoomTitle(_) => None,
-        }
-    }
-
     fn update(&mut self, base_object: &mut BaseObject, state: &State) -> bool {
         match self {
+            ObjectType::PlayerSpawn(player_spawn) => player_spawn.update(base_object, state),
             ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
             ObjectType::Player => {
@@ -1813,7 +1783,7 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
             let ftx = tx as f32;
             let fty = ty as f32;
             let tile = state.mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
-            if dbg!(tile) == 11 {
+            if tile == 11 {
                 let mut platform =
                     Object::init(game_state, ObjectKind::Platform, ftx * 8., fty * 8.).unwrap();
                 platform.base_object.dir = -1;
@@ -2053,18 +2023,7 @@ impl ObjectKind {
 
     fn create(&self, object: &mut BaseObject) -> ObjectType {
         match self {
-            ObjectKind::PlayerSpawn => {
-                //  sfx(4)
-                object.spr = 3.0;
-                // this.target= {x=this.x,y=this.y}
-                // this.y=128
-                // this.spd.y=-4
-                // this.state=0
-                // this.delay=0
-                // this.solids=false
-                // create_hair(this)
-                ObjectType::Player
-            }
+            ObjectKind::PlayerSpawn => ObjectType::PlayerSpawn(PlayerSpawn::init(object)),
             // ObjectKind::Spring => todo!(),
             // ObjectKind::Balloon => todo!(),
             // ObjectKind::FallFloor => todo!(),
@@ -2107,6 +2066,85 @@ impl ObjectKind {
             // ObjectKind::Key => true,
             // ObjectKind::Chest => true,
             _ => false,
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+struct PlayerSpawn {
+    delay: i32,
+    target: Vec2<f32>,
+    state: PlayerSpawnState,
+}
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+enum PlayerSpawnState {
+    Jumping,
+    Falling,
+    Landing,
+}
+
+impl PlayerSpawn {
+    fn init(base_object: &mut BaseObject) -> Self {
+        use PlayerSpawnState::*;
+
+        // TODO: Implement sound api
+        // sfx(4)
+        base_object.spr = 3.0;
+        let target = Vec2 {
+            x: base_object.x,
+            y: base_object.y,
+        };
+        base_object.y = 128.0;
+        base_object.spd.y = -4.0;
+        base_object.is_solid = false;
+        // create_hair(this)
+
+        Self {
+            delay: 0,
+            target,
+            state: Jumping,
+        }
+    }
+
+    fn update(&mut self, base_object: &mut BaseObject, state: &State) -> bool {
+        match self.state {
+            PlayerSpawnState::Jumping => {
+                if base_object.y < self.target.y + 16.0 {
+                    self.state = PlayerSpawnState::Falling;
+                    self.delay = 3;
+                }
+
+                false
+            }
+            PlayerSpawnState::Falling => {
+                base_object.spd.y += 0.5;
+
+                if base_object.spd.y > 0.0 && self.delay > 0 {
+                    base_object.spd.y = 0.0;
+                    self.delay -= 1;
+                }
+                if base_object.spd.y > 0.0 && base_object.y > self.target.y {
+                    base_object.y = self.target.y;
+                    base_object.spd = Vec2 { x: 0.0, y: 0.0 };
+                    self.state = PlayerSpawnState::Landing;
+                    self.delay = 5;
+                    // TODO: Integrate this screen shake
+                    // shake = 5;
+                    // init_object(smoke, this.x, base_object.y + 4);
+                    // sfx(5);
+                }
+                false
+            }
+            PlayerSpawnState::Landing => {
+                self.delay -= 1;
+                base_object.spr = 6.0;
+                //     if this.delay<0 then
+                //         destroy_object(this)
+                //         init_object(player,this.x,this.y)
+                //     end
+                false
+            }
         }
     }
 }
