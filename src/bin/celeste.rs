@@ -764,61 +764,6 @@ fn unset_hair_color(draw: &mut DrawContext) {
     draw.pal(8, 8);
 }
 
-// player_spawn = {
-//     tile=1,
-//     init=function(this)
-//      sfx(4)
-//         this.spr=3
-//         this.target= {x=this.x,y=this.y}
-//         this.y=128
-//         this.spd.y=-4
-//         this.state=0
-//         this.delay=0
-//         this.solids=false
-//         create_hair(this)
-//     end,
-//     update=function(this)
-//         -- jumping up
-//         if this.state==0 then
-//             if this.y < this.target.y+16 then
-//                 this.state=1
-//                 this.delay=3
-//             end
-//         -- falling
-//         elseif this.state==1 then
-//             this.spd.y+=0.5
-//             if this.spd.y>0 and this.delay>0 then
-//                 this.spd.y=0
-//                 this.delay-=1
-//             end
-//             if this.spd.y>0 and this.y > this.target.y then
-//                 this.y=this.target.y
-//                 this.spd = {x=0,y=0}
-//                 this.state=2
-//                 this.delay=5
-//                 shake=5
-//                 init_object(smoke,this.x,this.y+4)
-//                 sfx(5)
-//             end
-//         -- landing
-//         elseif this.state==2 then
-//             this.delay-=1
-//             this.spr=6
-//             if this.delay<0 then
-//                 destroy_object(this)
-//                 init_object(player,this.x,this.y)
-//             end
-//         end
-//     end,
-//     draw=function(this)
-//         set_hair_color(max_djump)
-//         draw_hair(this,1)
-//         spr(this.spr,this.x,this.y,1,1,this.flip.x,this.flip.y)
-//         unset_hair_color()
-//     end
-// }
-// add(types,player_spawn)
-
 struct Spring {
     hide_in: i32,
     hide_for: i32,
@@ -1439,21 +1384,12 @@ impl Object {
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
             // ObjectType::Orb => todo!(),
-            // ObjectType::FakeWall => todo!(),
+            ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, game_state, draw),
             // ObjectType::FallFloor => todo!(),
             // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state),
-            _ => {
-                if self.base_object.spr > 0. {
-                    // TODO: Implement version with many arguments
-                    // draw.spr(self.base_object.spr, self.base_object.x, self.base_object.y, 1, 1, self.base_object.flip.x, self.base_object.flip.y);
-                    draw.spr(
-                        self.base_object.spr.floor() as usize,
-                        self.base_object.x.floor() as i32,
-                        self.base_object.y.floor() as i32,
-                    );
-                }
-            }
+            ObjectType::Platform => todo!("Platform draw"),
+            ObjectType::Smoke => default_draw(&mut self.base_object, draw),
         }
     }
 
@@ -1585,6 +1521,21 @@ impl Object {
     }
 }
 
+fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
+    if base_object.spr > 0. {
+        // TODO: Implement version with many arguments
+        draw.spr(
+            base_object.spr.floor() as usize,
+            base_object.x.floor() as i32,
+            base_object.y.floor() as i32,
+            // 1,
+            // 1,
+            // base_object.flip.x,
+            // base_object.flip.y,
+        );
+    }
+}
+
 fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
     for i in 0.max(x / 8)..=(15.min((x + w - 1) / 8)) {
         for j in 0.max(y / 8)..=(15.min((y + h - 1) / 8)) {
@@ -1614,7 +1565,7 @@ enum ObjectType {
     // LifeUp,
     // Fruit,
     // Orb,
-    // FakeWall,
+    FakeWall,
     // FallFloor,
     // Key,
     RoomTitle(RoomTitle),
@@ -1628,8 +1579,10 @@ impl ObjectType {
             ObjectType::PlayerSpawn(_) => ObjectKind::PlayerSpawn,
             ObjectType::RoomTitle(_) => ObjectKind::RoomTitle,
             ObjectType::Smoke => ObjectKind::Smoke,
+            ObjectType::FakeWall => ObjectKind::FakeWall,
         }
     }
+
     // TODO: Figure out what exactly needs to go here
     // const TYPES: &'static [ObjectType] = &[Self::BigChest];
 
@@ -1693,7 +1646,7 @@ impl ObjectType {
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
             // ObjectType::Orb => todo!(),
-            // ObjectType::FakeWall => todo!(),
+            ObjectType::FakeWall => FakeWall::update(base_object, game_state, state),
             // ObjectType::FallFloor => todo!(),
             // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(rt) => rt.update(),
@@ -1980,7 +1933,7 @@ enum ObjectKind {
     // FallFloor,
     // Fruit,
     // FlyFruit,
-    // FakeWall,
+    FakeWall,
     // Key,
     // Chest,
     // Message,
@@ -1997,6 +1950,9 @@ impl ObjectKind {
     // I think these are the "instantiable" objects
     // (you put a "marker" tile in the map and this creates the object for it)
     // see line 1135 of source.p8
+    //
+    // TODO: Make this just an array of all the variants with a macro or the strum crate.
+    // and depend on the tile function for tile-instantiability
     const TYPES: &'static [Self] = &[
         ObjectKind::PlayerSpawn,
         // ObjectKind::Spring,
@@ -2004,7 +1960,7 @@ impl ObjectKind {
         // ObjectKind::FallFloor,
         // ObjectKind::Fruit,
         // ObjectKind::FlyFruit,
-        // ObjectKind::FakeWall,
+        ObjectKind::FakeWall,
         // ObjectKind::Key,
         // ObjectKind::Chest,
         // ObjectKind::Message,
@@ -2035,6 +1991,7 @@ impl ObjectKind {
                 Smoke::init(base_object);
                 ObjectType::Smoke
             }
+            ObjectKind::FakeWall => ObjectType::FakeWall,
         }
     }
     fn tile(&self) -> Option<i32> {
@@ -2045,7 +2002,7 @@ impl ObjectKind {
             // ObjectKind::FallFloor => Some(23),
             // ObjectKind::Fruit => Some(26),
             // ObjectKind::FlyFruit => Some(28),
-            // ObjectKind::FakeWall => Some(64),
+            ObjectKind::FakeWall => Some(64),
             // ObjectKind::Key => Some(8),
             // ObjectKind::Chest => Some(20),
             // ObjectKind::Message => Some(86),
@@ -2117,6 +2074,15 @@ enum PlayerSpawnState {
 struct UpdateAction {
     should_destroy: bool,
     new_objects: Vec<Object>,
+}
+
+impl UpdateAction {
+    fn noop() -> Self {
+        Self {
+            should_destroy: false,
+            new_objects: vec![],
+        }
+    }
 }
 
 impl PlayerSpawn {
@@ -2231,5 +2197,50 @@ impl PlayerSpawn {
             // base_object.flip.y,
         );
         unset_hair_color(draw);
+    }
+}
+
+struct FakeWall;
+
+impl FakeWall {
+    fn update(base_object: &mut BaseObject, game_state: &mut GameState, _: &State) -> UpdateAction {
+        base_object.hitbox = Hitbox {
+            x: -1.0,
+            y: -1.0,
+            w: 18,
+            h: 18,
+        };
+        // local hit = this.collide(player,0,0)
+
+        // if let Some(hit) = todo!() {}
+        // if hit~=nil and hit.dash_effect_time>0 then
+        //     hit.spd.x=-sign(hit.spd.x)*1.5
+        //     hit.spd.y=-1.5
+        //     hit.dash_time=-1
+        //     sfx_timer=20
+        //     sfx(16)
+        //     destroy_object(this)
+        //     init_object(smoke,this.x,this.y)
+        //     init_object(smoke,this.x+8,this.y)
+        //     init_object(smoke,this.x,this.y+8)
+        //     init_object(smoke,this.x+8,this.y+8)
+        //     init_object(fruit,this.x+4,this.y+4)
+        // end
+        base_object.hitbox = Hitbox {
+            x: 0.0,
+            y: 0.0,
+            w: 16,
+            h: 16,
+        };
+        UpdateAction::noop()
+    }
+
+    fn draw(base_object: &mut BaseObject, _: &GameState, draw: &mut DrawContext) {
+        let x = base_object.x.floor() as i32;
+        let y = base_object.y.floor() as i32;
+        draw.spr(64, x, y);
+        draw.spr(65, x + 8, y);
+        draw.spr(80, x, y + 8);
+        draw.spr(81, x + 8, y + 8);
     }
 }
