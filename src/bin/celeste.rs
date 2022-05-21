@@ -268,8 +268,8 @@ impl App for GameState {
             .iter()
             .copied()
             .map(|mut object| {
-                if object.object_type == ObjectType::Platform {
-                    //|| object.object_type == ObjectType::BigChest {
+                if object.object_type.kind() == ObjectKind::Platform {
+                    //|| object.object_type == ObjectKind::BigChest {
                     object.draw(draw, self);
                 }
                 object
@@ -286,8 +286,8 @@ impl App for GameState {
             .iter()
             .copied()
             .map(|mut object| {
-                if object.object_type != ObjectType::Platform {
-                    //&& object.object_type != ObjectType::BigChest {
+                if object.object_type.kind() != ObjectKind::Platform {
+                    //&& object.object_type.kind() != ObjectKind::BigChest {
                     object.draw(draw, self);
                 }
                 object
@@ -345,7 +345,7 @@ impl App for GameState {
             if let Some(p) = self
                 .objects
                 .iter()
-                .find(|object| object.object_type == ObjectType::Player)
+                .find(|object| object.object_type.kind() == ObjectKind::Player)
             {
                 let diff = f32::min(24., 40. - f32::abs(p.base_object.x + 4. - 64.)).floor() as i32;
                 draw.rectfill(0, 0, diff, 128, 0);
@@ -461,6 +461,7 @@ fn is_title(game_state: &GameState) -> bool {
 }
 
 #[allow(dead_code)]
+#[derive(Clone, Copy, Debug)]
 struct Player {
     p_jump: bool,
     p_dash: bool,
@@ -1358,7 +1359,7 @@ struct Hitbox {
     h: i32,
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Clone, Copy)]
 struct Object {
     base_object: BaseObject,
     object_type: ObjectType,
@@ -1409,7 +1410,7 @@ impl Object {
             }
             // ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
-            ObjectType::Player => {
+            ObjectType::Player(player) => {
                 // if this.x<-1 or this.x>121 then
                 //     this.x=clamp(this.x,-1,121)
                 //     this.spd.x=0
@@ -1519,8 +1520,8 @@ impl Object {
         oy: i32,
     ) -> bool {
         if oy > 0
-            && !self.check(objects, &ObjectType::Platform, ox, 0)
-            && self.check(objects, &ObjectType::Platform, ox, oy)
+            && !self.check(objects, &ObjectKind::Platform, ox, 0)
+            && self.check(objects, &ObjectKind::Platform, ox, oy)
         {
             return true;
         }
@@ -1537,20 +1538,20 @@ impl Object {
         //     || self.check(objects, &ObjectType::FakeWall, ox, oy)
     }
 
-    fn check(&self, objects: &[Object], type_: &ObjectType, ox: i32, oy: i32) -> bool {
-        self.collide(objects, type_, ox, oy).is_some()
+    fn check(&self, objects: &[Object], kind: &ObjectKind, ox: i32, oy: i32) -> bool {
+        self.collide(objects, kind, ox, oy).is_some()
     }
 
     fn collide<'a>(
         &self,
         objects: &'a [Object],
-        type_: &ObjectType,
+        kind: &ObjectKind,
         ox: i32,
         oy: i32,
     ) -> Option<(usize, &'a Object)> {
         for (index, other) in objects.iter().enumerate() {
             if !std::ptr::eq(other, self)
-                && other.object_type == self.object_type
+                && &other.object_type.kind() == kind
                 && other.base_object.collideable
                 && other.base_object.x
                     + other.base_object.hitbox.x
@@ -1597,11 +1598,11 @@ fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> b
     tile_flag_at(state, room, x, y, w, h, 0)
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Clone, Copy)]
 enum ObjectType {
     Platform,
     // BigChest,
-    Player,
+    Player(Player),
     PlayerSpawn(PlayerSpawn),
     // Smoke,
     // LifeUp,
@@ -1614,6 +1615,14 @@ enum ObjectType {
 }
 
 impl ObjectType {
+    fn kind(&self) -> ObjectKind {
+        match self {
+            ObjectType::Platform => ObjectKind::Platform,
+            ObjectType::Player(_) => ObjectKind::Player,
+            ObjectType::PlayerSpawn(_) => ObjectKind::PlayerSpawn,
+            ObjectType::RoomTitle(_) => ObjectKind::RoomTitle,
+        }
+    }
     // TODO: Figure out what exactly needs to go here
     // const TYPES: &'static [ObjectType] = &[Self::BigChest];
 
@@ -1629,7 +1638,7 @@ impl ObjectType {
             }
             ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
-            ObjectType::Player => {
+            ObjectType::Player(player) => {
                 let input = if state.btn(K_RIGHT) {
                     1
                 } else if state.btn(K_LEFT) {
@@ -1722,7 +1731,7 @@ fn kill_player(obj: &Object, game_state: &mut GameState) {
 }
 
 fn destroy_object(game_state: &mut GameState, object: &Object) {
-    game_state.objects.retain(|o| o != object);
+    game_state.objects.retain(|o| std::ptr::eq(o, object));
 }
 // -- room functions --
 // --------------------
@@ -1888,8 +1897,8 @@ impl Platform {
         }
         self_.base_object.last = self_.base_object.x;
 
-        let ret = if !self_.check(objects, &ObjectType::Player, 0, 0) {
-            let (index, hit) = self_.collide(objects, &ObjectType::Player, 0, -1)?;
+        let ret = if !self_.check(objects, &ObjectKind::Player, 0, 0) {
+            let (index, hit) = self_.collide(objects, &ObjectKind::Player, 0, -1)?;
             let mut hit = *hit;
             hit.move_x(
                 state,
@@ -1950,9 +1959,10 @@ impl Fruit {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum ObjectKind {
     PlayerSpawn,
+    Player,
     // Spring,
     // Balloon,
     // FallFloor,
@@ -1989,28 +1999,12 @@ impl ObjectKind {
         // ObjectKind::Flag,
     ];
 
-    fn init(&self, object: &mut Object) {
-        match self {
-            ObjectKind::PlayerSpawn => todo!(),
-            // ObjectKind::Spring => todo!(),
-            // ObjectKind::Balloon => todo!(),
-            // ObjectKind::FallFloor => todo!(),
-            // ObjectKind::Fruit => todo!(),
-            // ObjectKind::FlyFruit => todo!(),
-            // ObjectKind::FakeWall => todo!(),
-            // ObjectKind::Key => todo!(),
-            // ObjectKind::Chest => todo!(),
-            // ObjectKind::Message => todo!(),
-            // ObjectKind::BigChest => todo!(),
-            // ObjectKind::Flag => todo!(),
-            ObjectKind::RoomTitle => todo!(),
-            ObjectKind::Platform => todo!(),
-        }
-    }
-
     fn create(&self, object: &mut BaseObject) -> ObjectType {
         match self {
             ObjectKind::PlayerSpawn => ObjectType::PlayerSpawn(PlayerSpawn::init(object)),
+            ObjectKind::Player => {
+                todo!()
+            }
             // ObjectKind::Spring => todo!(),
             // ObjectKind::Balloon => todo!(),
             // ObjectKind::FallFloor => todo!(),
@@ -2103,6 +2097,11 @@ enum PlayerSpawnState {
     Landing,
 }
 
+struct UpdateAction {
+    should_destroy: bool,
+    new_objects: Vec<Object>,
+}
+
 impl PlayerSpawn {
     fn init(base_object: &mut BaseObject) -> Self {
         use PlayerSpawnState::*;
@@ -2155,7 +2154,12 @@ impl PlayerSpawn {
                     self.delay = 5;
                     // TODO: Integrate this screen shake
                     game_state.shake = 5;
-                    // init_object(smoke, this.x, base_object.y + 4);
+                    // let smoke = Object::init(
+                    //     game_state,
+                    //     ObjectKind::Smoke,
+                    //     base_object.x,
+                    //     base_object.y + 4.0,
+                    // );
                     // sfx(5);
                 }
                 false
@@ -2166,7 +2170,8 @@ impl PlayerSpawn {
                 // TODO: Init player on destroy
                 //     if this.delay<0 then
                 //         destroy_object(this)
-                //         init_object(player,this.x,this.y)
+                let player =
+                    Object::init(game_state, ObjectKind::Player, base_object.x, base_object.y);
                 //     end
 
                 let should_destroy = self.delay < 0;
