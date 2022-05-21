@@ -148,17 +148,21 @@ impl App for GameState {
         }
 
         // Update each object?
+        let mut all_new_objects = vec![];
         self.objects = self
             .objects
             .clone()
             .into_iter()
             .filter_map(|mut object| {
                 object.move_(state, &self.objects, self.room);
-                let should_destroy =
-                    object
-                        .object_type
-                        .update(&mut object.base_object, self, state);
+                let UpdateAction {
+                    should_destroy,
+                    mut new_objects,
+                } = object
+                    .object_type
+                    .update(&mut object.base_object, self, state);
 
+                all_new_objects.append(&mut new_objects);
                 if should_destroy {
                     None
                 } else {
@@ -166,6 +170,7 @@ impl App for GameState {
                 }
             })
             .collect();
+        self.objects.append(&mut all_new_objects);
 
         if !is_title(self) {
             self.clouds.iter_mut().for_each(Cloud::update);
@@ -1321,11 +1326,13 @@ impl RoomTitle {
         Self { delay: 5 }
     }
 
-    fn update(&mut self) -> bool {
+    fn update(&mut self) -> UpdateAction {
         self.delay -= 1;
 
-        // Destroy if
-        self.delay < -30
+        UpdateAction {
+            should_destroy: self.delay < -30,
+            new_objects: vec![],
+        }
     }
 
     fn draw(&self, draw: &mut DrawContext, game_state: &GameState) {
@@ -1429,7 +1436,6 @@ impl Object {
                 )
                 // unset_hair_color()
             }
-            // ObjectType::Smoke => todo!(),
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
             // ObjectType::Orb => todo!(),
@@ -1604,7 +1610,7 @@ enum ObjectType {
     // BigChest,
     Player(Player),
     PlayerSpawn(PlayerSpawn),
-    // Smoke,
+    Smoke,
     // LifeUp,
     // Fruit,
     // Orb,
@@ -1621,6 +1627,7 @@ impl ObjectType {
             ObjectType::Player(_) => ObjectKind::Player,
             ObjectType::PlayerSpawn(_) => ObjectKind::PlayerSpawn,
             ObjectType::RoomTitle(_) => ObjectKind::RoomTitle,
+            ObjectType::Smoke => ObjectKind::Smoke,
         }
     }
     // TODO: Figure out what exactly needs to go here
@@ -1631,11 +1638,12 @@ impl ObjectType {
         base_object: &mut BaseObject,
         game_state: &mut GameState,
         state: &State,
-    ) -> bool {
+    ) -> UpdateAction {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
                 player_spawn.update(base_object, game_state, state)
             }
+            ObjectType::Smoke => Smoke::update(base_object),
             ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
             ObjectType::Player(player) => {
@@ -1677,10 +1685,11 @@ impl ObjectType {
 
                 // TODO: Update
 
-                // dont destroy
-                false
+                UpdateAction {
+                    should_destroy: false,
+                    new_objects: vec![],
+                }
             }
-            // ObjectType::Smoke => todo!(),
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
             // ObjectType::Orb => todo!(),
@@ -1929,27 +1938,30 @@ impl Platform {
         )
     }
 }
-// struct Smoke;
+#[derive(Clone, Copy)]
+struct Smoke;
 
-// impl Smoke {
-//     fn init(this: &mut Object) {
-//         this.spr = 29.;
-//         this.spd.y = -0.1;
-//         this.spd.x = 0.3 + rnd(0.2);
-//         this.x += -1. + rnd(2.);
-//         this.y += -1. + rnd(2.);
-//         this.flip.x = maybe();
-//         this.flip.y = maybe();
-//         this.is_solid = false;
-//     }
+impl Smoke {
+    fn init(base_object: &mut BaseObject) {
+        base_object.spr = 29.;
+        base_object.spd.y = -0.1;
+        base_object.spd.x = 0.3 + rnd(0.2);
+        base_object.x += -1. + rnd(2.);
+        base_object.y += -1. + rnd(2.);
+        base_object.flip.x = maybe();
+        base_object.flip.y = maybe();
+        base_object.is_solid = false;
+    }
 
-//     fn update(self_: &mut Object) -> bool {
-//         self_.spr += 0.2;
+    fn update(base_object: &mut BaseObject) -> UpdateAction {
+        base_object.spr += 0.2;
 
-//         // destroy if
-//         self_.spr >= 32.
-//     }
-// }
+        UpdateAction {
+            should_destroy: base_object.spr >= 32.0,
+            new_objects: vec![],
+        }
+    }
+}
 
 struct Fruit;
 
@@ -1978,6 +1990,7 @@ enum ObjectKind {
     // Non-tile-instantiable
     RoomTitle,
     Platform,
+    Smoke,
 }
 
 impl ObjectKind {
@@ -1999,11 +2012,11 @@ impl ObjectKind {
         // ObjectKind::Flag,
     ];
 
-    fn create(&self, object: &mut BaseObject) -> ObjectType {
+    fn create(&self, base_object: &mut BaseObject) -> ObjectType {
         match self {
-            ObjectKind::PlayerSpawn => ObjectType::PlayerSpawn(PlayerSpawn::init(object)),
+            ObjectKind::PlayerSpawn => ObjectType::PlayerSpawn(PlayerSpawn::init(base_object)),
             ObjectKind::Player => {
-                todo!()
+                todo!("ObjectType::create player")
             }
             // ObjectKind::Spring => todo!(),
             // ObjectKind::Balloon => todo!(),
@@ -2018,6 +2031,10 @@ impl ObjectKind {
             // ObjectKind::Flag => todo!(),
             ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle { delay: 5 }),
             ObjectKind::Platform => todo!(),
+            ObjectKind::Smoke => {
+                Smoke::init(base_object);
+                ObjectType::Smoke
+            }
         }
     }
     fn tile(&self) -> Option<i32> {
@@ -2130,7 +2147,7 @@ impl PlayerSpawn {
         base_object: &mut BaseObject,
         game_state: &mut GameState,
         _: &State,
-    ) -> bool {
+    ) -> UpdateAction {
         match self.state {
             PlayerSpawnState::Jumping => {
                 if base_object.y < self.target.y + 16.0 {
@@ -2138,7 +2155,10 @@ impl PlayerSpawn {
                     self.delay = 3;
                 }
 
-                false
+                UpdateAction {
+                    should_destroy: false,
+                    new_objects: vec![],
+                }
             }
             PlayerSpawnState::Falling => {
                 base_object.spd.y += 0.5;
@@ -2147,6 +2167,8 @@ impl PlayerSpawn {
                     base_object.spd.y = 0.0;
                     self.delay -= 1;
                 }
+
+                let mut new_objects = vec![];
                 if base_object.spd.y > 0.0 && base_object.y > self.target.y {
                     base_object.y = self.target.y;
                     base_object.spd = Vec2 { x: 0.0, y: 0.0 };
@@ -2154,29 +2176,38 @@ impl PlayerSpawn {
                     self.delay = 5;
                     // TODO: Integrate this screen shake
                     game_state.shake = 5;
-                    // let smoke = Object::init(
-                    //     game_state,
-                    //     ObjectKind::Smoke,
-                    //     base_object.x,
-                    //     base_object.y + 4.0,
-                    // );
+                    if let Some(smoke) = Object::init(
+                        game_state,
+                        ObjectKind::Smoke,
+                        base_object.x,
+                        base_object.y + 4.0,
+                    ) {
+                        new_objects.push(smoke);
+                    }
+
                     // sfx(5);
+                };
+
+                UpdateAction {
+                    should_destroy: false,
+                    new_objects,
                 }
-                false
             }
             PlayerSpawnState::Landing => {
                 self.delay -= 1;
                 base_object.spr = 6.0;
-                // TODO: Init player on destroy
-                //     if this.delay<0 then
-                //         destroy_object(this)
-                let player =
-                    Object::init(game_state, ObjectKind::Player, base_object.x, base_object.y);
-                //     end
 
                 let should_destroy = self.delay < 0;
+                // TODO:
+                // let player =
+                //     Object::init(game_state, ObjectKind::Player, base_object.x, base_object.y)
+                //         .filter(|_| should_destroy);
 
-                should_destroy
+                let player = None;
+                UpdateAction {
+                    should_destroy,
+                    new_objects: player.into_iter().collect(),
+                }
             }
         }
     }
