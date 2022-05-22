@@ -27,7 +27,6 @@ struct GameState {
     start_game_flash: i32,
     objects: Vec<Object>,
     freeze: i32,
-    shake: i32,
     will_restart: bool,
     delay_restart: i32,
     got_fruit: Vec<bool>,
@@ -83,7 +82,6 @@ impl App for GameState {
             objects: vec![],
             // types: vec![],
             freeze: 0,
-            shake: 0,
             will_restart: false,
             delay_restart: 0,
             got_fruit: vec![],
@@ -140,8 +138,8 @@ impl App for GameState {
         }
 
         // screenshake
-        if self.shake > 0 {
-            self.shake -= 1;
+        if self.effects.shake > 0 {
+            self.effects.shake -= 1;
         }
 
         // Restart (soon)
@@ -203,7 +201,7 @@ impl App for GameState {
 
     fn draw(&mut self, draw: &mut DrawContext) {
         draw.camera(0, 0);
-        if self.shake > 0 {
+        if self.effects.shake > 0 {
             draw.camera(
                 (-2. + rnd(5.)).floor() as i32,
                 (-2. + rnd(5.)).floor() as i32,
@@ -1681,7 +1679,7 @@ fn kill_player(obj: &Object, game_state: &mut GameState) {
     game_state.sfx_timer = 12;
     // sfx(0);
     game_state.deaths += 1;
-    game_state.shake = 10;
+    game_state.effects.shake = 10;
     destroy_object(game_state, obj);
 
     game_state.dead_particles.clear();
