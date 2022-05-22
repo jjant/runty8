@@ -1390,7 +1390,6 @@ impl Object {
             ObjectType::PlayerSpawn(player_spawn) => {
                 player_spawn.draw(&mut self.base_object, game_state, draw)
             }
-            // ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
             ObjectType::Player(player) => {
                 // if this.x<-1 or this.x>121 then
