@@ -163,7 +163,13 @@ impl App for GameState {
             let UpdateAction {
                 should_destroy,
                 mut new_objects,
-            } = object.update(&mut self.effects, &self.got_fruit, self.room, state);
+            } = object.update(
+                &mut iter,
+                &mut self.effects,
+                &self.got_fruit,
+                self.room,
+                state,
+            );
 
             if should_destroy {
                 self.objects.remove(i);
@@ -786,6 +792,38 @@ struct BaseObject {
     flip: Vec2<bool>,
 }
 
+impl BaseObject {
+    fn collide<'a>(
+        &self,
+        objects: &mut impl Iterator<Item = &'a mut Object>,
+        kind: &ObjectKind,
+        ox: i32,
+        oy: i32,
+    ) -> Option<(usize, &'a mut Object)> {
+        for (index, other) in objects.enumerate() {
+            if !std::ptr::eq(&other.base_object, self)
+                && &other.object_type.kind() == kind
+                && other.base_object.collideable
+                && other.base_object.x
+                    + other.base_object.hitbox.x
+                    + other.base_object.hitbox.w as f32
+                    > self.x + self.hitbox.x + ox as f32
+                && other.base_object.y
+                    + other.base_object.hitbox.y
+                    + other.base_object.hitbox.h as f32
+                    > self.y + self.hitbox.y + oy as f32
+                && other.base_object.x + other.base_object.hitbox.x
+                    < self.x + self.hitbox.x + self.hitbox.w as f32 + ox as f32
+                && other.base_object.y + other.base_object.hitbox.y
+                    < self.y + self.hitbox.y + self.hitbox.h as f32 + oy as f32
+            {
+                return Some((index, other));
+            }
+        }
+        None
+    }
+}
+
 // impl Spring {
 //     fn init() -> Self {
 //         Self {
@@ -1329,15 +1367,22 @@ impl Object {
         })
     }
 
-    fn update(
+    fn update<'a>(
         &mut self,
+        other_objects: &mut impl Iterator<Item = &'a mut Object>,
         effects: &mut GameEffects,
         got_fruit: &[bool],
         room: Vec2<i32>,
         state: &State,
     ) -> UpdateAction {
-        self.object_type
-            .update(&mut self.base_object, effects, got_fruit, room, state)
+        self.object_type.update(
+            &mut self.base_object,
+            other_objects,
+            effects,
+            got_fruit,
+            room,
+            state,
+        )
     }
 
     fn draw(&mut self, draw: &mut DrawContext, game_state: &GameState) {
@@ -1483,43 +1528,7 @@ impl Object {
         ox: i32,
         oy: i32,
     ) -> bool {
-        self.collide(objects, kind, ox, oy).is_some()
-    }
-
-    fn collide<'a>(
-        &self,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
-        kind: &ObjectKind,
-        ox: i32,
-        oy: i32,
-    ) -> Option<(usize, &'a Object)> {
-        for (index, other) in objects.enumerate() {
-            if !std::ptr::eq(other, self)
-                && &other.object_type.kind() == kind
-                && other.base_object.collideable
-                && other.base_object.x
-                    + other.base_object.hitbox.x
-                    + other.base_object.hitbox.w as f32
-                    > self.base_object.x + self.base_object.hitbox.x + ox as f32
-                && other.base_object.y
-                    + other.base_object.hitbox.y
-                    + other.base_object.hitbox.h as f32
-                    > self.base_object.y + self.base_object.hitbox.y + oy as f32
-                && other.base_object.x + other.base_object.hitbox.x
-                    < self.base_object.x
-                        + self.base_object.hitbox.x
-                        + self.base_object.hitbox.w as f32
-                        + ox as f32
-                && other.base_object.y + other.base_object.hitbox.y
-                    < self.base_object.y
-                        + self.base_object.hitbox.y
-                        + self.base_object.hitbox.h as f32
-                        + oy as f32
-            {
-                return Some((index, other));
-            }
-        }
-        None
+        self.base_object.collide(objects, kind, ox, oy).is_some()
     }
 }
 
@@ -1585,12 +1594,10 @@ impl ObjectType {
         }
     }
 
-    // TODO: Figure out what exactly needs to go here
-    // const TYPES: &'static [ObjectType] = &[Self::BigChest];
-
-    fn update(
+    fn update<'a>(
         &mut self,
         base_object: &mut BaseObject,
+        other_objects: &mut impl Iterator<Item = &'a mut Object>,
         effects: &mut GameEffects,
         got_fruit: &[bool],
         room: Vec2<i32>,
@@ -1650,11 +1657,9 @@ impl ObjectType {
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
             // ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => FakeWall::update(
-                base_object,
-                //  game_state,
-                state,
-            ),
+            ObjectType::FakeWall => {
+                FakeWall::update(base_object, other_objects, got_fruit, room, state)
+            }
             // ObjectType::FallFloor => todo!(),
             // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(rt) => rt.update(),
@@ -1892,7 +1897,9 @@ impl Platform {
         self_.base_object.last = self_.base_object.x;
 
         let ret = if !self_.check(objects, &ObjectKind::Player, 0, 0) {
-            let (index, hit) = self_.collide(objects, &ObjectKind::Player, 0, -1)?;
+            let (index, hit) = self_
+                .base_object
+                .collide(objects, &ObjectKind::Player, 0, -1)?;
             let mut hit = *hit;
             hit.move_x(
                 state,
@@ -2240,7 +2247,9 @@ struct FakeWall;
 impl FakeWall {
     fn update<'a>(
         base_object: &mut BaseObject,
-        // other_objects: impl Iterator<Item = &'a mut Object>,
+        other_objects: &mut impl Iterator<Item = &'a mut Object>,
+        got_fruit: &[bool],
+        room: Vec2<i32>,
         _: &State,
     ) -> UpdateAction {
         base_object.hitbox = Hitbox {
@@ -2250,55 +2259,61 @@ impl FakeWall {
             h: 18,
         };
 
-        let update_action = UpdateAction::noop();
+        let mut update_action = UpdateAction::noop();
 
-        // let hit: Option<(usize, &Object)> = todo!() /* this.collide(player,0,0) */;
-        // if let Some((_, hit_object)) = hit {
-        //     if let ObjectType::Player(player) = hit_object.object_type {
-        //         if player.dash_effect_time > 0 {
-        //             //     hit.spd.x=-sign(hit.spd.x)*1.5
-        //             //     hit.spd.y=-1.5
-        //             //     hit.dash_time=-1
-        //             //     sfx_timer=20
-        //             //     sfx(16)
-        //             update_action = UpdateAction {
-        //                 should_destroy: true,
-        //                 new_objects: [
-        //                     Object::init(
-        //                         game_state,
-        //                         ObjectKind::Smoke,
-        //                         base_object.x,
-        //                         base_object.y,
-        //                     ),
-        //                     Object::init(
-        //                         game_state,
-        //                         ObjectKind::Smoke,
-        //                         base_object.x + 8.0,
-        //                         base_object.y,
-        //                     ),
-        //                     Object::init(
-        //                         game_state,
-        //                         ObjectKind::Smoke,
-        //                         base_object.x,
-        //                         base_object.y + 8.0,
-        //                     ),
-        //                     Object::init(
-        //                         game_state,
-        //                         ObjectKind::Smoke,
-        //                         base_object.x + 8.0,
-        //                         base_object.y + 8.0,
-        //                     ),
-        //                     // Object::init(ObjectKind::Fruit,this.x+4,this.y+4);
-        //                 ]
-        //                 .into_iter()
-        //                 .flatten()
-        //                 .collect(),
-        //             };
-        //         }
-        //     } else {
-        //         panic!("Got a different object than a player on collide(player)")
-        //     }
-        // }
+        let hit: Option<(usize, &mut Object)> =
+            base_object.collide(other_objects, &ObjectKind::Player, 0, 0);
+        if let Some((_, hit_object)) = hit {
+            if let ObjectType::Player(player) = &mut hit_object.object_type {
+                if player.dash_effect_time > 0 {
+                    hit_object.base_object.spd.x = -hit_object.base_object.spd.x.signum() * 1.5;
+                    hit_object.base_object.spd.y = -1.5;
+                    player.dash_time = -1;
+                    // TODO:
+                    //     sfx_timer=20
+                    //     sfx(16)
+                    update_action = UpdateAction {
+                        should_destroy: true,
+                        new_objects: [
+                            Object::init(
+                                got_fruit,
+                                room,
+                                ObjectKind::Smoke,
+                                base_object.x,
+                                base_object.y,
+                            ),
+                            Object::init(
+                                got_fruit,
+                                room,
+                                ObjectKind::Smoke,
+                                base_object.x + 8.0,
+                                base_object.y,
+                            ),
+                            Object::init(
+                                got_fruit,
+                                room,
+                                ObjectKind::Smoke,
+                                base_object.x,
+                                base_object.y + 8.0,
+                            ),
+                            Object::init(
+                                got_fruit,
+                                room,
+                                ObjectKind::Smoke,
+                                base_object.x + 8.0,
+                                base_object.y + 8.0,
+                            ),
+                            // Object::init(ObjectKind::Fruit,this.x+4,this.y+4);
+                        ]
+                        .into_iter()
+                        .flatten()
+                        .collect(),
+                    };
+                }
+            } else {
+                panic!("Got a different object than a player on collide(player)")
+            }
+        }
 
         base_object.hitbox = Hitbox {
             x: 0.0,
