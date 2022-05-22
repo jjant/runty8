@@ -1405,13 +1405,17 @@ impl Object {
             }
             // ObjectType::BigChest => todo!(),
             ObjectType::Player(player) => {
-                // if this.x<-1 or this.x>121 then
-                //     this.x=clamp(this.x,-1,121)
-                //     this.spd.x=0
-                // end
+                let base_object = &mut self.base_object;
+                if base_object.x < -1.0 || base_object.x > 121.0 {
+                    base_object.x = clamp(base_object.x, -1.0, 121.0);
+                    base_object.spd.x = 0.0;
+                }
 
-                // set_hair_color(this.djump)
-                // draw_hair(this,this.flip.x and -1 or 1)
+                set_hair_color(draw, game_state.frames, player.djump);
+
+                let facing = if base_object.flip.x { -1 } else { 1 };
+                player.hair.draw(draw, base_object.x, base_object.y, facing);
+
                 draw.spr(
                     self.base_object.spr.floor() as usize,
                     self.base_object.x.floor() as i32,
@@ -1873,6 +1877,11 @@ fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
 
 // -- helper functions --
 // ----------------------
+
+fn clamp(val: f32, a: f32, b: f32) -> f32 {
+    a.max(b.min(val))
+}
+
 fn appr(val: f32, target: f32, amount: f32) -> f32 {
     if val > target {
         f32::max(val - amount, target)
