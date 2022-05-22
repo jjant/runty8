@@ -166,9 +166,10 @@ impl App for GameState {
             } = object.update(
                 &mut iter,
                 &mut self.effects,
-                &self.got_fruit,
+                &mut self.got_fruit,
                 self.room,
                 state,
+                self.max_djump,
             );
 
             if should_destroy {
@@ -188,21 +189,25 @@ impl App for GameState {
         // Update and remove dead dead_particles
         self.dead_particles.drain_filter(DeadParticle::update);
 
-        // start game
+        // TODO: remove
         if is_title(self) {
-            if !self.start_game && (state.btn(K_JUMP) || state.btn(K_DASH)) {
-                // music(-1);
-                self.start_game_flash = 50;
-                self.start_game = true;
-                // sfx(38);
-            }
-            if self.start_game {
-                self.start_game_flash -= 1;
-                if self.start_game_flash <= -30 {
-                    self.begin_game(state);
-                }
-            }
+            self.begin_game(state);
         }
+        // // start game
+        // if is_title(self) {
+        //     if !self.start_game && (state.btn(K_JUMP) || state.btn(K_DASH)) {
+        //         // music(-1);
+        //         self.start_game_flash = 50;
+        //         self.start_game = true;
+        //         // sfx(38);
+        //     }
+        //     if self.start_game {
+        //         self.start_game_flash -= 1;
+        //         if self.start_game_flash <= -30 {
+        //             self.begin_game(state);
+        //         }
+        //     }
+        // }
     }
 
     fn draw(&mut self, draw: &mut DrawContext) {
@@ -1371,9 +1376,10 @@ impl Object {
         &mut self,
         other_objects: &mut impl Iterator<Item = &'a mut Object>,
         effects: &mut GameEffects,
-        got_fruit: &[bool],
+        got_fruit: &mut [bool],
         room: Vec2<i32>,
         state: &State,
+        max_djump: i32,
     ) -> UpdateAction {
         self.object_type.update(
             &mut self.base_object,
@@ -1382,6 +1388,7 @@ impl Object {
             got_fruit,
             room,
             state,
+            max_djump,
         )
     }
 
@@ -1419,6 +1426,7 @@ impl Object {
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state.room),
             ObjectType::Platform => todo!("Platform draw"),
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
+            ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
         }
     }
 
@@ -1517,7 +1525,7 @@ impl Object {
             self.base_object.hitbox.h,
         )
         // || self.check(objects, &ObjectType::FallFloor, ox, oy)
-        //     || self.check(objects, &ObjectType::FakeWall, ox, oy)
+            || self.check(objects, &ObjectKind::FakeWall, ox, oy)
     }
 
     fn check<'a>(
@@ -1528,6 +1536,13 @@ impl Object {
         oy: i32,
     ) -> bool {
         self.base_object.collide(objects, kind, ox, oy).is_some()
+    }
+
+    fn to_player_mut(&mut self) -> Option<&mut Player> {
+        match &mut self.object_type {
+            ObjectType::Player(player) => Some(player),
+            _ => None,
+        }
     }
 }
 
@@ -1573,7 +1588,7 @@ enum ObjectType {
     PlayerSpawn(PlayerSpawn),
     Smoke,
     // LifeUp,
-    // Fruit,
+    Fruit(Fruit),
     // Orb,
     FakeWall,
     // FallFloor,
@@ -1590,6 +1605,7 @@ impl ObjectType {
             ObjectType::RoomTitle(_) => ObjectKind::RoomTitle,
             ObjectType::Smoke => ObjectKind::Smoke,
             ObjectType::FakeWall => ObjectKind::FakeWall,
+            ObjectType::Fruit(_) => ObjectKind::Fruit,
         }
     }
 
@@ -1598,9 +1614,10 @@ impl ObjectType {
         base_object: &mut BaseObject,
         other_objects: &mut impl Iterator<Item = &'a mut Object>,
         effects: &mut GameEffects,
-        got_fruit: &[bool],
+        got_fruit: &mut [bool],
         room: Vec2<i32>,
         state: &State,
+        max_djump: i32,
     ) -> UpdateAction {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
@@ -1654,7 +1671,9 @@ impl ObjectType {
                 }
             }
             // ObjectType::LifeUp => todo!(),
-            // ObjectType::Fruit => todo!(),
+            ObjectType::Fruit(fruit) => {
+                fruit.update(base_object, other_objects, got_fruit, room, max_djump)
+            }
             // ObjectType::Orb => todo!(),
             ObjectType::FakeWall => {
                 FakeWall::update(base_object, other_objects, got_fruit, room, state)
@@ -1954,11 +1973,54 @@ impl Smoke {
     }
 }
 
-struct Fruit;
+#[derive(Clone, Copy, Debug)]
+struct Fruit {
+    start: f32,
+    off: f32,
+}
 
 impl Fruit {
-    fn init(object: &mut Object) {
-        // object.start
+    fn init(base_object: &mut BaseObject) -> Self {
+        Self {
+            start: base_object.y,
+            off: 0.0,
+        }
+    }
+
+    fn update<'a>(
+        &mut self,
+        base_object: &mut BaseObject,
+        other_objects: &mut impl Iterator<Item = &'a mut Object>,
+        got_fruit: &mut [bool],
+        room: Vec2<i32>,
+        max_djump: i32,
+    ) -> UpdateAction {
+        let update_action =
+            if let Some((_, hit)) = base_object.collide(other_objects, &ObjectKind::Player, 0, 0) {
+                let player = hit.to_player_mut().unwrap();
+
+                player.djump = max_djump;
+                // sfx_timer=20
+                // sfx(13)
+                got_fruit[1 + level_index(room) as usize] = true;
+
+                UpdateAction::noop().destroy()
+                // TODO: Implement LifeUp
+                // .push(Object::init(
+                //     got_fruit,
+                //     room,
+                //     ObjectKind::LifeUp,
+                //     base_object.x,
+                //     base_object.y + 4.0,
+                // ))
+            } else {
+                UpdateAction::noop()
+            };
+
+        self.off += 1.0;
+        base_object.y = self.start + (self.off / 40.0).sin() * 2.5;
+
+        update_action
     }
 }
 
@@ -1969,7 +2031,7 @@ enum ObjectKind {
     // Spring,
     // Balloon,
     // FallFloor,
-    // Fruit,
+    Fruit,
     // FlyFruit,
     FakeWall,
     // Key,
@@ -2015,9 +2077,9 @@ impl ObjectKind {
             // ObjectKind::Spring => todo!(),
             // ObjectKind::Balloon => todo!(),
             // ObjectKind::FallFloor => todo!(),
-            // ObjectKind::Fruit => todo!(),
+            ObjectKind::Fruit => ObjectType::Fruit(Fruit::init(base_object)),
             // ObjectKind::FlyFruit => todo!(),
-            // ObjectKind::FakeWall => todo!(),
+
             // ObjectKind::Key => todo!(),
             // ObjectKind::Chest => todo!(),
             // ObjectKind::Message => todo!(),
@@ -2055,7 +2117,7 @@ impl ObjectKind {
         match self {
             // ObjectKind::Fruit => true,
             // ObjectKind::FlyFruit => true,
-            // ObjectKind::FakeWall => true,
+            ObjectKind::FakeWall => true,
             // ObjectKind::Key => true,
             // ObjectKind::Chest => true,
             _ => false,
@@ -2120,6 +2182,20 @@ impl UpdateAction {
             should_destroy: false,
             new_objects: vec![],
         }
+    }
+
+    fn destroy(mut self) -> Self {
+        self.should_destroy = true;
+
+        self
+    }
+
+    fn push(mut self, object: Option<Object>) -> Self {
+        if let Some(object) = object {
+            self.new_objects.push(object);
+        }
+
+        self
     }
 }
 
@@ -2260,6 +2336,7 @@ impl FakeWall {
 
         let mut update_action = UpdateAction::noop();
 
+        // TODO: Test this works when I've got the player working.
         let hit: Option<(usize, &mut Object)> =
             base_object.collide(other_objects, &ObjectKind::Player, 0, 0);
         if let Some((_, hit_object)) = hit {
@@ -2271,44 +2348,45 @@ impl FakeWall {
                     // TODO:
                     //     sfx_timer=20
                     //     sfx(16)
-                    update_action = UpdateAction {
-                        should_destroy: true,
-                        new_objects: [
-                            Object::init(
-                                got_fruit,
-                                room,
-                                ObjectKind::Smoke,
-                                base_object.x,
-                                base_object.y,
-                            ),
-                            Object::init(
-                                got_fruit,
-                                room,
-                                ObjectKind::Smoke,
-                                base_object.x + 8.0,
-                                base_object.y,
-                            ),
-                            Object::init(
-                                got_fruit,
-                                room,
-                                ObjectKind::Smoke,
-                                base_object.x,
-                                base_object.y + 8.0,
-                            ),
-                            Object::init(
-                                got_fruit,
-                                room,
-                                ObjectKind::Smoke,
-                                base_object.x + 8.0,
-                                base_object.y + 8.0,
-                            ),
-                            // Object::init(ObjectKind::Fruit,this.x+4,this.y+4);
-                        ]
-                        .into_iter()
-                        .flatten()
-                        .collect(),
-                    };
-                }
+
+                    update_action = update_action
+                        .destroy()
+                        .push(Object::init(
+                            got_fruit,
+                            room,
+                            ObjectKind::Smoke,
+                            base_object.x,
+                            base_object.y,
+                        ))
+                        .push(Object::init(
+                            got_fruit,
+                            room,
+                            ObjectKind::Smoke,
+                            base_object.x + 8.0,
+                            base_object.y,
+                        ))
+                        .push(Object::init(
+                            got_fruit,
+                            room,
+                            ObjectKind::Smoke,
+                            base_object.x,
+                            base_object.y + 8.0,
+                        ))
+                        .push(Object::init(
+                            got_fruit,
+                            room,
+                            ObjectKind::Smoke,
+                            base_object.x + 8.0,
+                            base_object.y + 8.0,
+                        ))
+                        .push(Object::init(
+                            got_fruit,
+                            room,
+                            ObjectKind::Fruit,
+                            base_object.x + 4.0,
+                            base_object.y + 4.0,
+                        ));
+                };
             } else {
                 panic!("Got a different object than a player on collide(player)")
             }
