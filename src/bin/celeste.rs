@@ -49,6 +49,8 @@ struct GameState {
     dead_particles: Vec<DeadParticle>,
 }
 
+struct GameEffects {}
+
 impl App for GameState {
     fn init(state: &State) -> Self {
         let clouds = (0..=16)
@@ -147,6 +149,25 @@ impl App for GameState {
             }
         }
 
+        // let mut i = 0;
+        // while i < self.objects.len() {
+        //     let (previous_objects, object, future_objects) =
+        //         split_at_index(i, &mut self.objects).unwrap();
+
+        //     let mut iter = previous_objects.iter_mut().chain(future_objects.iter_mut());
+
+        //     // Apply velocity
+        //     object.move_(state, &mut iter, self.room);
+        //     let action = object.update(panic!("Figuring things out"), state);
+
+        //     if action.should_destroy {
+        //         self.objects.remove(i);
+        //     } else {
+        //         i += 1;
+        //     }
+        //     self.objects.append(&mut action.new_objects);
+        // }
+
         // Update each object?
         let mut all_new_objects = vec![];
         self.objects = self
@@ -154,7 +175,8 @@ impl App for GameState {
             .clone()
             .into_iter()
             .filter_map(|mut object| {
-                object.move_(state, &self.objects, self.room);
+                let mut iter = self.objects.iter_mut();
+                object.move_(state, &mut iter, self.room);
                 let UpdateAction {
                     should_destroy,
                     mut new_objects,
@@ -769,7 +791,7 @@ struct Spring {
     hide_for: i32,
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 struct BaseObject {
     x: f32,
     y: f32,
@@ -1261,7 +1283,7 @@ struct BaseObject {
 // }
 // add(types,flag)
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 struct RoomTitle {
     delay: i32,
 }
@@ -1311,7 +1333,7 @@ struct Hitbox {
     h: i32,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Object {
     base_object: BaseObject,
     object_type: ObjectType,
@@ -1355,6 +1377,11 @@ impl Object {
         })
     }
 
+    fn update(&mut self, game_state: &mut GameState, state: &State) -> UpdateAction {
+        self.object_type
+            .update(&mut self.base_object, game_state, state)
+    }
+
     fn draw(&mut self, draw: &mut DrawContext, game_state: &GameState) {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
@@ -1393,7 +1420,12 @@ impl Object {
         }
     }
 
-    fn move_(&mut self, state: &State, objects: &[Object], room: Vec2<i32>) {
+    fn move_<'a>(
+        &mut self,
+        state: &State,
+        objects: &mut impl Iterator<Item = &'a mut Object>,
+        room: Vec2<i32>,
+    ) {
         let ox = self.base_object.spd.x;
         let oy = self.base_object.spd.y;
 
@@ -1410,10 +1442,10 @@ impl Object {
         self.move_y(state, objects, room, amount_y as i32);
     }
 
-    fn move_x(
+    fn move_x<'a>(
         &mut self,
         state: &State,
-        objects: &[Object],
+        objects: &mut impl Iterator<Item = &'a mut Object>,
         room: Vec2<i32>,
         amount: i32,
         start: i32,
@@ -1435,7 +1467,13 @@ impl Object {
         }
     }
 
-    fn move_y(&mut self, state: &State, objects: &[Object], room: Vec2<i32>, amount: i32) {
+    fn move_y<'a>(
+        &mut self,
+        state: &State,
+        objects: &mut impl Iterator<Item = &'a mut Object>,
+        room: Vec2<i32>,
+        amount: i32,
+    ) {
         if self.base_object.is_solid {
             let step = amount.signum();
 
@@ -1453,10 +1491,10 @@ impl Object {
         }
     }
 
-    fn is_solid(
+    fn is_solid<'a>(
         &self,
         state: &State,
-        objects: &[Object],
+        objects: &mut impl Iterator<Item = &'a mut Object>,
         room: Vec2<i32>,
         ox: i32,
         oy: i32,
@@ -1480,18 +1518,24 @@ impl Object {
         //     || self.check(objects, &ObjectType::FakeWall, ox, oy)
     }
 
-    fn check(&self, objects: &[Object], kind: &ObjectKind, ox: i32, oy: i32) -> bool {
+    fn check<'a>(
+        &self,
+        objects: &mut impl Iterator<Item = &'a mut Object>,
+        kind: &ObjectKind,
+        ox: i32,
+        oy: i32,
+    ) -> bool {
         self.collide(objects, kind, ox, oy).is_some()
     }
 
     fn collide<'a>(
         &self,
-        objects: &'a [Object],
+        objects: &mut impl Iterator<Item = &'a mut Object>,
         kind: &ObjectKind,
         ox: i32,
         oy: i32,
     ) -> Option<(usize, &'a Object)> {
-        for (index, other) in objects.iter().enumerate() {
+        for (index, other) in objects.enumerate() {
             if !std::ptr::eq(other, self)
                 && &other.object_type.kind() == kind
                 && other.base_object.collideable
@@ -1555,7 +1599,7 @@ fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> b
     tile_flag_at(state, room, x, y, w, h, 0)
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum ObjectType {
     Platform,
     // BigChest,
@@ -1845,10 +1889,10 @@ impl Platform {
     //     this.last = this.x;
     // }
 
-    fn update(
+    fn update<'a>(
         self_: &mut Object,
         state: &State,
-        objects: &[Object],
+        objects: &mut impl Iterator<Item = &'a mut Object>,
         room: Vec2<i32>,
     ) -> Option<(usize, Object)> {
         self_.base_object.spd.x = self_.base_object.dir as f32 * 0.65;
@@ -2279,4 +2323,11 @@ impl FakeWall {
         draw.spr(80, x, y + 8);
         draw.spr(81, x + 8, y + 8);
     }
+}
+
+fn split_at_index<T>(index: usize, elements: &mut [T]) -> Option<(&mut [T], &mut T, &mut [T])> {
+    let (a, bc) = elements.split_at_mut(index);
+    let (b, c) = bc.split_first_mut()?;
+
+    Some((a, b, c))
 }
