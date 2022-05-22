@@ -2203,36 +2203,72 @@ impl PlayerSpawn {
 struct FakeWall;
 
 impl FakeWall {
-    fn update(base_object: &mut BaseObject, game_state: &mut GameState, _: &State) -> UpdateAction {
+    fn update(base_object: &mut BaseObject, _: &mut GameState, _: &State) -> UpdateAction {
         base_object.hitbox = Hitbox {
             x: -1.0,
             y: -1.0,
             w: 18,
             h: 18,
         };
-        // local hit = this.collide(player,0,0)
 
-        // if let Some(hit) = todo!() {}
-        // if hit~=nil and hit.dash_effect_time>0 then
-        //     hit.spd.x=-sign(hit.spd.x)*1.5
-        //     hit.spd.y=-1.5
-        //     hit.dash_time=-1
-        //     sfx_timer=20
-        //     sfx(16)
-        //     destroy_object(this)
-        //     init_object(smoke,this.x,this.y)
-        //     init_object(smoke,this.x+8,this.y)
-        //     init_object(smoke,this.x,this.y+8)
-        //     init_object(smoke,this.x+8,this.y+8)
-        //     init_object(fruit,this.x+4,this.y+4)
-        // end
+        let update_action = UpdateAction::noop();
+
+        // let hit: Option<(usize, &Object)> = todo!() /* this.collide(player,0,0) */;
+        // if let Some((_, hit_object)) = hit {
+        //     if let ObjectType::Player(player) = hit_object.object_type {
+        //         if player.dash_effect_time > 0 {
+        //             //     hit.spd.x=-sign(hit.spd.x)*1.5
+        //             //     hit.spd.y=-1.5
+        //             //     hit.dash_time=-1
+        //             //     sfx_timer=20
+        //             //     sfx(16)
+        //             update_action = UpdateAction {
+        //                 should_destroy: true,
+        //                 new_objects: [
+        //                     Object::init(
+        //                         game_state,
+        //                         ObjectKind::Smoke,
+        //                         base_object.x,
+        //                         base_object.y,
+        //                     ),
+        //                     Object::init(
+        //                         game_state,
+        //                         ObjectKind::Smoke,
+        //                         base_object.x + 8.0,
+        //                         base_object.y,
+        //                     ),
+        //                     Object::init(
+        //                         game_state,
+        //                         ObjectKind::Smoke,
+        //                         base_object.x,
+        //                         base_object.y + 8.0,
+        //                     ),
+        //                     Object::init(
+        //                         game_state,
+        //                         ObjectKind::Smoke,
+        //                         base_object.x + 8.0,
+        //                         base_object.y + 8.0,
+        //                     ),
+        //                     // Object::init(ObjectKind::Fruit,this.x+4,this.y+4);
+        //                 ]
+        //                 .into_iter()
+        //                 .flatten()
+        //                 .collect(),
+        //             };
+        //         }
+        //     } else {
+        //         panic!("Got a different object than a player on collide(player)")
+        //     }
+        // }
+
         base_object.hitbox = Hitbox {
             x: 0.0,
             y: 0.0,
             w: 16,
             h: 16,
         };
-        UpdateAction::noop()
+
+        update_action
     }
 
     fn draw(base_object: &mut BaseObject, _: &GameState, draw: &mut DrawContext) {
