@@ -47,9 +47,12 @@ struct GameState {
     particles: Vec<Particle>,
     // Particles created when the player dies
     dead_particles: Vec<DeadParticle>,
+    effects: GameEffects,
 }
 
-struct GameEffects {}
+struct GameEffects {
+    shake: i32,
+}
 
 impl App for GameState {
     fn init(state: &State) -> Self {
@@ -101,6 +104,7 @@ impl App for GameState {
             minutes: 0,
             particles,
             dead_particles: vec![],
+            effects: GameEffects { shake: 0 },
         };
 
         title_screen(&mut gs, state);
@@ -111,7 +115,7 @@ impl App for GameState {
     fn update(&mut self, state: &State) {
         self.frames = (self.frames + 1) % 30;
 
-        if self.frames == 0 && level_index(self) < 30 {
+        if self.frames == 0 && level_index(self.room) < 30 {
             self.seconds = (self.seconds + 1) % 60;
             if self.seconds == 0 {
                 self.minutes += 1;
@@ -149,50 +153,27 @@ impl App for GameState {
             }
         }
 
-        // let mut i = 0;
-        // while i < self.objects.len() {
-        //     let (previous_objects, object, future_objects) =
-        //         split_at_index(i, &mut self.objects).unwrap();
+        let mut i = 0;
+        while i < self.objects.len() {
+            let (previous_objects, object, future_objects) =
+                split_at_index(i, &mut self.objects).unwrap();
 
-        //     let mut iter = previous_objects.iter_mut().chain(future_objects.iter_mut());
+            let mut iter = previous_objects.iter_mut().chain(future_objects.iter_mut());
 
-        //     // Apply velocity
-        //     object.move_(state, &mut iter, self.room);
-        //     let action = object.update(panic!("Figuring things out"), state);
+            // Apply velocity
+            object.move_(state, &mut iter, self.room);
+            let UpdateAction {
+                should_destroy,
+                mut new_objects,
+            } = object.update(&mut self.effects, &self.got_fruit, self.room, state);
 
-        //     if action.should_destroy {
-        //         self.objects.remove(i);
-        //     } else {
-        //         i += 1;
-        //     }
-        //     self.objects.append(&mut action.new_objects);
-        // }
-
-        // Update each object?
-        let mut all_new_objects = vec![];
-        self.objects = self
-            .objects
-            .clone()
-            .into_iter()
-            .filter_map(|mut object| {
-                let mut iter = self.objects.iter_mut();
-                object.move_(state, &mut iter, self.room);
-                let UpdateAction {
-                    should_destroy,
-                    mut new_objects,
-                } = object
-                    .object_type
-                    .update(&mut object.base_object, self, state);
-
-                all_new_objects.append(&mut new_objects);
-                if should_destroy {
-                    None
-                } else {
-                    Some(object)
-                }
-            })
-            .collect();
-        self.objects.append(&mut all_new_objects);
+            if should_destroy {
+                self.objects.remove(i);
+            } else {
+                i += 1;
+            }
+            self.objects.append(&mut new_objects);
+        }
 
         if !is_title(self) {
             self.clouds.iter_mut().for_each(Cloud::update);
@@ -368,7 +349,7 @@ impl App for GameState {
             draw.print("NOEL BERRY", 46, 102, 5);
         }
 
-        if level_index(self) == 30 {
+        if level_index(self.room) == 30 {
             if let Some(p) = self
                 .objects
                 .iter()
@@ -478,13 +459,13 @@ fn title_screen(game_state: &mut GameState, state: &State) {
     load_room(game_state, state, 7, 3)
 }
 
-fn level_index(game_state: &GameState) -> i32 {
-    game_state.room.x % 8 + game_state.room.y * 8
+fn level_index(room: Vec2<i32>) -> i32 {
+    room.x % 8 + room.y * 8
 }
 
 /// Starting title screen
 fn is_title(game_state: &GameState) -> bool {
-    level_index(game_state) == 31
+    level_index(game_state.room) == 31
 }
 
 #[allow(dead_code)]
@@ -1067,36 +1048,6 @@ struct BaseObject {
 //     end
 // }
 
-// fake_wall = {
-//     tile=64,
-//     if_not_fruit=true,
-//     update=function(this)
-//         this.hitbox={x=-1,y=-1,w=18,h=18}
-//         local hit = this.collide(player,0,0)
-//         if hit~=nil and hit.dash_effect_time>0 then
-//             hit.spd.x=-sign(hit.spd.x)*1.5
-//             hit.spd.y=-1.5
-//             hit.dash_time=-1
-//             sfx_timer=20
-//             sfx(16)
-//             destroy_object(this)
-//             init_object(smoke,this.x,this.y)
-//             init_object(smoke,this.x+8,this.y)
-//             init_object(smoke,this.x,this.y+8)
-//             init_object(smoke,this.x+8,this.y+8)
-//             init_object(fruit,this.x+4,this.y+4)
-//         end
-//         this.hitbox={x=0,y=0,w=16,h=16}
-//     end,
-//     draw=function(this)
-//         spr(64,this.x,this.y)
-//         spr(65,this.x+8,this.y)
-//         spr(80,this.x,this.y+8)
-//         spr(81,this.x+8,this.y+8)
-//     end
-// }
-// add(types,fake_wall)
-
 // key={
 //     tile=8,
 //     if_not_fruit=true,
@@ -1302,16 +1253,16 @@ impl RoomTitle {
         }
     }
 
-    fn draw(&self, draw: &mut DrawContext, game_state: &GameState) {
+    fn draw(&self, draw: &mut DrawContext, room: Vec2<i32>) {
         if self.delay < 0 {
             draw.rectfill(24, 58, 104, 70, 0);
 
-            if game_state.room.x == 3 && game_state.room.y == 1 {
+            if room.x == 3 && room.y == 1 {
                 draw.print("OLD SITE", 48, 62, 7);
-            } else if level_index(game_state) == 30 {
+            } else if level_index(room) == 30 {
                 draw.print("SUMMIT", 52, 62, 7);
             } else {
-                let level = (1 + level_index(game_state)) * 100;
+                let level = (1 + level_index(room)) * 100;
                 let x = 52 + (if level < 1000 { 2 } else { 0 });
                 draw.print(&format!("{} M", level), x, 62, 7);
             }
@@ -1339,12 +1290,15 @@ struct Object {
     object_type: ObjectType,
 }
 
+fn got_fruit_for_room(got_fruit: &[bool], room: Vec2<i32>) -> bool {
+    got_fruit[1 + level_index(room) as usize]
+}
+
 impl Object {
-    fn init(game_state: &GameState, kind: ObjectKind, x: f32, y: f32) -> Option<Self> {
+    fn init(got_fruit: &[bool], room: Vec2<i32>, kind: ObjectKind, x: f32, y: f32) -> Option<Self> {
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
-        if dbg!(&kind).if_not_fruit() && game_state.got_fruit[1 + level_index(game_state) as usize]
-        {
+        if dbg!(&kind).if_not_fruit() && got_fruit_for_room(got_fruit, room) {
             return None;
         }
 
@@ -1377,9 +1331,15 @@ impl Object {
         })
     }
 
-    fn update(&mut self, game_state: &mut GameState, state: &State) -> UpdateAction {
+    fn update(
+        &mut self,
+        effects: &mut GameEffects,
+        got_fruit: &[bool],
+        room: Vec2<i32>,
+        state: &State,
+    ) -> UpdateAction {
         self.object_type
-            .update(&mut self.base_object, game_state, state)
+            .update(&mut self.base_object, effects, got_fruit, room, state)
     }
 
     fn draw(&mut self, draw: &mut DrawContext, game_state: &GameState) {
@@ -1414,7 +1374,7 @@ impl Object {
             ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, game_state, draw),
             // ObjectType::FallFloor => todo!(),
             // ObjectType::Key => todo!(),
-            ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state),
+            ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state.room),
             ObjectType::Platform => todo!("Platform draw"),
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
         }
@@ -1633,12 +1593,14 @@ impl ObjectType {
     fn update(
         &mut self,
         base_object: &mut BaseObject,
-        game_state: &mut GameState,
+        effects: &mut GameEffects,
+        got_fruit: &[bool],
+        room: Vec2<i32>,
         state: &State,
     ) -> UpdateAction {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
-                player_spawn.update(base_object, game_state, state)
+                player_spawn.update(base_object, effects, got_fruit, room, state)
             }
             ObjectType::Smoke => Smoke::update(base_object),
             ObjectType::Platform => todo!(),
@@ -1690,7 +1652,11 @@ impl ObjectType {
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
             // ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => FakeWall::update(base_object, game_state, state),
+            ObjectType::FakeWall => FakeWall::update(
+                base_object,
+                //  game_state,
+                state,
+            ),
             // ObjectType::FallFloor => todo!(),
             // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(rt) => rt.update(),
@@ -1786,19 +1752,37 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
             let fty = ty as f32;
             let tile = state.mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
             if tile == 11 {
-                let mut platform =
-                    Object::init(game_state, ObjectKind::Platform, ftx * 8., fty * 8.).unwrap();
+                let mut platform = Object::init(
+                    &game_state.got_fruit,
+                    game_state.room,
+                    ObjectKind::Platform,
+                    ftx * 8.,
+                    fty * 8.,
+                )
+                .unwrap();
                 platform.base_object.dir = -1;
                 game_state.objects.push(platform);
             } else if tile == 12 {
-                let mut platform =
-                    Object::init(game_state, ObjectKind::Platform, ftx * 8., fty * 8.).unwrap();
+                let mut platform = Object::init(
+                    &game_state.got_fruit,
+                    game_state.room,
+                    ObjectKind::Platform,
+                    ftx * 8.,
+                    fty * 8.,
+                )
+                .unwrap();
                 platform.base_object.dir = 1;
                 game_state.objects.push(platform);
             } else {
                 for kind in ObjectKind::TYPES.iter().copied() {
                     if kind.tile() == Some(tile.into()) {
-                        if let Some(object) = Object::init(game_state, kind, ftx * 8., fty * 8.) {
+                        if let Some(object) = Object::init(
+                            &game_state.got_fruit,
+                            game_state.room,
+                            kind,
+                            ftx * 8.,
+                            fty * 8.,
+                        ) {
                             game_state.objects.push(object);
                         }
                     }
@@ -1808,7 +1792,13 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
     }
 
     if !is_title(game_state) {
-        if let Some(object) = Object::init(&game_state, ObjectKind::RoomTitle, 0., 0.) {
+        if let Some(object) = Object::init(
+            &game_state.got_fruit,
+            game_state.room,
+            ObjectKind::RoomTitle,
+            0.,
+            0.,
+        ) {
             game_state.objects.push(object);
         }
     }
@@ -2155,7 +2145,9 @@ impl PlayerSpawn {
     fn update(
         &mut self,
         base_object: &mut BaseObject,
-        game_state: &mut GameState,
+        effects: &mut GameEffects,
+        got_fruit: &[bool],
+        room: Vec2<i32>,
         _: &State,
     ) -> UpdateAction {
         match self.state {
@@ -2184,10 +2176,11 @@ impl PlayerSpawn {
                     base_object.spd = Vec2 { x: 0.0, y: 0.0 };
                     self.state = PlayerSpawnState::Landing;
                     self.delay = 5;
-                    // TODO: Integrate this screen shake
-                    game_state.shake = 5;
+
+                    effects.shake = 5;
                     if let Some(smoke) = Object::init(
-                        game_state,
+                        got_fruit,
+                        room,
                         ObjectKind::Smoke,
                         base_object.x,
                         base_object.y + 4.0,
@@ -2247,7 +2240,11 @@ impl PlayerSpawn {
 struct FakeWall;
 
 impl FakeWall {
-    fn update(base_object: &mut BaseObject, _: &mut GameState, _: &State) -> UpdateAction {
+    fn update<'a>(
+        base_object: &mut BaseObject,
+        // other_objects: impl Iterator<Item = &'a mut Object>,
+        _: &State,
+    ) -> UpdateAction {
         base_object.hitbox = Hitbox {
             x: -1.0,
             y: -1.0,
