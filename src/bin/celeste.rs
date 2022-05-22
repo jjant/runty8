@@ -497,7 +497,6 @@ struct Player {
 
 impl Player {
     fn init(x: f32, y: f32, max_djump: i32) -> Self {
-        let hair = Self::create_hair(x, y);
         Self {
             p_jump: false,
             p_dash: false,
@@ -516,7 +515,7 @@ impl Player {
             },
             spr_off: 0.,
             was_on_ground: false,
-            hair,
+            hair: Self::create_hair(x, y),
         }
     }
 
@@ -1336,7 +1335,14 @@ fn got_fruit_for_room(got_fruit: &[bool], room: Vec2<i32>) -> bool {
 }
 
 impl Object {
-    fn init(got_fruit: &[bool], room: Vec2<i32>, kind: ObjectKind, x: f32, y: f32) -> Option<Self> {
+    fn init(
+        got_fruit: &[bool],
+        room: Vec2<i32>,
+        kind: ObjectKind,
+        x: f32,
+        y: f32,
+        max_djump: i32,
+    ) -> Option<Self> {
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
         if dbg!(&kind).if_not_fruit() && got_fruit_for_room(got_fruit, room) {
@@ -1362,7 +1368,7 @@ impl Object {
             // TODO: figure out if we need an option here
             spr: kind.tile().map(|t| t as f32).unwrap_or(-42.),
         };
-        let object_type = ObjectKind::create(&kind, &mut base_object);
+        let object_type = ObjectKind::create(&kind, &mut base_object, max_djump);
 
         // kind.init(&mut object);
 
@@ -1609,6 +1615,7 @@ impl ObjectType {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update<'a>(
         &mut self,
         base_object: &mut BaseObject,
@@ -1621,7 +1628,7 @@ impl ObjectType {
     ) -> UpdateAction {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
-                player_spawn.update(base_object, effects, got_fruit, room, state)
+                player_spawn.update(base_object, effects, got_fruit, room, max_djump, state)
             }
             ObjectType::Smoke => Smoke::update(base_object),
             ObjectType::Platform => todo!(),
@@ -1675,9 +1682,14 @@ impl ObjectType {
                 fruit.update(base_object, other_objects, got_fruit, room, max_djump)
             }
             // ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => {
-                FakeWall::update(base_object, other_objects, got_fruit, room, state)
-            }
+            ObjectType::FakeWall => FakeWall::update(
+                base_object,
+                other_objects,
+                got_fruit,
+                room,
+                max_djump,
+                state,
+            ),
             // ObjectType::FallFloor => todo!(),
             // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(rt) => rt.update(),
@@ -1779,6 +1791,7 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
                     ObjectKind::Platform,
                     ftx * 8.,
                     fty * 8.,
+                    game_state.max_djump,
                 )
                 .unwrap();
                 platform.base_object.dir = -1;
@@ -1790,6 +1803,7 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
                     ObjectKind::Platform,
                     ftx * 8.,
                     fty * 8.,
+                    game_state.max_djump,
                 )
                 .unwrap();
                 platform.base_object.dir = 1;
@@ -1803,6 +1817,7 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
                             kind,
                             ftx * 8.,
                             fty * 8.,
+                            game_state.max_djump,
                         ) {
                             game_state.objects.push(object);
                         }
@@ -1819,6 +1834,7 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
             ObjectKind::RoomTitle,
             0.,
             0.,
+            game_state.max_djump,
         ) {
             game_state.objects.push(object);
         }
@@ -2068,12 +2084,13 @@ impl ObjectKind {
         // ObjectKind::Flag,
     ];
 
-    fn create(&self, base_object: &mut BaseObject) -> ObjectType {
+    fn create(&self, base_object: &mut BaseObject, max_djump: i32) -> ObjectType {
         match self {
             ObjectKind::PlayerSpawn => ObjectType::PlayerSpawn(PlayerSpawn::init(base_object)),
             ObjectKind::Player => {
-                todo!("ObjectType::create player")
+                ObjectType::Player(Player::init(base_object.x, base_object.y, max_djump))
             }
+
             // ObjectKind::Spring => todo!(),
             // ObjectKind::Balloon => todo!(),
             // ObjectKind::FallFloor => todo!(),
@@ -2228,6 +2245,7 @@ impl PlayerSpawn {
         effects: &mut GameEffects,
         got_fruit: &[bool],
         room: Vec2<i32>,
+        max_djump: i32,
         _: &State,
     ) -> UpdateAction {
         match self.state {
@@ -2264,6 +2282,7 @@ impl PlayerSpawn {
                         ObjectKind::Smoke,
                         base_object.x,
                         base_object.y + 4.0,
+                        max_djump,
                     ) {
                         new_objects.push(smoke);
                     }
@@ -2281,15 +2300,20 @@ impl PlayerSpawn {
                 base_object.spr = 6.0;
 
                 let should_destroy = self.delay < 0;
-                // TODO:
-                // let player =
-                //     Object::init(game_state, ObjectKind::Player, base_object.x, base_object.y)
-                //         .filter(|_| should_destroy);
 
-                let player = None;
-                UpdateAction {
-                    should_destroy,
-                    new_objects: player.into_iter().collect(),
+                if should_destroy {
+                    let player = Object::init(
+                        got_fruit,
+                        room,
+                        ObjectKind::Player,
+                        base_object.x,
+                        base_object.y,
+                        max_djump,
+                    );
+
+                    UpdateAction::noop().destroy().push(player)
+                } else {
+                    UpdateAction::noop()
                 }
             }
         }
@@ -2325,6 +2349,7 @@ impl FakeWall {
         other_objects: &mut impl Iterator<Item = &'a mut Object>,
         got_fruit: &[bool],
         room: Vec2<i32>,
+        max_djump: i32,
         _: &State,
     ) -> UpdateAction {
         base_object.hitbox = Hitbox {
@@ -2357,6 +2382,7 @@ impl FakeWall {
                             ObjectKind::Smoke,
                             base_object.x,
                             base_object.y,
+                            max_djump,
                         ))
                         .push(Object::init(
                             got_fruit,
@@ -2364,6 +2390,7 @@ impl FakeWall {
                             ObjectKind::Smoke,
                             base_object.x + 8.0,
                             base_object.y,
+                            max_djump,
                         ))
                         .push(Object::init(
                             got_fruit,
@@ -2371,6 +2398,7 @@ impl FakeWall {
                             ObjectKind::Smoke,
                             base_object.x,
                             base_object.y + 8.0,
+                            max_djump,
                         ))
                         .push(Object::init(
                             got_fruit,
@@ -2378,6 +2406,7 @@ impl FakeWall {
                             ObjectKind::Smoke,
                             base_object.x + 8.0,
                             base_object.y + 8.0,
+                            max_djump,
                         ))
                         .push(Object::init(
                             got_fruit,
@@ -2385,6 +2414,7 @@ impl FakeWall {
                             ObjectKind::Fruit,
                             base_object.x + 4.0,
                             base_object.y + 4.0,
+                            max_djump,
                         ));
                 };
             } else {
