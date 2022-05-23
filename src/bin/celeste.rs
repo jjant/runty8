@@ -572,6 +572,10 @@ impl Player {
         } else {
             base_object.spd.x = appr(base_object.spd.x, input as f32 * maxrun, accel);
         }
+        // --facing
+        if base_object.spd.x != 0.0 {
+            base_object.flip.x = base_object.spd.x < 0.0;
+        }
 
         // Animation
         self.spr_off += 0.25;
@@ -592,6 +596,29 @@ impl Player {
         }
 
         UpdateAction::noop()
+    }
+
+    fn draw(&mut self, base_object: &mut BaseObject, draw: &mut DrawContext, frames: i32) {
+        if base_object.x < -1.0 || base_object.x > 121.0 {
+            base_object.x = clamp(base_object.x, -1.0, 121.0);
+            base_object.spd.x = 0.0;
+        }
+
+        set_hair_color(draw, frames, self.djump);
+
+        let facing = if base_object.flip.x { -1 } else { 1 };
+        self.hair.draw(draw, base_object.x, base_object.y, facing);
+
+        draw.spr_(
+            base_object.spr.floor() as usize,
+            base_object.x.floor() as i32,
+            base_object.y.floor() as i32,
+            1.0,
+            1.0,
+            base_object.flip.x,
+            base_object.flip.y,
+        );
+        unset_hair_color(draw);
     }
 }
 
@@ -799,21 +826,6 @@ struct HairElement {
 //         this.was_on_ground=on_ground
 
 //     end, --<end update loop
-
-//     draw=function(this)
-
-//         -- clamp in screen
-//         if this.x<-1 or this.x>121 then
-//             this.x=clamp(this.x,-1,121)
-//             this.spd.x=0
-//         end
-
-//         set_hair_color(this.djump)
-//         draw_hair(this,this.flip.x and -1 or 1)
-//         spr(this.spr,this.x,this.y,1,1,this.flip.x,this.flip.y)
-//         unset_hair_color()
-//     end
-// }
 
 #[allow(dead_code, unused_variables)]
 fn psfx(game_state: &GameState, num: i32) {
@@ -1518,27 +1530,7 @@ impl Object {
             }
             // ObjectType::BigChest => todo!(),
             ObjectType::Player(player) => {
-                let base_object = &mut self.base_object;
-                if base_object.x < -1.0 || base_object.x > 121.0 {
-                    base_object.x = clamp(base_object.x, -1.0, 121.0);
-                    base_object.spd.x = 0.0;
-                }
-
-                set_hair_color(draw, game_state.frames, player.djump);
-
-                let facing = if base_object.flip.x { -1 } else { 1 };
-                player.hair.draw(draw, base_object.x, base_object.y, facing);
-
-                draw.spr_(
-                    self.base_object.spr.floor() as usize,
-                    self.base_object.x.floor() as i32,
-                    self.base_object.y.floor() as i32,
-                    1.0,
-                    1.0,
-                    self.base_object.flip.x,
-                    self.base_object.flip.y,
-                );
-                unset_hair_color(draw);
+                player.draw(&mut self.base_object, draw, game_state.frames)
             }
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
