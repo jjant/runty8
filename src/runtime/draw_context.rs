@@ -127,6 +127,7 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
     }
 
     #[allow(clippy::too_many_arguments)]
+    // TODO: Implement w and h params functionality
     pub fn spr_(
         &mut self,
         sprite: usize,
