@@ -452,7 +452,7 @@ impl GameState {
 
 const K_LEFT: Button = Button::Left;
 const K_RIGHT: Button = Button::Right;
-// k_up=2
+const K_UP: Button = Button::Up;
 const K_DOWN: Button = Button::Down;
 const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
@@ -527,6 +527,71 @@ impl Player {
                 size: i32::max(1, i32::min(2, 3 - index)),
             }),
         }
+    }
+
+    fn update<'a>(
+        &mut self,
+        base_object: &mut BaseObject,
+        state: &State,
+        objects: &mut impl Iterator<Item = &'a mut Object>,
+        room: Vec2<i32>,
+    ) -> UpdateAction {
+        let input = if state.btn(K_RIGHT) {
+            1
+        } else if state.btn(K_LEFT) {
+            -1
+        } else {
+            0
+        };
+
+        let on_ground = base_object.is_solid(state, objects, room, 0, 1);
+        let on_ice = base_object.is_ice(state, room, 0, 1);
+
+        // -- move
+        // part
+        let mut maxrun = 1.0;
+        let mut accel = 0.6;
+        let mut deccel = 0.15;
+
+        if !on_ground {
+            accel = 0.4;
+        } else if on_ice {
+            accel = 0.05;
+
+            if input == (if base_object.flip.x { -1 } else { 1 }) {
+                accel = 0.05;
+            }
+        }
+
+        if base_object.spd.x.abs() > maxrun {
+            base_object.spd.x = appr(
+                base_object.spd.x,
+                base_object.spd.x.signum() * maxrun,
+                deccel,
+            );
+        } else {
+            base_object.spd.x = appr(base_object.spd.x, input as f32 * maxrun, accel);
+        }
+
+        // Animation
+        self.spr_off += 0.25;
+        if !on_ground {
+            if base_object.is_solid(state, objects, room, input, 0) {
+                base_object.spr = 5.0;
+            } else {
+                base_object.spr = 3.0;
+            }
+        } else if state.btn(K_DOWN) {
+            base_object.spr = 6.0;
+        } else if state.btn(K_UP) {
+            base_object.spr = 7.0;
+        } else if (base_object.spd.x == 0.0) || (!state.btn(K_LEFT) && !state.btn(K_RIGHT)) {
+            base_object.spr = 1.0;
+        } else {
+            base_object.spr = 1.0 + self.spr_off % 4.0;
+        }
+
+        UpdateAction::noop()
     }
 }
 
@@ -825,6 +890,54 @@ impl BaseObject {
             }
         }
         None
+    }
+
+    fn is_solid<'a>(
+        &self,
+        state: &State,
+        objects: &mut impl Iterator<Item = &'a mut Object>,
+        room: Vec2<i32>,
+        ox: i32,
+        oy: i32,
+    ) -> bool {
+        if oy > 0
+            && !self.check(objects, &ObjectKind::Platform, ox, 0)
+            && self.check(objects, &ObjectKind::Platform, ox, oy)
+        {
+            return true;
+        }
+
+        solid_at(
+            state,
+            room,
+            (self.x + self.hitbox.x + ox as f32).floor() as i32,
+            (self.y + self.hitbox.y + oy as f32).floor() as i32,
+            self.hitbox.w,
+            self.hitbox.h,
+        )
+        // || self.check(objects, &ObjectType::FallFloor, ox, oy)
+            || self.check(objects, &ObjectKind::FakeWall, ox, oy)
+    }
+
+    fn check<'a>(
+        &self,
+        objects: &mut impl Iterator<Item = &'a mut Object>,
+        kind: &ObjectKind,
+        ox: i32,
+        oy: i32,
+    ) -> bool {
+        self.collide(objects, kind, ox, oy).is_some()
+    }
+
+    fn is_ice(&self, state: &State, room: Vec2<i32>, ox: i32, oy: i32) -> bool {
+        ice_at(
+            state,
+            room,
+            (self.x + self.hitbox.x + ox as f32).floor() as i32,
+            (self.y + self.hitbox.y + oy as f32).floor() as i32,
+            self.hitbox.w,
+            self.hitbox.h,
+        )
     }
 }
 
@@ -1424,8 +1537,8 @@ impl Object {
                     // 1,
                     // self.base_object.flip.x,
                     // self.base_object.flip.y,
-                )
-                // unset_hair_color()
+                );
+                unset_hair_color(draw);
             }
             // ObjectType::LifeUp => todo!(),
             // ObjectType::Fruit => todo!(),
@@ -1519,23 +1632,7 @@ impl Object {
         ox: i32,
         oy: i32,
     ) -> bool {
-        if oy > 0
-            && !self.check(objects, &ObjectKind::Platform, ox, 0)
-            && self.check(objects, &ObjectKind::Platform, ox, oy)
-        {
-            return true;
-        }
-
-        solid_at(
-            state,
-            room,
-            (self.base_object.x + self.base_object.hitbox.x + ox as f32).floor() as i32,
-            (self.base_object.y + self.base_object.hitbox.y + oy as f32).floor() as i32,
-            self.base_object.hitbox.w,
-            self.base_object.hitbox.h,
-        )
-        // || self.check(objects, &ObjectType::FallFloor, ox, oy)
-            || self.check(objects, &ObjectKind::FakeWall, ox, oy)
+        self.base_object.is_solid(state, objects, room, ox, oy)
     }
 
     fn check<'a>(
@@ -1545,7 +1642,7 @@ impl Object {
         ox: i32,
         oy: i32,
     ) -> bool {
-        self.base_object.collide(objects, kind, ox, oy).is_some()
+        self.base_object.check(objects, kind, ox, oy)
     }
 
     fn to_player_mut(&mut self) -> Option<&mut Player> {
@@ -1637,50 +1734,7 @@ impl ObjectType {
             ObjectType::Smoke => Smoke::update(base_object),
             ObjectType::Platform => todo!(),
             // ObjectType::BigChest => todo!(),
-            ObjectType::Player(player) => {
-                let input = if state.btn(K_RIGHT) {
-                    1
-                } else if state.btn(K_LEFT) {
-                    -1
-                } else {
-                    0
-                } as f32;
-
-                // -- move
-                // part
-                let mut maxrun = 1.0;
-                let mut accel = 0.6;
-                let mut deccel = 0.15;
-
-                let on_ground = true;
-                let on_ice = false;
-                if !on_ground {
-                    accel = 0.4;
-                } else if on_ice {
-                    accel = 0.05;
-
-                    if input == (if base_object.flip.x { -1.0 } else { 1.0 }) {
-                        accel = 0.05;
-                    }
-                }
-
-                if base_object.spd.x.abs() > maxrun {
-                    base_object.spd.x = appr(
-                        base_object.spd.x,
-                        base_object.spd.x.signum() * maxrun,
-                        deccel,
-                    );
-                } else {
-                    base_object.spd.x = appr(base_object.spd.x, input * maxrun, accel);
-                }
-
-                // TODO: Update
-
-                UpdateAction {
-                    should_destroy: false,
-                    new_objects: vec![],
-                }
-            }
+            ObjectType::Player(player) => player.update(base_object, state, other_objects, room),
             // ObjectType::LifeUp => todo!(),
             ObjectType::Fruit(fruit) => {
                 fruit.update(base_object, other_objects, got_fruit, room, max_djump)
@@ -1702,15 +1756,8 @@ impl ObjectType {
 }
 
 impl Object {
-    fn is_ice(&self, state: &State, room: Vec2<i32>, ox: f32, oy: f32) -> bool {
-        ice_at(
-            state,
-            room,
-            (self.base_object.x + self.base_object.hitbox.x + ox).floor() as i32,
-            (self.base_object.y + self.base_object.hitbox.y + oy).floor() as i32,
-            self.base_object.hitbox.w,
-            self.base_object.hitbox.h,
-        )
+    fn is_ice(&self, state: &State, room: Vec2<i32>, ox: i32, oy: i32) -> bool {
+        self.base_object.is_ice(state, room, ox, oy)
     }
 }
 
