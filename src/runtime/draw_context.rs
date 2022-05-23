@@ -126,7 +126,17 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         self.state.btn(button)
     }
 
-    pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
+    #[allow(clippy::too_many_arguments)]
+    pub fn spr_(
+        &mut self,
+        sprite: usize,
+        x: i32,
+        y: i32,
+        w: f32,
+        h: f32,
+        flip_x: bool,
+        flip_y: bool,
+    ) {
         let sprite = self.state.sprite_sheet.get_sprite(sprite);
         let buffer = &sprite.sprite;
 
@@ -144,6 +154,10 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
                 }
             }
         }
+    }
+
+    pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
+        self.spr_(sprite, x, y, 1.0, 1.0, false, false)
     }
 
     pub fn print(&mut self, str: &str, x: i32, y: i32, color: Color) {

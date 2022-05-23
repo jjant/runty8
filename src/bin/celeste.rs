@@ -1529,14 +1529,14 @@ impl Object {
                 let facing = if base_object.flip.x { -1 } else { 1 };
                 player.hair.draw(draw, base_object.x, base_object.y, facing);
 
-                draw.spr(
+                draw.spr_(
                     self.base_object.spr.floor() as usize,
                     self.base_object.x.floor() as i32,
                     self.base_object.y.floor() as i32,
-                    // 1,
-                    // 1,
-                    // self.base_object.flip.x,
-                    // self.base_object.flip.y,
+                    1.0,
+                    1.0,
+                    self.base_object.flip.x,
+                    self.base_object.flip.y,
                 );
                 unset_hair_color(draw);
             }
@@ -1655,15 +1655,14 @@ impl Object {
 
 fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
     if base_object.spr > 0. {
-        // TODO: Implement version with many arguments
-        draw.spr(
+        draw.spr_(
             base_object.spr.floor() as usize,
             base_object.x.floor() as i32,
             base_object.y.floor() as i32,
-            // 1,
-            // 1,
-            // base_object.flip.x,
-            // base_object.flip.y,
+            1.0,
+            1.0,
+            base_object.flip.x,
+            base_object.flip.y,
         );
     }
 }
@@ -2384,14 +2383,14 @@ impl PlayerSpawn {
         set_hair_color(draw, game_state.frames, game_state.max_djump);
 
         self.hair.draw(draw, base_object.x, base_object.y, 1);
-        draw.spr(
+        draw.spr_(
             base_object.spr.floor() as usize,
             base_object.x.floor() as i32,
             base_object.y.floor() as i32,
-            // 1,
-            // 1,
-            // base_object.flip.x,
-            // base_object.flip.y,
+            1.0,
+            1.0,
+            base_object.flip.x,
+            base_object.flip.y,
         );
         unset_hair_color(draw);
     }
