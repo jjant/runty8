@@ -364,7 +364,7 @@ impl App for GameState {
                 .iter()
                 .find(|object| object.object_type.kind() == ObjectKind::Player)
             {
-                let diff = f32::min(24., 40. - f32::abs(p.base_object.x + 4. - 64.)).floor() as i32;
+                let diff = i32::min(24, 40 - i32::abs(p.base_object.x + 4 - 64));
                 draw.rectfill(0, 0, diff, 128, 0);
                 draw.rectfill(128 - diff, 0, 128, 128, 0);
             }
@@ -496,7 +496,7 @@ struct Player {
 }
 
 impl Player {
-    fn init(x: f32, y: f32, max_djump: i32) -> Self {
+    fn init(x: i32, y: i32, max_djump: i32) -> Self {
         Self {
             p_jump: false,
             p_dash: false,
@@ -508,8 +508,8 @@ impl Player {
             dash_target: Vec2 { x: 0., y: 0. },
             dash_accel: Vec2 { x: 0., y: 0. },
             hitbox: Hitbox {
-                x: 1.,
-                y: 3.,
+                x: 1,
+                y: 3,
                 w: 6,
                 h: 5,
             },
@@ -519,11 +519,11 @@ impl Player {
         }
     }
 
-    fn create_hair(x: f32, y: f32) -> Hair {
+    fn create_hair(x: i32, y: i32) -> Hair {
         Hair {
             segments: [0, 1, 2, 3, 4].map(|index| HairElement {
-                x,
-                y,
+                x: x as f32,
+                y: y as f32,
                 size: i32::max(1, i32::min(2, 3 - index)),
             }),
         }
@@ -617,7 +617,7 @@ impl Player {
                     got_fruit,
                     room,
                     ObjectKind::Smoke,
-                    base_object.x + input as f32 * 6.0,
+                    base_object.x + input * 6,
                     base_object.y,
                     max_djump,
                 ));
@@ -641,7 +641,7 @@ impl Player {
                     room,
                     ObjectKind::Smoke,
                     base_object.x,
-                    base_object.y + 4.0,
+                    base_object.y + 4,
                     max_djump,
                 ));
             }
@@ -665,7 +665,7 @@ impl Player {
                         got_fruit,
                         room,
                         ObjectKind::Smoke,
-                        base_object.x + (wall_dir * 6) as f32,
+                        base_object.x + wall_dir * 6,
                         base_object.y,
                         max_djump,
                     ));
@@ -695,8 +695,8 @@ impl Player {
     }
 
     fn draw(&mut self, base_object: &mut BaseObject, draw: &mut DrawContext, frames: i32) {
-        if base_object.x < -1.0 || base_object.x >= 121.0 {
-            base_object.x = clamp(base_object.x, -1.0, 121.0);
+        if base_object.x < -1 || base_object.x >= 121 {
+            base_object.x = clampi(base_object.x, -1, 121);
             base_object.spd.x = 0.0;
         }
 
@@ -707,8 +707,8 @@ impl Player {
 
         draw.spr_(
             base_object.spr.floor() as usize,
-            base_object.x.floor() as i32,
-            base_object.y.floor() as i32,
+            base_object.x,
+            base_object.y,
             1.0,
             1.0,
             base_object.flip.x,
@@ -757,13 +757,13 @@ struct Spring {
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 struct BaseObject {
-    x: f32,
-    y: f32,
+    x: i32,
+    y: i32,
     hitbox: Hitbox,
     spr: f32, // hack they use
     spd: Vec2<f32>,
     rem: Vec2<f32>,
-    last: f32,
+    last: i32,
     dir: i32, // not sure if all objects use this?
     // obj.solids in original source
     is_solid: bool,
@@ -783,18 +783,14 @@ impl BaseObject {
             if !std::ptr::eq(&other.base_object, self)
                 && &other.object_type.kind() == kind
                 && other.base_object.collideable
-                && other.base_object.x
-                    + other.base_object.hitbox.x
-                    + other.base_object.hitbox.w as f32
-                    > self.x + self.hitbox.x + ox as f32
-                && other.base_object.y
-                    + other.base_object.hitbox.y
-                    + other.base_object.hitbox.h as f32
-                    > self.y + self.hitbox.y + oy as f32
+                && other.base_object.x + other.base_object.hitbox.x + other.base_object.hitbox.w
+                    > self.x + self.hitbox.x + ox
+                && other.base_object.y + other.base_object.hitbox.y + other.base_object.hitbox.h
+                    > self.y + self.hitbox.y + oy
                 && other.base_object.x + other.base_object.hitbox.x
-                    < self.x + self.hitbox.x + self.hitbox.w as f32 + ox as f32
+                    < self.x + self.hitbox.x + self.hitbox.w + ox
                 && other.base_object.y + other.base_object.hitbox.y
-                    < self.y + self.hitbox.y + self.hitbox.h as f32 + oy as f32
+                    < self.y + self.hitbox.y + self.hitbox.h + oy
             {
                 return Some((index, other));
             }
@@ -820,8 +816,8 @@ impl BaseObject {
         solid_at(
             state,
             room,
-            (self.x + self.hitbox.x + ox as f32).floor() as i32,
-            (self.y + self.hitbox.y + oy as f32).floor() as i32,
+            self.x + self.hitbox.x + ox,
+            self.y + self.hitbox.y + oy,
             self.hitbox.w,
             self.hitbox.h,
         )
@@ -843,8 +839,8 @@ impl BaseObject {
         ice_at(
             state,
             room,
-            (self.x + self.hitbox.x + ox as f32).floor() as i32,
-            (self.y + self.hitbox.y + oy as f32).floor() as i32,
+            self.x + self.hitbox.x + ox,
+            self.y + self.hitbox.y + oy,
             self.hitbox.w,
             self.hitbox.h,
         )
@@ -1341,8 +1337,8 @@ impl RoomTitle {
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 struct Hitbox {
-    x: f32,
-    y: f32,
+    x: i32,
+    y: i32,
     w: i32,
     h: i32,
 }
@@ -1363,8 +1359,8 @@ impl Object {
         got_fruit: &[bool],
         room: Vec2<i32>,
         kind: ObjectKind,
-        x: f32,
-        y: f32,
+        x: i32,
+        y: i32,
         max_djump: i32,
     ) -> Option<Self> {
         // What this means: If the fruit has been already
@@ -1379,14 +1375,14 @@ impl Object {
             collideable: true,
             is_solid: true,
             hitbox: Hitbox {
-                x: 0.,
-                y: 0.,
+                x: 0,
+                y: 0,
                 w: 8,
                 h: 8,
             },
             spd: Vec2 { x: 0., y: 0. },
             rem: Vec2 { x: 0., y: 0. },
-            last: 0.,
+            last: 0,
             dir: 0,
             flip: Vec2 { x: false, y: false },
             // TODO: figure out if we need an option here
@@ -1479,7 +1475,7 @@ impl Object {
 
             for _ in start..=amount.abs() {
                 if !self.is_solid(state, objects, room, step, 0) {
-                    self.base_object.x += step as f32;
+                    self.base_object.x += step;
                 } else {
                     self.base_object.spd.x = 0.;
                     self.base_object.rem.x = 0.;
@@ -1487,7 +1483,7 @@ impl Object {
                 }
             }
         } else {
-            self.base_object.x += amount as f32;
+            self.base_object.x += amount;
         }
     }
 
@@ -1503,7 +1499,7 @@ impl Object {
 
             for _ in 0..=amount.abs() {
                 if !self.is_solid(state, objects, room, 0, step) {
-                    self.base_object.y += step as f32;
+                    self.base_object.y += step;
                 } else {
                     self.base_object.spd.y = 0.;
                     self.base_object.rem.y = 0.;
@@ -1511,7 +1507,7 @@ impl Object {
                 }
             }
         } else {
-            self.base_object.y += amount as f32;
+            self.base_object.y += amount;
         }
     }
 
@@ -1548,8 +1544,8 @@ fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
     if base_object.spr > 0. {
         draw.spr_(
             base_object.spr.floor() as usize,
-            base_object.x.floor() as i32,
-            base_object.y.floor() as i32,
+            base_object.x,
+            base_object.y,
             1.0,
             1.0,
             base_object.flip.x,
@@ -1671,8 +1667,8 @@ fn kill_player(obj: &Object, game_state: &mut GameState) {
         let angle = dir / 8.;
 
         game_state.dead_particles.push(DeadParticle {
-            x: obj.base_object.x + 4.,
-            y: obj.base_object.y + 4.,
+            x: (obj.base_object.x + 4) as f32,
+            y: (obj.base_object.y + 4) as f32,
             t: 10,
             spd: Vec2 {
                 x: (angle).sin() * 3.,
@@ -1729,16 +1725,14 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
     for tx in 0..=15 {
         for ty in 0..=15 {
             // entities
-            let ftx = tx as f32;
-            let fty = ty as f32;
             let tile = state.mget(game_state.room.x * 16 + tx, game_state.room.y * 16 + ty);
             if tile == 11 {
                 let mut platform = Object::init(
                     &game_state.got_fruit,
                     game_state.room,
                     ObjectKind::Platform,
-                    ftx * 8.,
-                    fty * 8.,
+                    tx * 8,
+                    ty * 8,
                     game_state.max_djump,
                 )
                 .unwrap();
@@ -1749,8 +1743,8 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
                     &game_state.got_fruit,
                     game_state.room,
                     ObjectKind::Platform,
-                    ftx * 8.,
-                    fty * 8.,
+                    tx * 8,
+                    ty * 8,
                     game_state.max_djump,
                 )
                 .unwrap();
@@ -1763,8 +1757,8 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
                             &game_state.got_fruit,
                             game_state.room,
                             kind,
-                            ftx * 8.,
-                            fty * 8.,
+                            tx * 8,
+                            ty * 8,
                             game_state.max_djump,
                         ) {
                             game_state.objects.push(object);
@@ -1780,8 +1774,8 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
             &game_state.got_fruit,
             game_state.room,
             ObjectKind::RoomTitle,
-            0.,
-            0.,
+            0,
+            0,
             game_state.max_djump,
         ) {
             game_state.objects.push(object);
@@ -1821,6 +1815,10 @@ fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
 
 // -- helper functions --
 // ----------------------
+
+fn clampi(val: i32, a: i32, b: i32) -> i32 {
+    a.max(b.min(val))
+}
 
 fn clamp(val: f32, a: f32, b: f32) -> f32 {
     a.max(b.min(val))
@@ -1876,10 +1874,10 @@ impl Platform {
         room: Vec2<i32>,
     ) -> Option<(usize, Object)> {
         self_.base_object.spd.x = self_.base_object.dir as f32 * 0.65;
-        if self_.base_object.x < -16. {
-            self_.base_object.x = 128.;
-        } else if self_.base_object.x > 128. {
-            self_.base_object.x = -16.;
+        if self_.base_object.x < -16 {
+            self_.base_object.x = 128;
+        } else if self_.base_object.x > 128 {
+            self_.base_object.x = -16;
         }
         self_.base_object.last = self_.base_object.x;
 
@@ -1892,7 +1890,7 @@ impl Platform {
                 state,
                 objects,
                 room,
-                (self_.base_object.x - self_.base_object.last).floor() as i32,
+                self_.base_object.x - self_.base_object.last,
                 1,
             );
 
@@ -1905,16 +1903,8 @@ impl Platform {
     }
 
     fn draw(self_: &Object, draw: &mut DrawContext) {
-        draw.spr(
-            11,
-            self_.base_object.x.floor() as i32,
-            self_.base_object.y.floor() as i32 - 1,
-        );
-        draw.spr(
-            12,
-            self_.base_object.x.floor() as i32 + 8,
-            self_.base_object.y.floor() as i32 - 1,
-        )
+        draw.spr(11, self_.base_object.x, self_.base_object.y - 1);
+        draw.spr(12, self_.base_object.x + 8, self_.base_object.y - 1)
     }
 }
 #[derive(Clone, Copy)]
@@ -1925,8 +1915,8 @@ impl Smoke {
         base_object.spr = 29.;
         base_object.spd.y = -0.1;
         base_object.spd.x = 0.3 + rnd(0.2);
-        base_object.x += -1. + rnd(2.);
-        base_object.y += -1. + rnd(2.);
+        base_object.x += -1 + rnd(2.).floor() as i32;
+        base_object.y += -1 + rnd(2.).floor() as i32;
         base_object.flip.x = maybe();
         base_object.flip.y = maybe();
         base_object.is_solid = false;
@@ -1944,15 +1934,15 @@ impl Smoke {
 
 #[derive(Clone, Copy, Debug)]
 struct Fruit {
-    start: f32,
-    off: f32,
+    start: i32,
+    off: i32,
 }
 
 impl Fruit {
     fn init(base_object: &mut BaseObject) -> Self {
         Self {
             start: base_object.y,
-            off: 0.0,
+            off: 0,
         }
     }
 
@@ -1986,8 +1976,8 @@ impl Fruit {
                 UpdateAction::noop()
             };
 
-        self.off += 1.0;
-        base_object.y = self.start + (self.off / 40.0).sin() * 2.5;
+        self.off += 1;
+        base_object.y = self.start + ((self.off as f32 / 40.0).sin() * 2.5) as i32;
 
         update_action
     }
@@ -2101,10 +2091,10 @@ struct Hair {
 }
 
 impl Hair {
-    fn draw(&mut self, draw: &mut DrawContext, x: f32, y: f32, facing: i32) {
+    fn draw(&mut self, draw: &mut DrawContext, x: i32, y: i32, facing: i32) {
         let mut last = Vec2 {
-            x: x + (4 - facing * 2) as f32,
-            y: y + (if draw.btn(K_DOWN) { 4. } else { 3. }),
+            x: (x + (4 - facing * 2)) as f32,
+            y: (y + (if draw.btn(K_DOWN) { 4 } else { 3 })) as f32,
         };
 
         for hair_element in self.segments.iter_mut() {
@@ -2130,7 +2120,7 @@ impl Hair {
 struct PlayerSpawn {
     hair: Hair,
     delay: i32,
-    target: Vec2<f32>,
+    target: Vec2<i32>,
     state: PlayerSpawnState,
 }
 
@@ -2184,7 +2174,7 @@ impl PlayerSpawn {
             x: base_object.x,
             y: base_object.y,
         };
-        base_object.y = 128.0;
+        base_object.y = 128;
         base_object.spd.y = -4.0;
         base_object.is_solid = false;
 
@@ -2207,7 +2197,7 @@ impl PlayerSpawn {
     ) -> UpdateAction {
         match self.state {
             PlayerSpawnState::Jumping => {
-                if base_object.y < self.target.y + 16.0 {
+                if base_object.y < self.target.y + 16 {
                     self.state = PlayerSpawnState::Falling;
                     self.delay = 3;
                 }
@@ -2238,7 +2228,7 @@ impl PlayerSpawn {
                         room,
                         ObjectKind::Smoke,
                         base_object.x,
-                        base_object.y + 4.0,
+                        base_object.y + 4,
                         max_djump,
                     ) {
                         new_objects.push(smoke);
@@ -2287,8 +2277,8 @@ impl PlayerSpawn {
         self.hair.draw(draw, base_object.x, base_object.y, 1);
         draw.spr_(
             base_object.spr.floor() as usize,
-            base_object.x.floor() as i32,
-            base_object.y.floor() as i32,
+            base_object.x,
+            base_object.y,
             1.0,
             1.0,
             base_object.flip.x,
@@ -2310,8 +2300,8 @@ impl FakeWall {
         _: &State,
     ) -> UpdateAction {
         base_object.hitbox = Hitbox {
-            x: -1.0,
-            y: -1.0,
+            x: -1,
+            y: -1,
             w: 18,
             h: 18,
         };
@@ -2345,7 +2335,7 @@ impl FakeWall {
                             got_fruit,
                             room,
                             ObjectKind::Smoke,
-                            base_object.x + 8.0,
+                            base_object.x + 8,
                             base_object.y,
                             max_djump,
                         ))
@@ -2354,23 +2344,23 @@ impl FakeWall {
                             room,
                             ObjectKind::Smoke,
                             base_object.x,
-                            base_object.y + 8.0,
+                            base_object.y + 8,
                             max_djump,
                         ))
                         .push(Object::init(
                             got_fruit,
                             room,
                             ObjectKind::Smoke,
-                            base_object.x + 8.0,
-                            base_object.y + 8.0,
+                            base_object.x + 8,
+                            base_object.y + 8,
                             max_djump,
                         ))
                         .push(Object::init(
                             got_fruit,
                             room,
                             ObjectKind::Fruit,
-                            base_object.x + 4.0,
-                            base_object.y + 4.0,
+                            base_object.x + 4,
+                            base_object.y + 4,
                             max_djump,
                         ));
                 };
@@ -2380,8 +2370,8 @@ impl FakeWall {
         }
 
         base_object.hitbox = Hitbox {
-            x: 0.0,
-            y: 0.0,
+            x: 0,
+            y: 0,
             w: 16,
             h: 16,
         };
@@ -2390,8 +2380,8 @@ impl FakeWall {
     }
 
     fn draw(base_object: &mut BaseObject, _: &GameState, draw: &mut DrawContext) {
-        let x = base_object.x.floor() as i32;
-        let y = base_object.y.floor() as i32;
+        let x = base_object.x;
+        let y = base_object.y;
         draw.spr(64, x, y);
         draw.spr(65, x + 8, y);
         draw.spr(80, x, y + 8);
