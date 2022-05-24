@@ -143,8 +143,8 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
 
         for i in 0..8 {
             for j in 0..8 {
-                let world_x = if flip_x { x + 8 - i } else { x + i };
-                let world_y = if flip_y { y + 8 - j } else { y + j };
+                let world_x = if flip_x { x + 7 - i } else { x + i };
+                let world_y = if flip_y { y + 7 - j } else { y + j };
 
                 let (x, y) = self.apply_camera(world_x, world_y);
                 if let Some(index) = self.index(x, y) {
