@@ -538,6 +538,8 @@ impl Player {
         room: Vec2<i32>,
         max_djump: i32,
     ) -> UpdateAction {
+        let mut update_action = UpdateAction::noop();
+
         let input = if state.btn(K_RIGHT) {
             1
         } else if state.btn(K_LEFT) {
@@ -545,6 +547,7 @@ impl Player {
         } else {
             0
         };
+
         let on_ground = base_object.is_solid(state, objects, room, 0, 1);
         let on_ice = base_object.is_ice(state, room, 0, 1);
 
@@ -567,10 +570,9 @@ impl Player {
         }
 
         // -- move
-        // part
-        let mut maxrun = 1.0;
+        const MAX_RUN: f32 = 1.0;
         let mut accel = 0.6;
-        let mut deccel = 0.15;
+        const DECCEL: f32 = 0.15;
 
         if !on_ground {
             accel = 0.4;
@@ -582,14 +584,14 @@ impl Player {
             }
         }
 
-        if base_object.spd.x.abs() > maxrun {
+        if base_object.spd.x.abs() > MAX_RUN {
             base_object.spd.x = appr(
                 base_object.spd.x,
-                base_object.spd.x.signum() * maxrun,
-                deccel,
+                base_object.spd.x.signum() * MAX_RUN,
+                DECCEL,
             );
         } else {
-            base_object.spd.x = appr(base_object.spd.x, input as f32 * maxrun, accel);
+            base_object.spd.x = appr(base_object.spd.x, input as f32 * MAX_RUN, accel);
         }
         // --facing
         if base_object.spd.x != 0.0 {
@@ -611,14 +613,14 @@ impl Player {
         {
             maxfall = 0.4;
             if rnd(10.0) < 2.0 {
-                Object::init(
+                update_action.push_mut(Object::init(
                     got_fruit,
                     room,
                     ObjectKind::Smoke,
                     base_object.x + input as f32 * 6.0,
                     base_object.y,
                     max_djump,
-                );
+                ));
             }
         }
 
@@ -634,14 +636,14 @@ impl Player {
                 self.grace = 0;
                 base_object.spd.y -= 2.0;
 
-                let smoke = Object::init(
+                update_action.push_mut(Object::init(
                     got_fruit,
                     room,
                     ObjectKind::Smoke,
                     base_object.x,
                     base_object.y + 4.0,
                     max_djump,
-                );
+                ));
             }
             // -- wall jump
             let wall_dir = if base_object.is_solid(state, objects, room, -3, 0) {
@@ -656,17 +658,17 @@ impl Player {
                 //psfx(2)
                 self.jbuffer = 0;
                 base_object.spd.y = -2.0;
-                base_object.spd.x = -wall_dir as f32 * (maxrun + 1.0);
+                base_object.spd.x = -wall_dir as f32 * (MAX_RUN + 1.0);
 
                 if !base_object.is_ice(state, room, wall_dir * 3, 0) {
-                    let smoke = Object::init(
+                    update_action.push_mut(Object::init(
                         got_fruit,
                         room,
                         ObjectKind::Smoke,
                         base_object.x + (wall_dir * 6) as f32,
                         base_object.y,
                         max_djump,
-                    );
+                    ));
                 }
             }
         }
@@ -689,11 +691,11 @@ impl Player {
             base_object.spr = 1.0 + self.spr_off % 4.0;
         }
 
-        UpdateAction::noop()
+        update_action
     }
 
     fn draw(&mut self, base_object: &mut BaseObject, draw: &mut DrawContext, frames: i32) {
-        if base_object.x < -1.0 || base_object.x > 121.0 {
+        if base_object.x < -1.0 || base_object.x >= 121.0 {
             base_object.x = clamp(base_object.x, -1.0, 121.0);
             base_object.spd.x = 0.0;
         }
@@ -2081,7 +2083,7 @@ impl ObjectKind {
     }
 
     fn if_not_fruit(&self) -> bool {
-        #[allow(clippy::match_single_binding)]
+        #[allow(clippy::match_like_matches_macro)]
         match self {
             // ObjectKind::Fruit => true,
             // ObjectKind::FlyFruit => true,
@@ -2158,10 +2160,14 @@ impl UpdateAction {
         self
     }
 
-    fn push(mut self, object: Option<Object>) -> Self {
+    fn push_mut(&mut self, object: Option<Object>) {
         if let Some(object) = object {
             self.new_objects.push(object);
         }
+    }
+
+    fn push(mut self, object: Option<Object>) -> Self {
+        self.push_mut(object);
 
         self
     }
