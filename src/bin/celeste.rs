@@ -1464,13 +1464,13 @@ struct Hitbox {
 }
 impl Hitbox {
     // TODO: Remove, for debugging purposes only
-    fn draw(&self, draw: &mut DrawContext, x: i32, y: i32) {
+    fn draw(&self, draw: &mut DrawContext, x: i32, y: i32, color: u8) {
         draw.rect(
             x + self.x,
             y + self.y,
             x + self.x + self.w - 1,
             y + self.y + self.h - 1,
-            7,
+            8,
         );
     }
 }
@@ -1495,6 +1495,7 @@ impl Object {
         y: i32,
         max_djump: i32,
     ) -> Option<Self> {
+        println!("Created {:?}", kind);
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
         if kind.if_not_fruit() && got_fruit_for_room(got_fruit, room) {
@@ -2428,8 +2429,7 @@ impl FakeWall {
 
         let mut update_action = UpdateAction::noop();
 
-        // TODO: Test this works when I've got the player working.
-        // TODO: Fix?
+        // TODO: This doesn't work as well as in the original.
         let hit: Option<(usize, &mut Object)> =
             base_object.collide(other_objects, &ObjectKind::Player, 0, 0);
         if let Some((_, hit_object)) = hit {
@@ -2490,12 +2490,14 @@ impl FakeWall {
             }
         }
 
-        base_object.hitbox = Hitbox {
-            x: 0,
-            y: 0,
-            w: 16,
-            h: 16,
-        };
+        // If I add this this the wall stops breaking, probably something to do with
+        // the order of updates?
+        // base_object.hitbox = Hitbox {
+        //     x: 0,
+        //     y: 0,
+        //     w: 16,
+        //     h: 16,
+        // };
 
         update_action
     }
