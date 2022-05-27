@@ -163,6 +163,7 @@ impl App for GameState {
             object.move_(state, &mut iter, self.room);
             let UpdateAction {
                 should_destroy,
+                next_level,
                 mut new_objects,
             } = object.update(
                 &mut iter,
@@ -490,14 +491,20 @@ struct Player {
     dash_effect_time: i32,
     dash_target: Vec2<f32>,
     dash_accel: Vec2<f32>,
-    hitbox: Hitbox,
+
     spr_off: f32,
     was_on_ground: bool,
     hair: Hair,
 }
 
 impl Player {
-    fn init(x: i32, y: i32, max_djump: i32) -> Self {
+    fn init(base_object: &mut BaseObject, max_djump: i32) -> Self {
+        base_object.hitbox = Hitbox {
+            x: 1,
+            y: 3,
+            w: 6,
+            h: 5,
+        };
         Self {
             p_jump: false,
             p_dash: false,
@@ -508,15 +515,9 @@ impl Player {
             dash_effect_time: 0,
             dash_target: Vec2 { x: 0., y: 0. },
             dash_accel: Vec2 { x: 0., y: 0. },
-            hitbox: Hitbox {
-                x: 1,
-                y: 3,
-                w: 6,
-                h: 5,
-            },
             spr_off: 0.,
             was_on_ground: false,
-            hair: Self::create_hair(x, y),
+            hair: Self::create_hair(base_object.x, base_object.y),
         }
     }
 
@@ -838,6 +839,8 @@ impl Player {
             base_object.flip.y,
         );
         unset_hair_color(draw);
+
+        // base_object.hitbox.draw(draw, base_object.x, base_object.y);
     }
 }
 
@@ -902,20 +905,17 @@ impl BaseObject {
         ox: i32,
         oy: i32,
     ) -> Option<(usize, &'a mut Object)> {
-        for (index, other) in objects.enumerate() {
-            if !std::ptr::eq(&other.base_object, self)
-                && &other.object_type.kind() == kind
-                && other.base_object.collideable
-                && other.base_object.x + other.base_object.hitbox.x + other.base_object.hitbox.w
-                    > self.x + self.hitbox.x + ox
-                && other.base_object.y + other.base_object.hitbox.y + other.base_object.hitbox.h
-                    > self.y + self.hitbox.y + oy
-                && other.base_object.x + other.base_object.hitbox.x
-                    < self.x + self.hitbox.x + self.hitbox.w + ox
-                && other.base_object.y + other.base_object.hitbox.y
-                    < self.y + self.hitbox.y + self.hitbox.h + oy
+        for (index, other_object) in objects.enumerate() {
+            let other_type = other_object.object_type;
+            let other = other_object.base_object;
+
+            if &other_type.kind() == kind && other.collideable // This kills rust-fmt?
+                && other.x + other.hitbox.x + other.hitbox.w > self.x + self.hitbox.x + ox
+                && other.y + other.hitbox.y + other.hitbox.h > self.y + self.hitbox.y + oy
+                && other.x + other.hitbox.x < self.x + self.hitbox.x + self.hitbox.w + ox
+                && other.y + other.hitbox.y < self.y + self.hitbox.y + self.hitbox.h + oy
             {
-                return Some((index, other));
+                return Some((index, other_object));
             }
         }
         None
@@ -944,7 +944,7 @@ impl BaseObject {
             self.hitbox.w,
             self.hitbox.h,
         )
-        // || self.check(objects, &ObjectType::FallFloor, ox, oy)
+        //  || self.check(objects, &ObjectType::FallFloor, ox, oy)
             || self.check(objects, &ObjectKind::FakeWall, ox, oy)
     }
 
@@ -1429,10 +1429,7 @@ impl RoomTitle {
     fn update(&mut self) -> UpdateAction {
         self.delay -= 1;
 
-        UpdateAction {
-            should_destroy: self.delay < -30,
-            new_objects: vec![],
-        }
+        UpdateAction::noop().destroy_if(self.delay < -30)
     }
 
     fn draw(&self, draw: &mut DrawContext, room: Vec2<i32>) {
@@ -1465,6 +1462,18 @@ struct Hitbox {
     w: i32,
     h: i32,
 }
+impl Hitbox {
+    // TODO: Remove, for debugging purposes only
+    fn draw(&self, draw: &mut DrawContext, x: i32, y: i32) {
+        draw.rect(
+            x + self.x,
+            y + self.y,
+            x + self.x + self.w - 1,
+            y + self.y + self.h - 1,
+            7,
+        );
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 struct Object {
@@ -1488,7 +1497,7 @@ impl Object {
     ) -> Option<Self> {
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
-        if dbg!(&kind).if_not_fruit() && got_fruit_for_room(got_fruit, room) {
+        if kind.if_not_fruit() && got_fruit_for_room(got_fruit, room) {
             return None;
         }
 
@@ -1512,8 +1521,6 @@ impl Object {
             spr: kind.tile().map(|t| t as f32).unwrap_or(-42.),
         };
         let object_type = ObjectKind::create(&kind, &mut base_object, max_djump);
-
-        // kind.init(&mut object);
 
         Some(Self {
             base_object,
@@ -1677,10 +1684,14 @@ fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
     }
 }
 
-fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: i32) -> bool {
-    for i in 0.max(x / 8)..=(15.min((x + w - 1) / 8)) {
-        for j in 0.max(y / 8)..=(15.min((y + h - 1) / 8)) {
-            if state.fget_n(tile_at(state, room, i, j) as usize, flag as u8) {
+fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: u8) -> bool {
+    let x_min = i32::max(0, (x as f32 / 8.0).floor() as i32);
+    let x_max = i32::min(15, ((x as f32 + w as f32 - 1.0) / 8.0).floor() as i32);
+    for i in x_min..=x_max {
+        let y_min = i32::max(0, (y as f32 / 8.0).floor() as i32);
+        let y_max = i32::min(15, ((y as f32 + h as f32 - 1.0) / 8.0).floor() as i32);
+        for j in y_min..=y_max {
+            if state.fget_n(tile_at(state, room, i, j), flag) {
                 return true;
             }
         }
@@ -1688,7 +1699,7 @@ fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, 
     false
 }
 
-fn tile_at(state: &State, room: Vec2<i32>, x: i32, y: i32) -> i32 {
+fn tile_at(state: &State, room: Vec2<i32>, x: i32, y: i32) -> usize {
     state.mget(room.x * 16 + x, room.y * 16 + y).into()
 }
 
@@ -1771,12 +1782,6 @@ impl ObjectType {
     }
 }
 
-impl Object {
-    fn is_ice(&self, state: &State, room: Vec2<i32>, ox: i32, oy: i32) -> bool {
-        self.base_object.is_ice(state, room, ox, oy)
-    }
-}
-
 fn kill_player(obj: &Object, game_state: &mut GameState) {
     game_state.sfx_timer = 12;
     // sfx(0);
@@ -1844,7 +1849,6 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
     game_state.room.x = x;
     game_state.room.y = y;
 
-    println!("Begin game {} {}", x, y);
     for tx in 0..=15 {
         for ty in 0..=15 {
             // entities
@@ -2048,10 +2052,7 @@ impl Smoke {
     fn update(base_object: &mut BaseObject) -> UpdateAction {
         base_object.spr += 0.2;
 
-        UpdateAction {
-            should_destroy: base_object.spr >= 32.0,
-            new_objects: vec![],
-        }
+        UpdateAction::noop().destroy_if(base_object.spr >= 32.0)
     }
 }
 
@@ -2153,9 +2154,7 @@ impl ObjectKind {
     fn create(&self, base_object: &mut BaseObject, max_djump: i32) -> ObjectType {
         match self {
             ObjectKind::PlayerSpawn => ObjectType::PlayerSpawn(PlayerSpawn::init(base_object)),
-            ObjectKind::Player => {
-                ObjectType::Player(Player::init(base_object.x, base_object.y, max_djump))
-            }
+            ObjectKind::Player => ObjectType::Player(Player::init(base_object, max_djump)),
 
             // ObjectKind::Spring => todo!(),
             // ObjectKind::Balloon => todo!(),
@@ -2256,6 +2255,7 @@ enum PlayerSpawnState {
 
 struct UpdateAction {
     should_destroy: bool,
+    next_level: bool,
     new_objects: Vec<Object>,
 }
 
@@ -2263,14 +2263,19 @@ impl UpdateAction {
     fn noop() -> Self {
         Self {
             should_destroy: false,
+            next_level: false,
             new_objects: vec![],
         }
     }
 
-    fn destroy(mut self) -> Self {
-        self.should_destroy = true;
+    fn destroy_if(mut self, should_destroy: bool) -> Self {
+        self.should_destroy = should_destroy;
 
         self
+    }
+
+    fn destroy(mut self) -> Self {
+        self.destroy_if(true)
     }
 
     fn push_mut(&mut self, object: Option<Object>) {
@@ -2325,10 +2330,7 @@ impl PlayerSpawn {
                     self.delay = 3;
                 }
 
-                UpdateAction {
-                    should_destroy: false,
-                    new_objects: vec![],
-                }
+                UpdateAction::noop()
             }
             PlayerSpawnState::Falling => {
                 base_object.spd.y += 0.5;
@@ -2338,7 +2340,7 @@ impl PlayerSpawn {
                     self.delay -= 1;
                 }
 
-                let mut new_objects = vec![];
+                let mut update_action = UpdateAction::noop();
                 if base_object.spd.y > 0.0 && base_object.y > self.target.y {
                     base_object.y = self.target.y;
                     base_object.spd = Vec2 { x: 0.0, y: 0.0 };
@@ -2346,24 +2348,19 @@ impl PlayerSpawn {
                     self.delay = 5;
 
                     effects.shake = 5;
-                    if let Some(smoke) = Object::init(
+                    update_action.push_mut(Object::init(
                         got_fruit,
                         room,
                         ObjectKind::Smoke,
                         base_object.x,
                         base_object.y + 4,
                         max_djump,
-                    ) {
-                        new_objects.push(smoke);
-                    }
+                    ));
 
                     // sfx(5);
                 };
 
-                UpdateAction {
-                    should_destroy: false,
-                    new_objects,
-                }
+                update_action
             }
             PlayerSpawnState::Landing => {
                 self.delay -= 1;
@@ -2422,8 +2419,6 @@ impl FakeWall {
         max_djump: i32,
         _: &State,
     ) -> UpdateAction {
-        println!("Updating fake wall");
-
         base_object.hitbox = Hitbox {
             x: -1,
             y: -1,
@@ -2434,9 +2429,10 @@ impl FakeWall {
         let mut update_action = UpdateAction::noop();
 
         // TODO: Test this works when I've got the player working.
+        // TODO: Fix?
         let hit: Option<(usize, &mut Object)> =
             base_object.collide(other_objects, &ObjectKind::Player, 0, 0);
-        if let Some((_, hit_object)) = dbg!(hit) {
+        if let Some((_, hit_object)) = hit {
             if let ObjectType::Player(player) = &mut hit_object.object_type {
                 if player.dash_effect_time > 0 {
                     hit_object.base_object.spd.x = -sign(hit_object.base_object.spd.x) * 1.5;
