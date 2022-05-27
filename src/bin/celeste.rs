@@ -497,6 +497,39 @@ struct Player {
 }
 
 impl Player {
+    fn init(x: i32, y: i32, max_djump: i32) -> Self {
+        Self {
+            p_jump: false,
+            p_dash: false,
+            grace: 0,
+            jbuffer: 0,
+            djump: max_djump,
+            dash_time: 0,
+            dash_effect_time: 0,
+            dash_target: Vec2 { x: 0., y: 0. },
+            dash_accel: Vec2 { x: 0., y: 0. },
+            hitbox: Hitbox {
+                x: 1,
+                y: 3,
+                w: 6,
+                h: 5,
+            },
+            spr_off: 0.,
+            was_on_ground: false,
+            hair: Self::create_hair(x, y),
+        }
+    }
+
+    fn create_hair(x: i32, y: i32) -> Hair {
+        Hair {
+            segments: [0, 1, 2, 3, 4].map(|index| HairElement {
+                x: x as f32,
+                y: y as f32,
+                size: i32::max(1, i32::min(2, 3 - index)),
+            }),
+        }
+    }
+
     fn update<'a>(
         &mut self,
         this: &mut BaseObject,
@@ -602,7 +635,7 @@ impl Player {
             }
 
             if this.spd.x.abs() > maxrun {
-                this.spd.x = appr(this.spd.x, this.spd.x.signum() * maxrun, deccel);
+                this.spd.x = appr(this.spd.x, sign(this.spd.x) * maxrun, deccel);
             } else {
                 this.spd.x = appr(this.spd.x, input as f32 * maxrun, accel);
             }
@@ -689,318 +722,98 @@ impl Player {
             }
 
             // -- dash
-        }
 
-        update_action
-    }
-
-    fn init(x: i32, y: i32, max_djump: i32) -> Self {
-        Self {
-            p_jump: false,
-            p_dash: false,
-            grace: 0,
-            jbuffer: 0,
-            djump: max_djump,
-            dash_time: 0,
-            dash_effect_time: 0,
-            dash_target: Vec2 { x: 0., y: 0. },
-            dash_accel: Vec2 { x: 0., y: 0. },
-            hitbox: Hitbox {
-                x: 1,
-                y: 3,
-                w: 6,
-                h: 5,
-            },
-            spr_off: 0.,
-            was_on_ground: false,
-            hair: Self::create_hair(x, y),
-        }
-    }
-
-    fn create_hair(x: i32, y: i32) -> Hair {
-        Hair {
-            segments: [0, 1, 2, 3, 4].map(|index| HairElement {
-                x: x as f32,
-                y: y as f32,
-                size: i32::max(1, i32::min(2, 3 - index)),
-            }),
-        }
-    }
-
-    fn update2<'a>(
-        &mut self,
-        base_object: &mut BaseObject,
-        state: &State,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
-        got_fruit: &[bool],
-        room: Vec2<i32>,
-        max_djump: i32,
-    ) -> UpdateAction {
-        let mut update_action = UpdateAction::noop();
-
-        let input = if state.btn(K_RIGHT) {
-            1
-        } else if state.btn(K_LEFT) {
-            -1
-        } else {
-            0
-        };
-
-        // -- spikes collide
-        // if spikes_at(
-        //     this.x + this.hitbox.x,
-        //     this.y + this.hitbox.y,
-        //     this.hitbox.w,
-        //     this.hitbox.h,
-        //     this.spd.x,
-        //     this.spd.y,
-        // ) {
-        //     kill_player(this);
-        // }
-
-        // -- bottom death
-        // if self.y > 128 {
-        //     kill_player(this);
-        // }
-
-        let on_ground = base_object.is_solid(state, objects, room, 0, 1);
-        let on_ice = base_object.is_ice(state, room, 0, 1);
-
-        // -- smoke particles
-        if on_ground && !self.was_on_ground {
-            update_action.push_mut(Object::init(
-                got_fruit,
-                room,
-                ObjectKind::Smoke,
-                base_object.x,
-                base_object.y + 4,
-                max_djump,
-            ));
-        }
-
-        let jump = state.btn(K_JUMP) && !self.p_jump;
-        self.p_jump = state.btn(K_JUMP);
-        if jump {
-            self.jbuffer = 4;
-        } else if self.jbuffer > 0 {
-            self.jbuffer -= 1;
-        }
-
-        let dash = state.btn(K_DASH) && !self.p_dash;
-        self.p_dash = state.btn(K_DASH);
-
-        if on_ground {
-            self.grace = 6;
-            if self.djump < max_djump {
-                //  psfx(54)
-                self.djump = max_djump;
-            }
-        } else if self.grace > 0 {
-            self.grace -= 1;
-        }
-        self.dash_effect_time -= 1;
-
-        if self.dash_time > 0 {
-            update_action.push_mut(Object::init(
-                got_fruit,
-                room,
-                ObjectKind::Smoke,
-                base_object.x,
-                base_object.y,
-                max_djump,
-            ));
-            self.dash_time -= 1;
-            base_object.spd.x = appr(base_object.spd.x, self.dash_target.x, self.dash_accel.x);
-            base_object.spd.y = appr(base_object.spd.y, self.dash_target.y, self.dash_accel.y);
-        } else {
-            // -- move
-            const MAX_RUN: f32 = 1.0;
-            let mut accel = 0.6;
-            const DECCEL: f32 = 0.15;
-
-            if !on_ground {
-                accel = 0.4;
-            } else if on_ice {
-                accel = 0.05;
-
-                if input == (if base_object.flip.x { -1 } else { 1 }) {
-                    accel = 0.05;
-                }
-            }
-
-            if base_object.spd.x.abs() > MAX_RUN {
-                base_object.spd.x = appr(
-                    base_object.spd.x,
-                    base_object.spd.x.signum() * MAX_RUN,
-                    DECCEL,
-                );
-            } else {
-                base_object.spd.x = appr(base_object.spd.x, input as f32 * MAX_RUN, accel);
-            }
-            // --facing
-            if base_object.spd.x != 0.0 {
-                base_object.flip.x = base_object.spd.x < 0.0;
-            }
-
-            // -- gravity
-            let mut maxfall = 2.0;
-            let mut gravity = 0.21;
-
-            if base_object.spd.y.abs() <= 0.15 {
-                gravity *= 0.5;
-            }
-
-            // -- wall slide
-            if input != 0
-                && base_object.is_solid(state, objects, room, input, 0)
-                && !base_object.is_ice(state, room, input, 0)
-            {
-                maxfall = 0.4;
-                if rnd(10.0) < 2.0 {
-                    update_action.push_mut(Object::init(
-                        got_fruit,
-                        room,
-                        ObjectKind::Smoke,
-                        base_object.x + input * 6,
-                        base_object.y,
-                        max_djump,
-                    ));
-                }
-            }
-
-            if !on_ground {
-                base_object.spd.y = appr(base_object.spd.y, maxfall, gravity);
-            }
-
-            // -- jump
-            if self.jbuffer > 0 {
-                if self.grace > 0 {
-                    // normal jump
-                    // psfx(1)
-                    self.jbuffer = 0;
-                    self.grace = 0;
-                    base_object.spd.y = -2.0;
-
-                    update_action.push_mut(Object::init(
-                        got_fruit,
-                        room,
-                        ObjectKind::Smoke,
-                        base_object.x,
-                        base_object.y + 4,
-                        max_djump,
-                    ));
-                }
-                // -- wall jump
-                let wall_dir = if base_object.is_solid(state, objects, room, -3, 0) {
-                    -1
-                } else if base_object.is_solid(state, objects, room, 3, 0) {
-                    1
-                } else {
-                    0
-                };
-
-                if wall_dir != 0 {
-                    //psfx(2)
-                    self.jbuffer = 0;
-                    base_object.spd.y = -2.0;
-                    base_object.spd.x = -wall_dir as f32 * (MAX_RUN + 1.0);
-
-                    if !base_object.is_ice(state, room, wall_dir * 3, 0) {
-                        update_action.push_mut(Object::init(
-                            got_fruit,
-                            room,
-                            ObjectKind::Smoke,
-                            base_object.x + wall_dir * 6,
-                            base_object.y,
-                            max_djump,
-                        ));
-                    }
-                }
-            }
-
-            // -- dash
             let d_full = 5.0;
-            let d_half = d_full * std::f32::consts::FRAC_1_SQRT_2;
+            let d_half = d_full * FRAC_1_SQRT_2;
 
             if self.djump > 0 && dash {
-                // init_object(smoke,this.x,this.y)
+                update_action.push_mut(Object::init(
+                    got_fruit,
+                    room,
+                    ObjectKind::Smoke,
+                    this.x,
+                    this.y,
+                    max_djump,
+                ));
 
                 self.djump -= 1;
                 self.dash_time = 4;
-                // TODO:
+                // below: used for flying fruits to leave
                 // has_dashed = true;
                 self.dash_effect_time = 10;
-                let v_input = if state.btn(K_UP) {
-                    -1
-                } else if state.btn(K_DOWN) {
-                    1
-                } else {
-                    0
-                };
+                let v_input = vertical_input(state);
 
-                let input_f = input as f32;
-                let v_input_f = dbg!(v_input as f32);
                 if input != 0 {
                     if v_input != 0 {
-                        base_object.spd.x = input_f * d_half;
-                        base_object.spd.y = v_input_f * d_half;
+                        this.spd.x = input as f32 * d_half;
+                        this.spd.y = v_input as f32 * d_half;
                     } else {
-                        base_object.spd.x = input_f * d_full;
-                        base_object.spd.y = 0.0;
+                        this.spd.x = input as f32 * d_full;
+                        this.spd.y = 0.0;
                     }
                 } else if v_input != 0 {
-                    base_object.spd.x = 0.0;
-                    base_object.spd.y = v_input_f * d_full;
+                    this.spd.x = 0.0;
+                    this.spd.y = v_input as f32 * d_full;
                 } else {
-                    base_object.spd.x = if base_object.flip.x { -1.0 } else { 1.0 };
-                    base_object.spd.y = 0.0;
+                    this.spd.x = if this.flip.x { -1.0 } else { 1.0 };
+                    this.spd.y = 0.0;
                 }
-                println!("{:?}", base_object.spd);
 
-                //     psfx(3)
-                //     freeze=2
-                //     shake=6
-
-                self.dash_target.x = 2.0 * base_object.spd.x.signum();
-                self.dash_target.y = 2.0 * base_object.spd.y.signum();
+                // psfx(3);
+                // freeze = 2;
+                // shake = 6;
+                self.dash_target.x = 2.0 * sign(this.spd.x);
+                self.dash_target.y = 2.0 * sign(this.spd.y);
                 self.dash_accel.x = 1.5;
                 self.dash_accel.y = 1.5;
 
-                if base_object.spd.y < 0.0 {
+                if this.spd.y < 0.0 {
                     self.dash_target.y *= 0.75;
                 }
 
-                if base_object.spd.y != 0.0 {
+                if this.spd.y != 0.0 {
                     self.dash_accel.x *= FRAC_1_SQRT_2;
                 }
-
-                if base_object.spd.x != 0.0 {
+                if this.spd.x != 0.0 {
                     self.dash_accel.y *= FRAC_1_SQRT_2;
-                } else if dash && self.djump <= 0 {
-                    // psfx(9)
-                    // init_object(smoke, this.x, this.y)
                 }
+            } else if dash && self.djump <= 0 {
+                // psfx(9)
+                update_action.push_mut(Object::init(
+                    got_fruit,
+                    room,
+                    ObjectKind::Smoke,
+                    this.x,
+                    this.y,
+                    max_djump,
+                ));
             }
         }
 
-        // Animation
+        // -- animation
         self.spr_off += 0.25;
         if !on_ground {
-            if base_object.is_solid(state, objects, room, input, 0) {
-                base_object.spr = 5.0;
+            if this.is_solid(state, objects, room, input, 0) {
+                this.spr = 5.0;
             } else {
-                base_object.spr = 3.0;
+                this.spr = 3.0;
             }
         } else if state.btn(K_DOWN) {
-            base_object.spr = 6.0;
+            this.spr = 6.0;
         } else if state.btn(K_UP) {
-            base_object.spr = 7.0;
-        } else if (base_object.spd.x == 0.0) || (!state.btn(K_LEFT) && !state.btn(K_RIGHT)) {
-            base_object.spr = 1.0;
+            this.spr = 7.0;
+        } else if this.spd.x == 0.0 && (!state.btn(K_LEFT) && !state.btn(K_RIGHT)) {
+            this.spr = 1.0;
         } else {
-            base_object.spr = 1.0 + self.spr_off % 4.0;
+            this.spr = 1.0 + self.spr_off % 4.0;
         }
 
+        // -- next level
+        // if this.y < -4 && level_index(room) < 30 {
+        //     next_room(game_state, state)
+        // }
+
+        self.was_on_ground = on_ground;
         update_action
     }
 
@@ -1781,7 +1594,7 @@ impl Object {
         start: i32,
     ) {
         if self.base_object.is_solid {
-            let step = amount.signum();
+            let step = signi(amount);
 
             for _ in start..=amount.abs() {
                 if !self.is_solid(state, objects, room, step, 0) {
@@ -1805,7 +1618,7 @@ impl Object {
         amount: i32,
     ) {
         if self.base_object.is_solid {
-            let step = amount.signum();
+            let step = signi(amount);
 
             for _ in 0..=amount.abs() {
                 if !self.is_solid(state, objects, room, 0, step) {
@@ -2626,7 +2439,7 @@ impl FakeWall {
         if let Some((_, hit_object)) = dbg!(hit) {
             if let ObjectType::Player(player) = &mut hit_object.object_type {
                 if player.dash_effect_time > 0 {
-                    hit_object.base_object.spd.x = -hit_object.base_object.spd.x.signum() * 1.5;
+                    hit_object.base_object.spd.x = -sign(hit_object.base_object.spd.x) * 1.5;
                     hit_object.base_object.spd.y = -1.5;
                     player.dash_time = -1;
                     // TODO:
@@ -2715,5 +2528,30 @@ fn horizontal_input(state: &State) -> i32 {
         -1
     } else {
         0
+    }
+}
+
+fn vertical_input(state: &State) -> i32 {
+    if state.btn(K_UP) {
+        -1
+    } else if state.btn(K_DOWN) {
+        1
+    } else {
+        0
+    }
+}
+fn signi(i: i32) -> i32 {
+    match i.cmp(&0) {
+        std::cmp::Ordering::Less => -1,
+        std::cmp::Ordering::Equal => 0,
+        std::cmp::Ordering::Greater => 1,
+    }
+}
+
+fn sign(f: f32) -> f32 {
+    match f.total_cmp(&0.0) {
+        std::cmp::Ordering::Less => -1.0,
+        std::cmp::Ordering::Equal => 0.0,
+        std::cmp::Ordering::Greater => 1.0,
     }
 }
