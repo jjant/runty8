@@ -569,16 +569,18 @@ impl Player {
         let input = horizontal_input(state);
 
         // -- spikes collide
-        // if spikes_at(
-        //     this.x + this.hitbox.x,
-        //     this.y + this.hitbox.y,
-        //     this.hitbox.w,
-        //     this.hitbox.h,
-        //     this.spd.x,
-        //     this.spd.y,
-        // ) {
-        //     kill_player(self);
-        // }
+        if spikes_at(
+            state,
+            room,
+            this.x + this.hitbox.x,
+            this.y + this.hitbox.y,
+            this.hitbox.w,
+            this.hitbox.h,
+            this.spd.x,
+            this.spd.y,
+        ) {
+            update_action.destroy_if_mut(true);
+        }
 
         // -- bottom death
         if this.y > 128 {
@@ -1592,23 +1594,32 @@ fn ice_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> boo
     tile_flag_at(state, room, x, y, w, h, 4)
 }
 
-// function spikes_at(x,y,w,h,xspd,yspd)
-//  for i=max(0,flr(x/8)),min(15,(x+w-1)/8) do
-//      for j=max(0,flr(y/8)),min(15,(y+h-1)/8) do
-//       local tile=tile_at(i,j)
-//       if tile==17 and ((y+h-1)%8>=6 or y+h==j*8+8) and yspd>=0 then
-//        return true
-//       elseif tile==27 and y%8<=2 and yspd<=0 then
-//        return true
-//          elseif tile==43 and x%8<=2 and xspd<=0 then
-//           return true
-//          elseif tile==59 and ((x+w-1)%8>=6 or x+w==i*8+8) and xspd>=0 then
-//           return true
-//          end
-//      end
-//  end
-//     return false
-// end
+fn spikes_at(
+    state: &State,
+    room: Vec2<i32>,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    xspd: f32,
+    yspd: f32,
+) -> bool {
+    for i in i32::max(0, flr(x as f32 / 8.0))..=i32::min(15, flr((x + w - 1) as f32 / 8.0)) {
+        for j in i32::max(0, flr(y as f32 / 8.))..=i32::min(15, flr((y + h - 1) as f32 / 8.0)) {
+            let tile = tile_at(state, room, i, j);
+            if tile == 17 && ((y + h - 1) % 8 >= 6 || y + h == j * 8 + 8) && yspd >= 0.0 {
+                return true;
+            } else if tile == 27 && y % 8 <= 2 && yspd <= 0.0 {
+                return true;
+            } else if tile == 43 && x % 8 <= 2 && xspd <= 0.0 {
+                return true;
+            } else if tile == 59 && ((x + w - 1) % 8 >= 6 || x + w == i * 8 + 8) && xspd >= 0.0 {
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 struct Platform {}
 
@@ -2199,6 +2210,10 @@ fn sin(turns: f32) -> f32 {
 
 fn cos(turns: f32) -> f32 {
     turn_to_rad(turns).cos()
+}
+
+fn flr(f: f32) -> i32 {
+    f.floor() as i32
 }
 
 struct OtherObjects<'a> {
