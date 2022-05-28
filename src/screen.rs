@@ -100,7 +100,9 @@ pub(crate) fn run_app<T: App + 'static>(
         );
 
         if internal_state.escape.btnp() {
-            internal_state.scene.flip();
+            // internal_state.scene.flip();
+            // TODO: remove below and uncomment above
+            app = T::init(&State::new(&internal_state, &mut resources));
         }
         keys.reset();
 
