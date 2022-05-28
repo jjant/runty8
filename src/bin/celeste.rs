@@ -468,7 +468,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 0, 0);
+        load_room(self, state, 2, 0);
     }
 }
 
@@ -517,6 +517,7 @@ struct Player {
     hair: Hair,
 }
 
+// TODO: Fix player getting stuck on the right side (level 3)
 impl Player {
     fn init(base_object: &mut BaseObject, max_djump: i32) -> Self {
         base_object.hitbox = Hitbox {
@@ -901,9 +902,87 @@ fn unset_hair_color(draw: &mut DrawContext) {
     draw.pal(8, 8);
 }
 
+#[derive(Clone, Copy, Debug)]
 struct Spring {
     hide_in: i32,
     hide_for: i32,
+    delay: i32,
+}
+
+impl Spring {
+    fn init() -> Self {
+        Self {
+            hide_in: 0,
+            hide_for: 0,
+            delay: 0,
+        }
+    }
+
+    fn update<'a>(
+        &mut self,
+        this: &mut BaseObject,
+        objects: &mut OtherObjects<'a>,
+        got_fruit: &mut [bool],
+        room: Vec2<i32>,
+        max_djump: i32,
+    ) -> UpdateAction {
+        let mut update_action = UpdateAction::noop();
+        if self.hide_for > 0 {
+            self.hide_for -= 1;
+
+            if self.hide_for <= 0 {
+                this.spr = 18.0;
+                self.delay = 0;
+            }
+        } else if this.spr == 18.0 {
+            if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+                let (player_base, player) = hit.to_player_mut().expect("Got wrong object back");
+
+                if player_base.spd.y >= 0.0 {
+                    this.spr = 19.0;
+
+                    player_base.y = this.y - 4;
+                    player_base.spd.x *= 0.2;
+                    player_base.spd.y = -3.0;
+                    player.djump = max_djump;
+                    self.delay = 10;
+
+                    update_action.push_mut(Object::init(
+                        got_fruit,
+                        room,
+                        ObjectKind::Smoke,
+                        this.x,
+                        this.y,
+                        max_djump,
+                    ));
+
+                    // This is gonna be tricky
+                    // -- breakable below us
+                    // let below = this.collide(objects, &ObjectKind::FallFloor, 0, 1);
+                    // if let Some(_, below) = below {
+                    //     break_fall_floor(below);
+                    // }
+
+                    // psfx(8)
+                }
+            }
+        } else if self.delay > 0 {
+            self.delay -= 1;
+            if self.delay <= 0 {
+                this.spr = 18.0;
+            }
+        }
+
+        if self.hide_in > 0 {
+            self.hide_in -= 1;
+
+            if self.hide_in <= 0 {
+                self.hide_for = 60;
+                this.spr = 0.0;
+            }
+        }
+        update_action
+    }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -1179,10 +1258,11 @@ impl Object {
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
             ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
             ObjectType::LifeUp(life_up) => life_up.draw(&self.base_object, draw),
+            ObjectType::Spring(spring) => default_draw(&mut self.base_object, draw),
         }
     }
 
-    fn move_<'a, 'b>(&mut self, state: &State, objects: &'a mut OtherObjects<'b>, room: Vec2<i32>) {
+    fn move_<'a>(&mut self, state: &State, objects: &mut OtherObjects<'a>, room: Vec2<i32>) {
         let ox = self.base_object.spd.x;
         let oy = self.base_object.spd.y;
 
@@ -1190,17 +1270,13 @@ impl Object {
         self.base_object.rem.x += ox;
         let amount_x = (self.base_object.rem.x as f32 + 0.5).floor();
         self.base_object.rem.x -= amount_x;
-        {
-            self.move_x(state, objects, room, amount_x as i32, 0);
-        }
+        self.move_x(state, objects, room, amount_x as i32, 0);
 
         // [y] get move amount
         self.base_object.rem.y += oy;
         let amount_y = (self.base_object.rem.y as f32 + 0.5).floor();
         self.base_object.rem.y -= amount_y;
-        {
-            self.move_y(state, objects, room, amount_y as i32)
-        };
+        self.move_y(state, objects, room, amount_y as i32);
     }
 
     fn move_x<'a, 'b>(
@@ -1273,9 +1349,9 @@ impl Object {
         self.base_object.check(objects, kind, ox, oy)
     }
 
-    fn to_player_mut(&mut self) -> Option<&mut Player> {
+    fn to_player_mut(&mut self) -> Option<(&mut BaseObject, &mut Player)> {
         match &mut self.object_type {
-            ObjectType::Player(player) => Some(player),
+            ObjectType::Player(player) => Some((&mut self.base_object, player)),
             _ => None,
         }
     }
@@ -1298,9 +1374,9 @@ fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
         );
     }
 
-    base_object
-        .hitbox
-        .draw(draw, base_object.x, base_object.y, 3);
+    // base_object
+    //     .hitbox
+    //     .draw(draw, base_object.x, base_object.y, 3);
 }
 
 fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: u8) -> bool {
@@ -1340,6 +1416,7 @@ enum ObjectType {
     // FallFloor,
     // Key,
     RoomTitle(RoomTitle),
+    Spring(Spring),
 }
 
 impl ObjectType {
@@ -1353,6 +1430,7 @@ impl ObjectType {
             ObjectType::FakeWall => ObjectKind::FakeWall,
             ObjectType::Fruit(_) => ObjectKind::Fruit,
             ObjectType::LifeUp(_) => ObjectKind::LifeUp,
+            ObjectType::Spring(_) => ObjectKind::Spring,
         }
     }
 
@@ -1398,6 +1476,9 @@ impl ObjectType {
             // ObjectType::FallFloor => todo!(),
             // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(rt) => rt.update(),
+            ObjectType::Spring(spring) => {
+                spring.update(base_object, other_objects, got_fruit, room, max_djump)
+            }
         }
     }
 }
@@ -1723,7 +1804,7 @@ impl Fruit {
         let update_action = if let Some((_, hit)) =
             base_object.collide(other_objects.iter_mut(), &ObjectKind::Player, 0, 0)
         {
-            let player = hit.to_player_mut().unwrap();
+            let (_, player) = hit.to_player_mut().unwrap();
 
             player.djump = max_djump;
             // sfx_timer=20
@@ -1753,7 +1834,7 @@ impl Fruit {
 enum ObjectKind {
     PlayerSpawn,
     Player,
-    // Spring,
+    Spring,
     // Balloon,
     // FallFloor,
     Fruit,
@@ -1781,7 +1862,7 @@ impl ObjectKind {
     // and depend on the tile function for tile-instantiability
     const TYPES: &'static [Self] = &[
         ObjectKind::PlayerSpawn,
-        // ObjectKind::Spring,
+        ObjectKind::Spring,
         // ObjectKind::Balloon,
         // ObjectKind::FallFloor,
         // ObjectKind::Fruit,
@@ -1799,7 +1880,7 @@ impl ObjectKind {
             ObjectKind::PlayerSpawn => ObjectType::PlayerSpawn(PlayerSpawn::init(base_object)),
             ObjectKind::Player => ObjectType::Player(Player::init(base_object, max_djump)),
 
-            // ObjectKind::Spring => todo!(),
+            ObjectKind::Spring => ObjectType::Spring(Spring::init()),
             // ObjectKind::Balloon => todo!(),
             // ObjectKind::FallFloor => todo!(),
             ObjectKind::Fruit => ObjectType::Fruit(Fruit::init(base_object)),
@@ -1823,7 +1904,7 @@ impl ObjectKind {
     fn tile(&self) -> Option<i32> {
         match self {
             ObjectKind::PlayerSpawn => Some(1),
-            // ObjectKind::Spring => Some(18),
+            ObjectKind::Spring => Some(18),
             // ObjectKind::Balloon => Some(22),
             // ObjectKind::FallFloor => Some(23),
             ObjectKind::Fruit => Some(26),
