@@ -341,10 +341,6 @@ impl App for GameState {
 
         // Particles
         for p in &self.particles {
-            // p.x += p.spd;
-
-            // p.y += sin(p.off);
-            // p.off += (0.05_f32).min(p.spd / 32.);
             draw.rectfill(
                 p.x.floor() as i32,
                 p.y.floor() as i32,
@@ -352,10 +348,6 @@ impl App for GameState {
                 (p.y + p.s as f32).floor() as i32,
                 p.c as u8,
             );
-            // if p.x > 128. + 4. {
-            //     p.x = -4.;
-            //     p.y = rnd(128.);
-            // }
         }
 
         // Dead particles
@@ -471,7 +463,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 5, 0);
+        load_room(self, state, 6, 0);
     }
 }
 
@@ -1267,7 +1259,7 @@ impl Object {
             ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, game_state, draw),
             ObjectType::FallFloor(fall_floor) => fall_floor.draw(&mut self.base_object, draw),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state.room),
-            ObjectType::Platform => todo!("Platform draw"),
+            ObjectType::Platform => Platform::draw(&self.base_object, draw),
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
             ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
             ObjectType::LifeUp(life_up) => life_up.draw(&self.base_object, draw),
@@ -1353,16 +1345,6 @@ impl Object {
         oy: i32,
     ) -> bool {
         self.base_object.is_solid(state, objects, room, ox, oy)
-    }
-
-    fn check<'a>(
-        &self,
-        objects: impl Iterator<Item = &'a mut Object>,
-        kind: &ObjectKind,
-        ox: i32,
-        oy: i32,
-    ) -> bool {
-        self.base_object.check(objects, kind, ox, oy)
     }
 
     fn to_player_mut(&mut self) -> Option<(&mut BaseObject, &mut Player)> {
@@ -1484,7 +1466,7 @@ impl ObjectType {
                 player_spawn.update(base_object, effects, got_fruit, room, max_djump, state)
             }
             ObjectType::Smoke => Smoke::update(base_object),
-            ObjectType::Platform => todo!(),
+            ObjectType::Platform => Platform::update(base_object, state, other_objects, room),
             // ObjectType::BigChest => todo!(),
             ObjectType::Player(player) => player.update(
                 base_object,
@@ -1567,9 +1549,6 @@ fn kill_player(game_state: &mut GameState) {
     restart_room(game_state)
 }
 
-fn destroy_object(game_state: &mut GameState, object: &Object) {
-    game_state.objects.retain(|o| std::ptr::eq(o, object));
-}
 // -- room functions --
 // --------------------
 
@@ -1760,54 +1739,50 @@ fn spikes_at(
 struct Platform {}
 
 impl Platform {
-    // fn init(this: &mut Object) {
-    //     this.x -= 4.;
-    //     this.is_solid = false;
-    //     this.hitbox.w = 16;
-    //     this.last = this.x;
-    // }
+    fn init(this: &mut BaseObject) {
+        this.x -= 4;
+        this.is_solid = false;
+        this.hitbox.w = 16;
+        this.last = this.x;
+    }
 
     fn update(
-        self_: &mut Object,
+        this: &mut BaseObject,
         state: &State,
         objects: &mut OtherObjects<'_>,
         room: Vec2<i32>,
-    ) -> Option<(usize, Object)> {
-        self_.base_object.spd.x = self_.base_object.dir as f32 * 0.65;
-        if self_.base_object.x < -16 {
-            self_.base_object.x = 128;
-        } else if self_.base_object.x > 128 {
-            self_.base_object.x = -16;
+    ) -> UpdateAction {
+        this.spd.x = this.dir as f32 * 0.65;
+        if this.x < -16 {
+            this.x = 128;
+        } else if this.x > 128 {
+            this.x = -16;
         }
-        self_.base_object.last = self_.base_object.x;
 
-        let ret = if !self_.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
-            let (index, hit) =
-                self_
-                    .base_object
-                    .collide(objects.iter_mut(), &ObjectKind::Player, 0, -1)?;
-            let mut hit = *hit;
-            hit.move_x(
-                state,
-                objects,
-                room,
-                self_.base_object.x - self_.base_object.last,
-                1,
-            );
-
-            Some((index, hit))
-        } else {
-            None
+        // TODO: Make this better?
+        let mut cloned_objects = objects.cloned();
+        let mut other_other = OtherObjects {
+            prev: &mut [],
+            next: &mut cloned_objects,
         };
+        // Platforms drag you
+        if !this.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+            if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, -1) {
+                hit.move_x(state, &mut other_other, room, this.x - this.last, 1);
+            }
+        }
 
-        ret
+        this.last = this.x;
+
+        UpdateAction::noop()
     }
 
-    fn draw(self_: &Object, draw: &mut DrawContext) {
-        draw.spr(11, self_.base_object.x, self_.base_object.y - 1);
-        draw.spr(12, self_.base_object.x + 8, self_.base_object.y - 1)
+    fn draw(this: &BaseObject, draw: &mut DrawContext) {
+        draw.spr(11, this.x, this.y - 1);
+        draw.spr(12, this.x + 8, this.y - 1)
     }
 }
+
 #[derive(Clone, Copy)]
 struct Smoke;
 
@@ -1943,7 +1918,11 @@ impl ObjectKind {
             // ObjectKind::BigChest => todo!(),
             // ObjectKind::Flag => todo!(),
             ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle::init()),
-            ObjectKind::Platform => todo!(),
+            ObjectKind::Platform => {
+                Platform::init(base_object);
+
+                ObjectType::Platform
+            }
             ObjectKind::Smoke => {
                 Smoke::init(base_object);
                 ObjectType::Smoke
@@ -2364,7 +2343,15 @@ impl<'a> OtherObjects<'a> {
             next: self.next.iter_mut(),
         }
     }
+
+    fn cloned(&self) -> Vec<Object> {
+        let mut prev = self.prev.to_vec();
+        prev.extend_from_slice(self.next);
+
+        prev
+    }
 }
+
 struct OtherObjectsIter<'a> {
     prev: std::slice::IterMut<'a, Object>,
     next: std::slice::IterMut<'a, Object>,
