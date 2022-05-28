@@ -1594,6 +1594,7 @@ fn ice_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> boo
     tile_flag_at(state, room, x, y, w, h, 4)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spikes_at(
     state: &State,
     room: Vec2<i32>,
@@ -1607,18 +1608,21 @@ fn spikes_at(
     for i in i32::max(0, flr(x as f32 / 8.0))..=i32::min(15, flr((x + w - 1) as f32 / 8.0)) {
         for j in i32::max(0, flr(y as f32 / 8.))..=i32::min(15, flr((y + h - 1) as f32 / 8.0)) {
             let tile = tile_at(state, room, i, j);
-            if tile == 17 && ((y + h - 1) % 8 >= 6 || y + h == j * 8 + 8) && yspd >= 0.0 {
-                return true;
-            } else if tile == 27 && y % 8 <= 2 && yspd <= 0.0 {
-                return true;
-            } else if tile == 43 && x % 8 <= 2 && xspd <= 0.0 {
-                return true;
-            } else if tile == 59 && ((x + w - 1) % 8 >= 6 || x + w == i * 8 + 8) && xspd >= 0.0 {
+
+            let spikes_up =
+                tile == 17 && ((y + h - 1) % 8 >= 6 || y + h == j * 8 + 8) && yspd >= 0.0;
+            let spikes_down = tile == 27 && y % 8 <= 2 && yspd <= 0.0;
+            let spikes_right = tile == 43 && x % 8 <= 2 && xspd <= 0.0;
+            let spikes_left =
+                tile == 59 && ((x + w - 1) % 8 >= 6 || x + w == i * 8 + 8) && xspd >= 0.0;
+
+            if spikes_up || spikes_down || spikes_right || spikes_left {
                 return true;
             }
         }
     }
-    return false;
+
+    false
 }
 
 struct Platform {}
