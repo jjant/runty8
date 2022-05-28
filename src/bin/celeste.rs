@@ -1255,6 +1255,7 @@ impl Object {
                 player_spawn.draw(&mut self.base_object, game_state, draw)
             }
             // ObjectType::BigChest => todo!(),
+            ObjectType::Chest(_) => default_draw(&mut self.base_object, draw),
             ObjectType::Player(player) => {
                 player.draw(&mut self.base_object, draw, game_state.frames)
             }
@@ -1415,6 +1416,7 @@ fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> b
 #[derive(Clone, Copy, Debug)]
 enum ObjectType {
     Platform,
+    Chest(Chest),
     // BigChest,
     Player(Player),
     PlayerSpawn(PlayerSpawn),
@@ -1445,6 +1447,7 @@ impl ObjectType {
             ObjectType::FlyFruit(_) => ObjectKind::FlyFruit,
             ObjectType::FallFloor(_) => ObjectKind::FallFloor,
             ObjectType::Key => ObjectKind::Key,
+            ObjectType::Chest(_) => ObjectKind::Chest,
         }
     }
 
@@ -1499,7 +1502,6 @@ impl ObjectType {
             ObjectType::Spring(spring) => {
                 spring.update(base_object, other_objects, got_fruit, room, max_djump)
             }
-
             ObjectType::FlyFruit(fly_fruit) => fly_fruit.update(
                 base_object,
                 other_objects,
@@ -1508,6 +1510,9 @@ impl ObjectType {
                 max_djump,
                 *has_dashed,
             ),
+            ObjectType::Chest(chest) => {
+                chest.update(base_object, got_fruit, room, *has_key, max_djump)
+            }
         }
     }
 }
@@ -1870,7 +1875,7 @@ enum ObjectKind {
     FlyFruit,
     FakeWall,
     Key,
-    // Chest,
+    Chest,
     // Message,
     // BigChest,
     // Flag,
@@ -1898,7 +1903,7 @@ impl ObjectKind {
         ObjectKind::FlyFruit,
         ObjectKind::FakeWall,
         ObjectKind::Key,
-        // ObjectKind::Chest,
+        ObjectKind::Chest,
         // ObjectKind::Message,
         // ObjectKind::BigChest,
         // ObjectKind::Flag,
@@ -1916,7 +1921,7 @@ impl ObjectKind {
             ObjectKind::FlyFruit => ObjectType::FlyFruit(FlyFruit::init(base_object)),
 
             ObjectKind::Key => ObjectType::Key,
-            // ObjectKind::Chest => todo!(),
+            ObjectKind::Chest => ObjectType::Chest(Chest::init(base_object)),
             // ObjectKind::Message => todo!(),
             // ObjectKind::BigChest => todo!(),
             // ObjectKind::Flag => todo!(),
@@ -1940,7 +1945,7 @@ impl ObjectKind {
             ObjectKind::FlyFruit => Some(28),
             ObjectKind::FakeWall => Some(64),
             ObjectKind::Key => Some(8),
-            // ObjectKind::Chest => Some(20),
+            ObjectKind::Chest => Some(20),
             // ObjectKind::Message => Some(86),
             // ObjectKind::BigChest => Some(96),
             // ObjectKind::Flag => Some(118),
@@ -1955,7 +1960,7 @@ impl ObjectKind {
             ObjectKind::FlyFruit => true,
             ObjectKind::FakeWall => true,
             ObjectKind::Key => true,
-            // ObjectKind::Chest => true,
+            ObjectKind::Chest => true,
             _ => false,
         }
     }
@@ -2606,6 +2611,52 @@ impl Key {
             // sfx_timer = 10;
             update_action.destroy_if_mut(true);
             *has_key = true;
+        }
+
+        update_action
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Chest {
+    start: i32,
+    timer: i32,
+}
+
+impl Chest {
+    fn init(this: &mut BaseObject) -> Self {
+        this.x -= 4;
+        Self {
+            start: this.x,
+            timer: 20,
+        }
+    }
+
+    fn update(
+        &mut self,
+        this: &mut BaseObject,
+        got_fruit: &[bool],
+        room: Vec2<i32>,
+        has_key: bool,
+        max_djump: i32,
+    ) -> UpdateAction {
+        let mut update_action = UpdateAction::noop();
+        if has_key {
+            self.timer -= 1;
+            this.x = self.start - 1 + flr(rnd(3.0));
+            if self.timer <= 0 {
+                // sfx_timer = 20;
+                // sfx(16);
+                update_action.push_mut(Object::init(
+                    got_fruit,
+                    room,
+                    ObjectKind::Fruit,
+                    this.x,
+                    this.y - 4,
+                    max_djump,
+                ));
+                update_action.destroy_if_mut(true);
+            }
         }
 
         update_action
