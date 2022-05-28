@@ -1,5 +1,5 @@
 #![feature(drain_filter)]
-use std::f32::consts::FRAC_1_SQRT_2;
+use std::f32::consts::{FRAC_1_SQRT_2, PI};
 use std::path::Path;
 
 use rand::Rng;
@@ -157,16 +157,19 @@ impl App for GameState {
             let (previous_objects, object, future_objects) =
                 split_at_index(i, &mut self.objects).unwrap();
 
-            let mut iter = previous_objects.iter_mut().chain(future_objects.iter_mut());
+            let mut other_objects = OtherObjects {
+                prev: previous_objects,
+                next: future_objects,
+            };
 
             // Apply velocity
-            object.move_(state, &mut iter, self.room);
+            object.move_(state, &mut other_objects, self.room);
             let UpdateAction {
                 should_destroy,
                 next_level,
                 mut new_objects,
             } = object.update(
-                &mut iter,
+                &mut other_objects,
                 &mut self.effects,
                 &mut self.got_fruit,
                 self.room,
@@ -320,7 +323,7 @@ impl App for GameState {
         for p in &self.particles {
             // p.x += p.spd;
 
-            // p.y += p.off.sin();
+            // p.y += sin(p.off);
             // p.off += (0.05_f32).min(p.spd / 32.);
             draw.rectfill(
                 p.x.floor() as i32,
@@ -404,7 +407,7 @@ impl Particle {
     fn update(&mut self) {
         self.x += self.spd;
 
-        self.y += self.off.sin();
+        self.y += sin(self.off);
         self.off += (0.05_f32).min(self.spd / 32.);
         if self.x > 128. + 4. {
             self.x = -4.;
@@ -535,7 +538,7 @@ impl Player {
         &mut self,
         this: &mut BaseObject,
         state: &State,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: &'a mut OtherObjects<'a>,
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
@@ -840,7 +843,9 @@ impl Player {
         );
         unset_hair_color(draw);
 
-        // base_object.hitbox.draw(draw, base_object.x, base_object.y);
+        base_object
+            .hitbox
+            .draw(draw, base_object.x, base_object.y, 7);
     }
 }
 
@@ -900,7 +905,7 @@ struct BaseObject {
 impl BaseObject {
     fn collide<'a>(
         &self,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: impl Iterator<Item = &'a mut Object>,
         kind: &ObjectKind,
         ox: i32,
         oy: i32,
@@ -924,14 +929,14 @@ impl BaseObject {
     fn is_solid<'a>(
         &self,
         state: &State,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: &mut OtherObjects<'a>,
         room: Vec2<i32>,
         ox: i32,
         oy: i32,
     ) -> bool {
         if oy > 0
-            && !self.check(objects, &ObjectKind::Platform, ox, 0)
-            && self.check(objects, &ObjectKind::Platform, ox, oy)
+            && !self.check(objects.iter_mut(), &ObjectKind::Platform, ox, 0)
+            && self.check(objects.iter_mut(), &ObjectKind::Platform, ox, oy)
         {
             return true;
         }
@@ -945,12 +950,12 @@ impl BaseObject {
             self.hitbox.h,
         )
         //  || self.check(objects, &ObjectType::FallFloor, ox, oy)
-            || self.check(objects, &ObjectKind::FakeWall, ox, oy)
+            || self.check(objects.iter_mut(), &ObjectKind::FakeWall, ox, oy)
     }
 
     fn check<'a>(
         &self,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: impl Iterator<Item = &'a mut Object>,
         kind: &ObjectKind,
         ox: i32,
         oy: i32,
@@ -970,451 +975,37 @@ impl BaseObject {
     }
 }
 
-// impl Spring {
-//     fn init() -> Self {
-//         Self {
-//             hide_in: 0,
-//             hide_for: 0,
-//         }
-//     }
+#[derive(Clone, Copy, Debug)]
+struct LifeUp {
+    duration: i32,
+    flash: f32,
+}
 
-//     fn update(&mut self, object: &mut BaseObject) {
-//         if self.hide_for > 0 {
-//             self.hide_for -= 1;
+impl LifeUp {
+    fn init(this: &mut BaseObject) -> Self {
+        this.spd.y = -0.25;
+        this.x -= 2;
+        this.y -= 4;
+        this.is_solid = false;
 
-//             if self.hide_for <= 0 {
-//                 object.spr = 18.;
-//                 object.delay = 0;
-//             }
-//         } else if object.spr == 18. {
-//             // TODO: Borrowchecker madness
-//             // let hit = object.collide(player);
-//             //
-//             // if let Some(hit) = hit.and_then(|hit| hit.spd.y >= 0) {
-//             //     object.spr = 19.;
-//             //     hit.y = object.y - 4.;
-//             //     hit.spd.x *= 0.2;
-//             //     hit.spd.y = -3;
-//             // hit.djump = game_state.max_djump;
-//             // object.delay = 10;
-//             //
-//             // init_object(smoke,this.x,this.y)
-//             //
-//             // -- breakable below us
-//             // local below=this.collide(fall_floor,0,1)
-//             // if below~=nil then
-//             //     break_fall_floor(below)
-//             // end
-//             //
-//             // psfx(8)
-//             // }
-//         } else if object.delay > 0 {
-//             object.delay -= 1;
+        Self {
+            duration: 30,
+            flash: 0.0,
+        }
+    }
 
-//             if object.delay <= 0 {
-//                 object.spr = 18.;
-//             }
-//         }
+    fn update(&mut self) -> UpdateAction {
+        self.duration -= 1;
 
-//         // begin hiding
-//         if self.hide_in > 0 {
-//             self.hide_in -= 1;
+        UpdateAction::noop().destroy_if(self.duration <= 0)
+    }
 
-//             if self.hide_in <= 0 {
-//                 self.hide_for = 60;
-//                 object.spr = 0.;
-//             }
-//         }
-//     }
+    fn draw(&mut self, this: &BaseObject, draw: &mut DrawContext) {
+        self.flash += 0.5;
 
-//     fn break_spring(&mut self) {
-//         self.hide_in = 15;
-//     }
-// }
-
-// balloon = {
-//     tile=22,
-//     init=function(this)
-//         this.offset=rnd(1)
-//         this.start=this.y
-//         this.timer=0
-//         this.hitbox={x=-1,y=-1,w=10,h=10}
-//     end,
-//     update=function(this)
-//         if this.spr==22 then
-//             this.offset+=0.01
-//             this.y=this.start+sin(this.offset)*2
-//             local hit = this.collide(player,0,0)
-//             if hit~=nil and hit.djump<max_djump then
-//                 psfx(6)
-//                 init_object(smoke,this.x,this.y)
-//                 hit.djump=max_djump
-//                 this.spr=0
-//                 this.timer=60
-//             end
-//         elseif this.timer>0 then
-//             this.timer-=1
-//         else
-//          psfx(7)
-//          init_object(smoke,this.x,this.y)
-//             this.spr=22
-//         end
-//     end,
-//     draw=function(this)
-//         if this.spr==22 then
-//             spr(13+(this.offset*8)%3,this.x,this.y+6)
-//             spr(this.spr,this.x,this.y)
-//         end
-//     end
-// }
-// add(types,balloon)
-
-// fall_floor = {
-//     tile=23,
-//     init=function(this)
-//         this.state=0
-//         this.solid=true
-//     end,
-//     update=function(this)
-//         -- idling
-//         if this.state == 0 then
-//             if this.check(player,0,-1) or this.check(player,-1,0) or this.check(player,1,0) then
-//                 break_fall_floor(this)
-//             end
-//         -- shaking
-//         elseif this.state==1 then
-//             this.delay-=1
-//             if this.delay<=0 then
-//                 this.state=2
-//                 this.delay=60--how long it hides for
-//                 this.collideable=false
-//             end
-//         -- invisible, waiting to reset
-//         elseif this.state==2 then
-//             this.delay-=1
-//             if this.delay<=0 and not this.check(player,0,0) then
-//                 psfx(7)
-//                 this.state=0
-//                 this.collideable=true
-//                 init_object(smoke,this.x,this.y)
-//             end
-//         end
-//     end,
-//     draw=function(this)
-//         if this.state!=2 then
-//             if this.state!=1 then
-//                 spr(23,this.x,this.y)
-//             else
-//                 spr(23+(15-this.delay)/5,this.x,this.y)
-//             end
-//         end
-//     end
-// }
-// add(types,fall_floor)
-
-// function break_fall_floor(obj)
-//  if obj.state==0 then
-//      psfx(15)
-//         obj.state=1
-//         obj.delay=15--how long until it falls
-//         init_object(smoke,obj.x,obj.y)
-//         local hit=obj.collide(spring,0,-1)
-//         if hit~=nil then
-//             break_spring(hit)
-//         end
-//     end
-// end
-
-// fruit={
-//     tile=26,
-//     if_not_fruit=true,
-//     init=function(this)
-//         this.start=this.y
-//         this.off=0
-//     end,
-//     update=function(this)
-//      local hit=this.collide(player,0,0)
-//         if hit~=nil then
-//          hit.djump=max_djump
-//             sfx_timer=20
-//             sfx(13)
-//             got_fruit[1+level_index()] = true
-//             init_object(lifeup,this.x,this.y)
-//             destroy_object(this)
-//         end
-//         this.off+=1
-//         this.y=this.start+sin(this.off/40)*2.5
-//     end
-// }
-// add(types,fruit)
-
-// fly_fruit={
-//     tile=28,
-//     if_not_fruit=true,
-//     init=function(this)
-//         this.start=this.y
-//         this.fly=false
-//         this.step=0.5
-//         this.solids=false
-//         this.sfx_delay=8
-//     end,
-//     update=function(this)
-//         --fly away
-//         if this.fly then
-//          if this.sfx_delay>0 then
-//           this.sfx_delay-=1
-//           if this.sfx_delay<=0 then
-//            sfx_timer=20
-//            sfx(14)
-//           end
-//          end
-//             this.spd.y=appr(this.spd.y,-3.5,0.25)
-//             if this.y<-16 then
-//                 destroy_object(this)
-//             end
-//         -- wait
-//         else
-//             if has_dashed then
-//                 this.fly=true
-//             end
-//             this.step+=0.05
-//             this.spd.y=sin(this.step)*0.5
-//         end
-//         -- collect
-//         local hit=this.collide(player,0,0)
-//         if hit~=nil then
-//          hit.djump=max_djump
-//             sfx_timer=20
-//             sfx(13)
-//             got_fruit[1+level_index()] = true
-//             init_object(lifeup,this.x,this.y)
-//             destroy_object(this)
-//         end
-//     end,
-//     draw=function(this)
-//         local off=0
-//         if not this.fly then
-//             local dir=sin(this.step)
-//             if dir<0 then
-//                 off=1+max(0,sign(this.y-this.start))
-//             end
-//         else
-//             off=(off+0.25)%3
-//         end
-//         spr(45+off,this.x-6,this.y-2,1,1,true,false)
-//         spr(this.spr,this.x,this.y)
-//         spr(45+off,this.x+6,this.y-2)
-//     end
-// }
-// add(types,fly_fruit)
-
-// lifeup = {
-//     init=function(this)
-//         this.spd.y=-0.25
-//         this.duration=30
-//         this.x-=2
-//         this.y-=4
-//         this.flash=0
-//         this.solids=false
-//     end,
-//     update=function(this)
-//         this.duration-=1
-//         if this.duration<= 0 then
-//             destroy_object(this)
-//         end
-//     end,
-//     draw=function(this)
-//         this.flash+=0.5
-
-//         print("1000",this.x-2,this.y,7+this.flash%2)
-//     end
-// }
-
-// key={
-//     tile=8,
-//     if_not_fruit=true,
-//     update=function(this)
-//         local was=flr(this.spr)
-//         this.spr=9+(sin(frames/30)+0.5)*1
-//         local is=flr(this.spr)
-//         if is==10 and is!=was then
-//             this.flip.x=not this.flip.x
-//         end
-//         if this.check(player,0,0) then
-//             sfx(23)
-//             sfx_timer=10
-//             destroy_object(this)
-//             has_key=true
-//         end
-//     end
-// }
-// add(types,key)
-
-// chest={
-//     tile=20,
-//     if_not_fruit=true,
-//     init=function(this)
-//         this.x-=4
-//         this.start=this.x
-//         this.timer=20
-//     end,
-//     update=function(this)
-//         if has_key then
-//             this.timer-=1
-//             this.x=this.start-1+rnd(3)
-//             if this.timer<=0 then
-//              sfx_timer=20
-//              sfx(16)
-//                 init_object(fruit,this.x,this.y-4)
-//                 destroy_object(this)
-//             end
-//         end
-//     end
-// }
-// add(types,chest)
-
-// message={
-//     tile=86,
-//     last=0,
-//     draw=function(this)
-//         this.text="-- celeste mountain --#this memorial to those# perished on the climb"
-//         if this.check(player,4,0) then
-//             if this.index<#this.text then
-//              this.index+=0.5
-//                 if this.index>=this.last+1 then
-//                  this.last+=1
-//                  sfx(35)
-//                 end
-//             end
-//             this.off={x=8,y=96}
-//             for i=1,this.index do
-//                 if sub(this.text,i,i)~="#" then
-//                     rectfill(this.off.x-2,this.off.y-2,this.off.x+7,this.off.y+6 ,7)
-//                     print(sub(this.text,i,i),this.off.x,this.off.y,0)
-//                     this.off.x+=5
-//                 else
-//                     this.off.x=8
-//                     this.off.y+=7
-//                 end
-//             end
-//         else
-//             this.index=0
-//             this.last=0
-//         end
-//     end
-// }
-// add(types,message)
-
-// big_chest={
-//     tile=96,
-//     init=function(this)
-//         this.state=0
-//         this.hitbox.w=16
-//     end,
-//     draw=function(this)
-//         if this.state==0 then
-//             local hit=this.collide(player,0,8)
-//             if hit~=nil and hit.is_solid(0,1) then
-//                 music(-1,500,7)
-//                 sfx(37)
-//                 pause_player=true
-//                 hit.spd.x=0
-//                 hit.spd.y=0
-//                 this.state=1
-//                 init_object(smoke,this.x,this.y)
-//                 init_object(smoke,this.x+8,this.y)
-//                 this.timer=60
-//                 this.particles={}
-//             end
-//             spr(96,this.x,this.y)
-//             spr(97,this.x+8,this.y)
-//         elseif this.state==1 then
-//             this.timer-=1
-//          shake=5
-//          flash_bg=true
-//             if this.timer<=45 and count(this.particles)<50 then
-//                 add(this.particles,{
-//                     x=1+rnd(14),
-//                     y=0,
-//                     h=32+rnd(32),
-//                     spd=8+rnd(8)
-//                 })
-//             end
-//             if this.timer<0 then
-//                 this.state=2
-//                 this.particles={}
-//                 flash_bg=false
-//                 new_bg=true
-//                 init_object(orb,this.x+4,this.y+4)
-//                 pause_player=false
-//             end
-//             foreach(this.particles,function(p)
-//                 p.y+=p.spd
-//                 line(this.x+p.x,this.y+8-p.y,this.x+p.x,min(this.y+8-p.y+p.h,this.y+8),7)
-//             end)
-//         end
-//         spr(112,this.x,this.y+8)
-//         spr(113,this.x+8,this.y+8)
-//     end
-// }
-// add(types,big_chest)
-
-// orb={
-//     init=function(this)
-//         this.spd.y=-4
-//         this.solids=false
-//         this.particles={}
-//     end,
-//     draw=function(this)
-//         this.spd.y=appr(this.spd.y,0,0.5)
-//         local hit=this.collide(player,0,0)
-//         if this.spd.y==0 and hit~=nil then
-//          music_timer=45
-//             sfx(51)
-//             freeze=10
-//             shake=10
-//             destroy_object(this)
-//             max_djump=2
-//             hit.djump=2
-//         end
-
-//         spr(102,this.x,this.y)
-//         local off=frames/30
-//         for i=0,7 do
-//             circfill(this.x+4+cos(off+i/8)*8,this.y+4+sin(off+i/8)*8,1,7)
-//         end
-//     end
-// }
-
-// flag = {
-//     tile=118,
-//     init=function(this)
-//         this.x+=5
-//         this.score=0
-//         this.show=false
-//         for i=1,count(got_fruit) do
-//             if got_fruit[i] then
-//                 this.score+=1
-//             end
-//         end
-//     end,
-//     draw=function(this)
-//         this.spr=118+(frames/5)%3
-//         spr(this.spr,this.x,this.y)
-//         if this.show then
-//             rectfill(32,2,96,31,0)
-//             spr(26,55,6)
-//             print("x"..this.score,64,9,7)
-//             draw_time(49,16)
-//             print("deaths:"..deaths,48,24,7)
-//         elseif this.check(player,0,0) then
-//             sfx(55)
-//       sfx_timer=30
-//             this.show=true
-//         end
-//     end
-// }
-// add(types,flag)
+        draw.print("1000", this.x - 2, this.y, 7 + (self.flash % 2.0) as u8);
+    }
+}
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 struct RoomTitle {
@@ -1470,7 +1061,7 @@ impl Hitbox {
             y + self.y,
             x + self.x + self.w - 1,
             y + self.y + self.h - 1,
-            8,
+            color,
         );
     }
 }
@@ -1495,7 +1086,6 @@ impl Object {
         y: i32,
         max_djump: i32,
     ) -> Option<Self> {
-        println!("Created {:?}", kind);
         // What this means: If the fruit has been already
         // picked up, don't instantiate this (fake wall containing, flying fruits, chests, etc)
         if kind.if_not_fruit() && got_fruit_for_room(got_fruit, room) {
@@ -1531,7 +1121,7 @@ impl Object {
 
     fn update<'a>(
         &mut self,
-        other_objects: &mut impl Iterator<Item = &'a mut Object>,
+        other_objects: &'a mut OtherObjects<'a>,
         effects: &mut GameEffects,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
@@ -1568,15 +1158,11 @@ impl Object {
             ObjectType::Platform => todo!("Platform draw"),
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
             ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
+            ObjectType::LifeUp(life_up) => life_up.draw(&self.base_object, draw),
         }
     }
 
-    fn move_<'a>(
-        &mut self,
-        state: &State,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
-        room: Vec2<i32>,
-    ) {
+    fn move_<'a, 'b>(&mut self, state: &State, objects: &'a mut OtherObjects<'b>, room: Vec2<i32>) {
         let ox = self.base_object.spd.x;
         let oy = self.base_object.spd.y;
 
@@ -1584,19 +1170,23 @@ impl Object {
         self.base_object.rem.x += ox;
         let amount_x = (self.base_object.rem.x as f32 + 0.5).floor();
         self.base_object.rem.x -= amount_x;
-        self.move_x(state, objects, room, amount_x as i32, 0);
+        {
+            self.move_x(state, objects, room, amount_x as i32, 0);
+        }
 
         // [y] get move amount
         self.base_object.rem.y += oy;
         let amount_y = (self.base_object.rem.y as f32 + 0.5).floor();
         self.base_object.rem.y -= amount_y;
-        self.move_y(state, objects, room, amount_y as i32);
+        {
+            self.move_y(state, objects, room, amount_y as i32)
+        };
     }
 
-    fn move_x<'a>(
+    fn move_x<'a, 'b>(
         &mut self,
         state: &State,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: &'a mut OtherObjects<'b>,
         room: Vec2<i32>,
         amount: i32,
         start: i32,
@@ -1621,7 +1211,7 @@ impl Object {
     fn move_y<'a>(
         &mut self,
         state: &State,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: &mut OtherObjects<'a>,
         room: Vec2<i32>,
         amount: i32,
     ) {
@@ -1645,7 +1235,7 @@ impl Object {
     fn is_solid<'a>(
         &self,
         state: &State,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: &mut OtherObjects<'a>,
         room: Vec2<i32>,
         ox: i32,
         oy: i32,
@@ -1655,7 +1245,7 @@ impl Object {
 
     fn check<'a>(
         &self,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: impl Iterator<Item = &'a mut Object>,
         kind: &ObjectKind,
         ox: i32,
         oy: i32,
@@ -1668,6 +1258,10 @@ impl Object {
             ObjectType::Player(player) => Some(player),
             _ => None,
         }
+    }
+
+    fn kind(&self) -> ObjectKind {
+        self.object_type.kind()
     }
 }
 
@@ -1683,6 +1277,10 @@ fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
             base_object.flip.y,
         );
     }
+
+    base_object
+        .hitbox
+        .draw(draw, base_object.x, base_object.y, 3);
 }
 
 fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: u8) -> bool {
@@ -1715,7 +1313,7 @@ enum ObjectType {
     Player(Player),
     PlayerSpawn(PlayerSpawn),
     Smoke,
-    // LifeUp,
+    LifeUp(LifeUp),
     Fruit(Fruit),
     // Orb,
     FakeWall,
@@ -1734,6 +1332,7 @@ impl ObjectType {
             ObjectType::Smoke => ObjectKind::Smoke,
             ObjectType::FakeWall => ObjectKind::FakeWall,
             ObjectType::Fruit(_) => ObjectKind::Fruit,
+            ObjectType::LifeUp(_) => ObjectKind::LifeUp,
         }
     }
 
@@ -1741,7 +1340,7 @@ impl ObjectType {
     fn update<'a>(
         &mut self,
         base_object: &mut BaseObject,
-        other_objects: &mut impl Iterator<Item = &'a mut Object>,
+        other_objects: &'a mut OtherObjects<'a>,
         effects: &mut GameEffects,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
@@ -1763,7 +1362,7 @@ impl ObjectType {
                 room,
                 max_djump,
             ),
-            // ObjectType::LifeUp => todo!(),
+            ObjectType::LifeUp(life_up) => life_up.update(),
             ObjectType::Fruit(fruit) => {
                 fruit.update(base_object, other_objects, got_fruit, room, max_djump)
             }
@@ -1800,8 +1399,8 @@ fn kill_player(obj: &Object, game_state: &mut GameState) {
             y: (obj.base_object.y + 4) as f32,
             t: 10,
             spd: Vec2 {
-                x: (angle).sin() * 3.,
-                y: (angle).cos() * 3.,
+                x: sin(angle) * 3.,
+                y: cos(angle) * 3.,
             },
         });
     }
@@ -1998,7 +1597,7 @@ impl Platform {
     fn update<'a>(
         self_: &mut Object,
         state: &State,
-        objects: &mut impl Iterator<Item = &'a mut Object>,
+        objects: &'a mut OtherObjects<'a>,
         room: Vec2<i32>,
     ) -> Option<(usize, Object)> {
         self_.base_object.spd.x = self_.base_object.dir as f32 * 0.65;
@@ -2009,10 +1608,11 @@ impl Platform {
         }
         self_.base_object.last = self_.base_object.x;
 
-        let ret = if !self_.check(objects, &ObjectKind::Player, 0, 0) {
-            let (index, hit) = self_
-                .base_object
-                .collide(objects, &ObjectKind::Player, 0, -1)?;
+        let ret = if !self_.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+            let (index, hit) =
+                self_
+                    .base_object
+                    .collide(objects.iter_mut(), &ObjectKind::Player, 0, -1)?;
             let mut hit = *hit;
             hit.move_x(
                 state,
@@ -2074,35 +1674,35 @@ impl Fruit {
     fn update<'a>(
         &mut self,
         base_object: &mut BaseObject,
-        other_objects: &mut impl Iterator<Item = &'a mut Object>,
+        other_objects: &mut OtherObjects<'a>,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
         max_djump: i32,
     ) -> UpdateAction {
-        let update_action =
-            if let Some((_, hit)) = base_object.collide(other_objects, &ObjectKind::Player, 0, 0) {
-                let player = hit.to_player_mut().unwrap();
+        let update_action = if let Some((_, hit)) =
+            base_object.collide(other_objects.iter_mut(), &ObjectKind::Player, 0, 0)
+        {
+            let player = hit.to_player_mut().unwrap();
 
-                player.djump = max_djump;
-                // sfx_timer=20
-                // sfx(13)
-                got_fruit[1 + level_index(room) as usize] = true;
+            player.djump = max_djump;
+            // sfx_timer=20
+            // sfx(13)
+            got_fruit[1 + level_index(room) as usize] = true;
 
-                UpdateAction::noop().destroy()
-                // TODO: Implement LifeUp
-                // .push(Object::init(
-                //     got_fruit,
-                //     room,
-                //     ObjectKind::LifeUp,
-                //     base_object.x,
-                //     base_object.y + 4.0,
-                // ))
-            } else {
-                UpdateAction::noop()
-            };
+            UpdateAction::noop().destroy().push(Object::init(
+                got_fruit,
+                room,
+                ObjectKind::LifeUp,
+                base_object.x,
+                base_object.y + 4,
+                max_djump,
+            ))
+        } else {
+            UpdateAction::noop()
+        };
 
         self.off += 1;
-        base_object.y = self.start + ((self.off as f32 / 40.0).sin() * 2.5) as i32;
+        base_object.y = self.start + (sin(self.off as f32 / 40.0) * 2.5) as i32;
 
         update_action
     }
@@ -2128,6 +1728,7 @@ enum ObjectKind {
     RoomTitle,
     Platform,
     Smoke,
+    LifeUp,
 }
 
 impl ObjectKind {
@@ -2175,6 +1776,7 @@ impl ObjectKind {
                 ObjectType::Smoke
             }
             ObjectKind::FakeWall => ObjectType::FakeWall,
+            ObjectKind::LifeUp => ObjectType::LifeUp(LifeUp::init(base_object)),
         }
     }
     fn tile(&self) -> Option<i32> {
@@ -2183,7 +1785,7 @@ impl ObjectKind {
             // ObjectKind::Spring => Some(18),
             // ObjectKind::Balloon => Some(22),
             // ObjectKind::FallFloor => Some(23),
-            // ObjectKind::Fruit => Some(26),
+            ObjectKind::Fruit => Some(26),
             // ObjectKind::FlyFruit => Some(28),
             ObjectKind::FakeWall => Some(64),
             // ObjectKind::Key => Some(8),
@@ -2275,7 +1877,7 @@ impl UpdateAction {
         self
     }
 
-    fn destroy(mut self) -> Self {
+    fn destroy(self) -> Self {
         self.destroy_if(true)
     }
 
@@ -2414,7 +2016,7 @@ struct FakeWall;
 impl FakeWall {
     fn update<'a>(
         base_object: &mut BaseObject,
-        other_objects: &mut impl Iterator<Item = &'a mut Object>,
+        other_objects: &'a mut OtherObjects<'a>,
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
@@ -2429,9 +2031,8 @@ impl FakeWall {
 
         let mut update_action = UpdateAction::noop();
 
-        // TODO: This doesn't work as well as in the original.
         let hit: Option<(usize, &mut Object)> =
-            base_object.collide(other_objects, &ObjectKind::Player, 0, 0);
+            base_object.collide(other_objects.iter_mut(), &ObjectKind::Player, 0, 0);
         if let Some((_, hit_object)) = hit {
             if let ObjectType::Player(player) = &mut hit_object.object_type {
                 if player.dash_effect_time > 0 {
@@ -2492,12 +2093,12 @@ impl FakeWall {
 
         // If I add this this the wall stops breaking, probably something to do with
         // the order of updates?
-        // base_object.hitbox = Hitbox {
-        //     x: 0,
-        //     y: 0,
-        //     w: 16,
-        //     h: 16,
-        // };
+        base_object.hitbox = Hitbox {
+            x: 0,
+            y: 0,
+            w: 16,
+            h: 16,
+        };
 
         update_action
     }
@@ -2551,5 +2152,49 @@ fn sign(f: f32) -> f32 {
         std::cmp::Ordering::Less => -1.0,
         std::cmp::Ordering::Equal => 0.0,
         std::cmp::Ordering::Greater => 1.0,
+    }
+}
+
+fn turn_to_rad(turns: f32) -> f32 {
+    turns * 2.0 * PI
+}
+
+fn sin(turns: f32) -> f32 {
+    turn_to_rad(turns).sin()
+}
+
+fn cos(turns: f32) -> f32 {
+    turn_to_rad(turns).cos()
+}
+
+struct OtherObjects<'a> {
+    prev: &'a mut [Object],
+    next: &'a mut [Object],
+}
+
+impl<'a> OtherObjects<'a> {
+    fn iter_mut(&mut self) -> OtherObjectsIter<'_> {
+        OtherObjectsIter {
+            prev: self.prev.iter_mut(),
+            next: self.next.iter_mut(),
+        }
+    }
+}
+struct OtherObjectsIter<'a> {
+    prev: std::slice::IterMut<'a, Object>,
+    next: std::slice::IterMut<'a, Object>,
+}
+
+impl<'a> Iterator for OtherObjectsIter<'a> {
+    type Item = &'a mut Object;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(o) = self.prev.next() {
+            Some(o)
+        } else if let Some(o) = self.next.next() {
+            Some(o)
+        } else {
+            None
+        }
     }
 }
