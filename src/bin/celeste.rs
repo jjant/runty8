@@ -178,6 +178,8 @@ impl App for GameState {
                 state,
                 self.max_djump,
                 &mut self.has_dashed,
+                self.frames,
+                &mut self.has_key,
             );
 
             player_dead = object.kind() == ObjectKind::Player && should_destroy;
@@ -469,7 +471,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 3, 0);
+        load_room(self, state, 4, 0);
     }
 }
 
@@ -1220,6 +1222,7 @@ impl Object {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update<'a>(
         &mut self,
         other_objects: &'a mut OtherObjects<'a>,
@@ -1229,6 +1232,8 @@ impl Object {
         state: &State,
         max_djump: i32,
         has_dashed: &mut bool,
+        frames: i32,
+        has_key: &mut bool,
     ) -> UpdateAction {
         self.object_type.update(
             &mut self.base_object,
@@ -1239,6 +1244,8 @@ impl Object {
             state,
             max_djump,
             has_dashed,
+            frames,
+            has_key,
         )
     }
 
@@ -1251,12 +1258,9 @@ impl Object {
             ObjectType::Player(player) => {
                 player.draw(&mut self.base_object, draw, game_state.frames)
             }
-            // ObjectType::LifeUp => todo!(),
-            // ObjectType::Fruit => todo!(),
             // ObjectType::Orb => todo!(),
             ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, game_state, draw),
             ObjectType::FallFloor(fall_floor) => fall_floor.draw(&mut self.base_object, draw),
-            // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state.room),
             ObjectType::Platform => todo!("Platform draw"),
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
@@ -1264,6 +1268,7 @@ impl Object {
             ObjectType::LifeUp(life_up) => life_up.draw(&self.base_object, draw),
             ObjectType::Spring(_) => default_draw(&mut self.base_object, draw),
             ObjectType::FlyFruit(fly_fruit) => fly_fruit.draw(&mut self.base_object, draw),
+            ObjectType::Key => default_draw(&mut self.base_object, draw),
         }
     }
 
@@ -1420,7 +1425,7 @@ enum ObjectType {
     // Orb,
     FakeWall,
     FallFloor(FallFloor),
-    // Key,
+    Key,
     RoomTitle(RoomTitle),
     Spring(Spring),
 }
@@ -1439,6 +1444,7 @@ impl ObjectType {
             ObjectType::Spring(_) => ObjectKind::Spring,
             ObjectType::FlyFruit(_) => ObjectKind::FlyFruit,
             ObjectType::FallFloor(_) => ObjectKind::FallFloor,
+            ObjectType::Key => ObjectKind::Key,
         }
     }
 
@@ -1453,6 +1459,8 @@ impl ObjectType {
         state: &State,
         max_djump: i32,
         has_dashed: &mut bool,
+        frames: i32,
+        has_key: &mut bool,
     ) -> UpdateAction {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
@@ -1486,7 +1494,7 @@ impl ObjectType {
             ObjectType::FallFloor(fall_floor) => {
                 fall_floor.update(base_object, other_objects, got_fruit, room, max_djump)
             }
-            // ObjectType::Key => todo!(),
+            ObjectType::Key => Key::update(base_object, other_objects, frames, has_key),
             ObjectType::RoomTitle(rt) => rt.update(),
             ObjectType::Spring(spring) => {
                 spring.update(base_object, other_objects, got_fruit, room, max_djump)
@@ -1861,7 +1869,7 @@ enum ObjectKind {
     Fruit,
     FlyFruit,
     FakeWall,
-    // Key,
+    Key,
     // Chest,
     // Message,
     // BigChest,
@@ -1889,7 +1897,7 @@ impl ObjectKind {
         ObjectKind::Fruit,
         ObjectKind::FlyFruit,
         ObjectKind::FakeWall,
-        // ObjectKind::Key,
+        ObjectKind::Key,
         // ObjectKind::Chest,
         // ObjectKind::Message,
         // ObjectKind::BigChest,
@@ -1907,7 +1915,7 @@ impl ObjectKind {
             ObjectKind::Fruit => ObjectType::Fruit(Fruit::init(base_object)),
             ObjectKind::FlyFruit => ObjectType::FlyFruit(FlyFruit::init(base_object)),
 
-            // ObjectKind::Key => todo!(),
+            ObjectKind::Key => ObjectType::Key,
             // ObjectKind::Chest => todo!(),
             // ObjectKind::Message => todo!(),
             // ObjectKind::BigChest => todo!(),
@@ -1931,7 +1939,7 @@ impl ObjectKind {
             ObjectKind::Fruit => Some(26),
             ObjectKind::FlyFruit => Some(28),
             ObjectKind::FakeWall => Some(64),
-            // ObjectKind::Key => Some(8),
+            ObjectKind::Key => Some(8),
             // ObjectKind::Chest => Some(20),
             // ObjectKind::Message => Some(86),
             // ObjectKind::BigChest => Some(96),
@@ -1946,7 +1954,7 @@ impl ObjectKind {
             ObjectKind::Fruit => true,
             ObjectKind::FlyFruit => true,
             ObjectKind::FakeWall => true,
-            // ObjectKind::Key => true,
+            ObjectKind::Key => true,
             // ObjectKind::Chest => true,
             _ => false,
         }
@@ -2573,5 +2581,33 @@ impl FallFloor {
             FallFloorState::Shaking => {}
             FallFloorState::Invisible => {}
         }
+    }
+}
+
+struct Key;
+
+impl Key {
+    fn update(
+        this: &mut BaseObject,
+        objects: &mut OtherObjects<'_>,
+        frames: i32,
+        has_key: &mut bool,
+    ) -> UpdateAction {
+        let mut update_action = UpdateAction::noop();
+
+        let was = flr(this.spr);
+        this.spr = 9.0 + (sin(frames as f32 / 30.0) + 0.5) * 1.0;
+        let is = flr(this.spr);
+        if is == 10 && is != was {
+            this.flip.x = !this.flip.x;
+        }
+        if this.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+            // sfx(23);
+            // sfx_timer = 10;
+            update_action.destroy_if_mut(true);
+            *has_key = true;
+        }
+
+        update_action
     }
 }
