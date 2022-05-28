@@ -308,7 +308,7 @@ impl App for GameState {
             .iter()
             .copied()
             .map(|mut object| {
-                if object.object_type.kind() == ObjectKind::Platform {
+                if object.kind() == ObjectKind::Platform {
                     //|| object.object_type == ObjectKind::BigChest {
                     object.draw(draw, self);
                 }
@@ -326,8 +326,8 @@ impl App for GameState {
             .iter()
             .copied()
             .map(|mut object| {
-                if object.object_type.kind() != ObjectKind::Platform {
-                    //&& object.object_type.kind() != ObjectKind::BigChest {
+                if object.kind() != ObjectKind::Platform {
+                    //&& object.kind() != ObjectKind::BigChest {
                     object.draw(draw, self);
                 }
                 object
@@ -385,7 +385,7 @@ impl App for GameState {
             if let Some(p) = self
                 .objects
                 .iter()
-                .find(|object| object.object_type.kind() == ObjectKind::Player)
+                .find(|object| object.kind() == ObjectKind::Player)
             {
                 let diff = i32::min(24, 40 - i32::abs(p.base_object.x + 4 - 64));
                 draw.rectfill(0, 0, diff, 128, 0);
@@ -1050,8 +1050,7 @@ impl BaseObject {
             self.y + self.hitbox.y + oy,
             self.hitbox.w,
             self.hitbox.h,
-        )
-        //  || self.check(objects, &ObjectType::FallFloor, ox, oy)
+        ) || self.check(objects.iter_mut(), &ObjectKind::FallFloor, ox, oy)
             || self.check(objects.iter_mut(), &ObjectKind::FakeWall, ox, oy)
     }
 
@@ -1256,7 +1255,7 @@ impl Object {
             // ObjectType::Fruit => todo!(),
             // ObjectType::Orb => todo!(),
             ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, game_state, draw),
-            // ObjectType::FallFloor => todo!(),
+            ObjectType::FallFloor(fall_floor) => fall_floor.draw(&mut self.base_object, draw),
             // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state.room),
             ObjectType::Platform => todo!("Platform draw"),
@@ -1420,7 +1419,7 @@ enum ObjectType {
     FlyFruit(FlyFruit),
     // Orb,
     FakeWall,
-    // FallFloor,
+    FallFloor(FallFloor),
     // Key,
     RoomTitle(RoomTitle),
     Spring(Spring),
@@ -1439,6 +1438,7 @@ impl ObjectType {
             ObjectType::LifeUp(_) => ObjectKind::LifeUp,
             ObjectType::Spring(_) => ObjectKind::Spring,
             ObjectType::FlyFruit(_) => ObjectKind::FlyFruit,
+            ObjectType::FallFloor(_) => ObjectKind::FallFloor,
         }
     }
 
@@ -1483,7 +1483,9 @@ impl ObjectType {
                 max_djump,
                 state,
             ),
-            // ObjectType::FallFloor => todo!(),
+            ObjectType::FallFloor(fall_floor) => {
+                fall_floor.update(base_object, other_objects, got_fruit, room, max_djump)
+            }
             // ObjectType::Key => todo!(),
             ObjectType::RoomTitle(rt) => rt.update(),
             ObjectType::Spring(spring) => {
@@ -1855,7 +1857,7 @@ enum ObjectKind {
     Player,
     Spring,
     // Balloon,
-    // FallFloor,
+    FallFloor,
     Fruit,
     FlyFruit,
     FakeWall,
@@ -1883,7 +1885,7 @@ impl ObjectKind {
         ObjectKind::PlayerSpawn,
         ObjectKind::Spring,
         // ObjectKind::Balloon,
-        // ObjectKind::FallFloor,
+        ObjectKind::FallFloor,
         ObjectKind::Fruit,
         ObjectKind::FlyFruit,
         ObjectKind::FakeWall,
@@ -1901,7 +1903,7 @@ impl ObjectKind {
 
             ObjectKind::Spring => ObjectType::Spring(Spring::init()),
             // ObjectKind::Balloon => todo!(),
-            // ObjectKind::FallFloor => todo!(),
+            ObjectKind::FallFloor => ObjectType::FallFloor(FallFloor::init()),
             ObjectKind::Fruit => ObjectType::Fruit(Fruit::init(base_object)),
             ObjectKind::FlyFruit => ObjectType::FlyFruit(FlyFruit::init(base_object)),
 
@@ -1925,7 +1927,7 @@ impl ObjectKind {
             ObjectKind::PlayerSpawn => Some(1),
             ObjectKind::Spring => Some(18),
             // ObjectKind::Balloon => Some(22),
-            // ObjectKind::FallFloor => Some(23),
+            ObjectKind::FallFloor => Some(23),
             ObjectKind::Fruit => Some(26),
             ObjectKind::FlyFruit => Some(28),
             ObjectKind::FakeWall => Some(64),
@@ -2449,5 +2451,127 @@ impl FlyFruit {
         );
         draw.spr(flr(this.spr) as usize, this.x, this.y);
         draw.spr(flr(45.0 + off) as usize, this.x + 6, this.y - 2);
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum FallFloorState {
+    Idling,
+    Shaking,
+    Invisible,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct FallFloor {
+    state: FallFloorState,
+    delay: i32,
+}
+
+impl FallFloor {
+    fn init() -> Self {
+        Self {
+            state: FallFloorState::Idling,
+            delay: 0,
+        }
+    }
+
+    fn update(
+        &mut self,
+        this: &mut BaseObject,
+        objects: &mut OtherObjects<'_>,
+        got_fruit: &[bool],
+        room: Vec2<i32>,
+        max_djump: i32,
+    ) -> UpdateAction {
+        let mut update_action = UpdateAction::noop();
+        match self.state {
+            FallFloorState::Idling => {
+                if this.check(objects.iter_mut(), &ObjectKind::Player, 0, -1)
+                    || this.check(objects.iter_mut(), &ObjectKind::Player, -1, 0)
+                    || this.check(objects.iter_mut(), &ObjectKind::Player, 1, 0)
+                {
+                    self.break_fall_floor(
+                        this,
+                        objects,
+                        got_fruit,
+                        room,
+                        max_djump,
+                        &mut update_action,
+                    );
+                }
+            }
+            FallFloorState::Shaking => {
+                self.delay -= 1;
+
+                if self.delay <= 0 {
+                    self.state = FallFloorState::Invisible;
+                    self.delay = 60;
+                    this.collideable = false;
+                }
+            }
+            FallFloorState::Invisible => {
+                self.delay -= 1;
+
+                if self.delay <= 0 && !this.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+                    // psfx(7)
+                    self.state = FallFloorState::Idling;
+                    this.collideable = true;
+
+                    update_action.push_mut(Object::init(
+                        got_fruit,
+                        room,
+                        ObjectKind::Smoke,
+                        this.x,
+                        this.y,
+                        max_djump,
+                    ));
+                }
+            }
+        }
+        update_action
+    }
+
+    fn draw(&self, this: &mut BaseObject, draw: &mut DrawContext) {
+        match self.state {
+            FallFloorState::Idling => draw.spr(23, this.x, this.y),
+            FallFloorState::Shaking => {
+                draw.spr((23 + (15 - self.delay) / 5) as usize, this.x, this.y)
+            }
+            FallFloorState::Invisible => {}
+        }
+    }
+
+    fn break_fall_floor(
+        &mut self,
+        this: &mut BaseObject,
+        objects: &mut OtherObjects<'_>,
+        got_fruit: &[bool],
+        room: Vec2<i32>,
+        max_djump: i32,
+        update_action: &mut UpdateAction,
+    ) {
+        match self.state {
+            FallFloorState::Idling => {
+                // psfx(15);
+                self.state = FallFloorState::Shaking;
+                self.delay = 15; // --how long until it falls
+
+                update_action.push_mut(Object::init(
+                    got_fruit,
+                    room,
+                    ObjectKind::Smoke,
+                    this.x,
+                    this.y,
+                    max_djump,
+                ));
+
+                if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Spring, 0, -1)
+                {
+                    // break_spring(hit);
+                }
+            }
+            FallFloorState::Shaking => {}
+            FallFloorState::Invisible => {}
+        }
     }
 }
