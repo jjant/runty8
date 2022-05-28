@@ -1865,7 +1865,7 @@ impl ObjectKind {
         ObjectKind::Spring,
         // ObjectKind::Balloon,
         // ObjectKind::FallFloor,
-        // ObjectKind::Fruit,
+        ObjectKind::Fruit,
         // ObjectKind::FlyFruit,
         ObjectKind::FakeWall,
         // ObjectKind::Key,
