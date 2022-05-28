@@ -988,6 +988,10 @@ impl Spring {
         }
         update_action
     }
+
+    fn break_spring(&mut self) {
+        self.hide_in = 15;
+    }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -1363,6 +1367,13 @@ impl Object {
     fn to_player_mut(&mut self) -> Option<(&mut BaseObject, &mut Player)> {
         match &mut self.object_type {
             ObjectType::Player(player) => Some((&mut self.base_object, player)),
+            _ => None,
+        }
+    }
+
+    fn to_spring_mut(&mut self) -> Option<(&mut BaseObject, &mut Spring)> {
+        match &mut self.object_type {
+            ObjectType::Spring(spring) => Some((&mut self.base_object, spring)),
             _ => None,
         }
     }
@@ -1750,10 +1761,10 @@ impl Platform {
     //     this.last = this.x;
     // }
 
-    fn update<'a>(
+    fn update(
         self_: &mut Object,
         state: &State,
-        objects: &'a mut OtherObjects<'a>,
+        objects: &mut OtherObjects<'_>,
         room: Vec2<i32>,
     ) -> Option<(usize, Object)> {
         self_.base_object.spd.x = self_.base_object.dir as f32 * 0.65;
@@ -1925,7 +1936,7 @@ impl ObjectKind {
             // ObjectKind::Message => todo!(),
             // ObjectKind::BigChest => todo!(),
             // ObjectKind::Flag => todo!(),
-            ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle { delay: 5 }),
+            ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle::init()),
             ObjectKind::Platform => todo!(),
             ObjectKind::Smoke => {
                 Smoke::init(base_object);
@@ -2580,7 +2591,9 @@ impl FallFloor {
 
                 if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Spring, 0, -1)
                 {
-                    // break_spring(hit);
+                    let (_, spring) = hit.to_spring_mut().unwrap();
+
+                    spring.break_spring();
                 }
             }
             FallFloorState::Shaking => {}
