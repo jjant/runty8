@@ -71,10 +71,10 @@ impl App for GameState {
             .map(|_| Particle {
                 x: rnd(128.),
                 y: rnd(128.),
-                s: (rnd(5.) / 4.).floor() as i32,
+                s: flr(rnd(5.) / 4.),
                 spd: 0.25 + rnd(5.),
                 off: rnd(1.),
-                c: 6 + (0.5 + rnd(1.)).floor() as i32,
+                c: 6 + flr(0.5 + rnd(1.)),
             })
             .collect();
 
@@ -342,10 +342,10 @@ impl App for GameState {
         // Particles
         for p in &self.particles {
             draw.rectfill(
-                p.x.floor() as i32,
-                p.y.floor() as i32,
-                (p.x + p.s as f32).floor() as i32,
-                (p.y + p.s as f32).floor() as i32,
+                flr(p.x),
+                flr(p.y),
+                flr(p.x + p.s as f32),
+                flr(p.y + p.s as f32),
                 p.c as u8,
             );
         }
@@ -840,8 +840,8 @@ impl Player {
     }
 
     fn draw(&mut self, base_object: &mut BaseObject, draw: &mut DrawContext, frames: i32) {
-        if base_object.x < -1 || base_object.x >= 121 {
-            base_object.x = clampi(base_object.x, -1, 121);
+        if base_object.x < -1 || base_object.x > 121 {
+            base_object.x = clamp(base_object.x, -1, 121);
             base_object.spd.x = 0.0;
         }
 
@@ -915,10 +915,10 @@ impl Spring {
         }
     }
 
-    fn update<'a>(
+    fn update(
         &mut self,
         this: &mut BaseObject,
-        objects: &mut OtherObjects<'a>,
+        objects: &mut OtherObjects<'_>,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
         max_djump: i32,
@@ -932,8 +932,11 @@ impl Spring {
                 self.delay = 0;
             }
         } else if this.spr == 18.0 {
+            let mut player_was_hit = false;
+
             if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
                 let (player_base, player) = hit.to_player_mut().expect("Got wrong object back");
+                player_was_hit = true;
 
                 if player_base.spd.y >= 0.0 {
                     this.spr = 19.0;
@@ -953,16 +956,27 @@ impl Spring {
                         max_djump,
                     ));
 
-                    // This is gonna be tricky
-                    // -- breakable below us
-                    // let below = this.collide(objects, &ObjectKind::FallFloor, 0, 1);
-                    // if let Some(_, below) = below {
-                    //     break_fall_floor(below);
-                    // }
-
                     // psfx(8)
                 }
             }
+
+            // TODO: Fixup
+            // if player_was_hit {
+            //     // -- breakable below us
+            //     let below = this.collide(objects.iter_mut(), &ObjectKind::FallFloor, 0, 1);
+            //     if let Some((others, below)) = below {
+            //         let (fall_floor_object, fall_floor) = below.to_fall_floor_mut().unwrap();
+
+            //         fall_floor.break_fall_floor(
+            //             fall_floor_object,
+            //             objects,
+            //             got_fruit,
+            //             room,
+            //             max_djump,
+            //             &mut update_action,
+            //         )
+            //     }
+            // }
         } else if self.delay > 0 {
             self.delay -= 1;
             if self.delay <= 0 {
@@ -1009,8 +1023,11 @@ impl BaseObject {
         kind: &ObjectKind,
         ox: i32,
         oy: i32,
-    ) -> Option<(usize, &'a mut Object)> {
-        for (index, other_object) in objects.enumerate() {
+    ) -> Option<(Vec<&'a mut Object>, &'a mut Object)> {
+        let mut others = vec![];
+
+        let mut result = None;
+        for other_object in objects {
             let other_type = other_object.object_type;
             let other = other_object.base_object;
 
@@ -1020,10 +1037,13 @@ impl BaseObject {
                 && other.x + other.hitbox.x < self.x + self.hitbox.x + self.hitbox.w + ox
                 && other.y + other.hitbox.y < self.y + self.hitbox.y + self.hitbox.h + oy
             {
-                return Some((index, other_object));
+                result = Some(other_object);
+                break;
+            } else {
+                others.push(other_object)
             }
         }
-        None
+        result.map(|object| (others, object))
     }
 
     fn is_solid<'a>(
@@ -1361,6 +1381,13 @@ impl Object {
         }
     }
 
+    fn to_fall_floor_mut(&mut self) -> Option<(&mut BaseObject, &mut FallFloor)> {
+        match &mut self.object_type {
+            ObjectType::FallFloor(fall_floor) => Some((&mut self.base_object, fall_floor)),
+            _ => None,
+        }
+    }
+
     fn kind(&self) -> ObjectKind {
         self.object_type.kind()
     }
@@ -1385,11 +1412,11 @@ fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
 }
 
 fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: u8) -> bool {
-    let x_min = i32::max(0, (x as f32 / 8.0).floor() as i32);
-    let x_max = i32::min(15, ((x as f32 + w as f32 - 1.0) / 8.0).floor() as i32);
+    let x_min = i32::max(0, flr(x as f32 / 8.0));
+    let x_max = i32::min(15, flr((x as f32 + w as f32 - 1.0) / 8.0));
     for i in x_min..=x_max {
-        let y_min = i32::max(0, (y as f32 / 8.0).floor() as i32);
-        let y_max = i32::min(15, ((y as f32 + h as f32 - 1.0) / 8.0).floor() as i32);
+        let y_min = i32::max(0, flr(y as f32 / 8.0));
+        let y_max = i32::min(15, flr((y as f32 + h as f32 - 1.0) / 8.0));
         for j in y_min..=y_max {
             if state.fget_n(tile_at(state, room, i, j), flag) {
                 return true;
@@ -1682,11 +1709,7 @@ fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
 // -- helper functions --
 // ----------------------
 
-fn clampi(val: i32, a: i32, b: i32) -> i32 {
-    a.max(b.min(val))
-}
-
-fn clamp(val: f32, a: f32, b: f32) -> f32 {
+fn clamp(val: i32, a: i32, b: i32) -> i32 {
     a.max(b.min(val))
 }
 
@@ -1791,8 +1814,8 @@ impl Smoke {
         base_object.spr = 29.;
         base_object.spd.y = -0.1;
         base_object.spd.x = 0.3 + rnd(0.2);
-        base_object.x += -1 + rnd(2.).floor() as i32;
-        base_object.y += -1 + rnd(2.).floor() as i32;
+        base_object.x += -1 + flr(rnd(2.));
+        base_object.y += -1 + flr(rnd(2.));
         base_object.flip.x = maybe();
         base_object.flip.y = maybe();
         base_object.is_solid = false;
@@ -2191,9 +2214,9 @@ impl FakeWall {
 
         let mut update_action = UpdateAction::noop();
 
-        let hit: Option<(usize, &mut Object)> =
-            base_object.collide(other_objects.iter_mut(), &ObjectKind::Player, 0, 0);
-        if let Some((_, hit_object)) = hit {
+        if let Some((_, hit_object)) =
+            base_object.collide(other_objects.iter_mut(), &ObjectKind::Player, 0, 0)
+        {
             if let ObjectType::Player(player) = &mut hit_object.object_type {
                 if player.dash_effect_time > 0 {
                     hit_object.base_object.spd.x = -sign(hit_object.base_object.spd.x) * 1.5;
