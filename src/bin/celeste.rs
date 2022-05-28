@@ -581,9 +581,9 @@ impl Player {
         // }
 
         // -- bottom death
-        // if this.y > 128 {
-        //     kill_player(self);
-        // }
+        if this.y > 128 {
+            update_action.destroy_if_mut(true);
+        }
 
         // TODO: Check is_solid, is_ice
         // Check appr
@@ -1897,8 +1897,12 @@ impl UpdateAction {
         }
     }
 
-    fn destroy_if(mut self, should_destroy: bool) -> Self {
+    fn destroy_if_mut(&mut self, should_destroy: bool) {
         self.should_destroy = should_destroy;
+    }
+
+    fn destroy_if(mut self, should_destroy: bool) -> Self {
+        self.destroy_if_mut(should_destroy);
 
         self
     }
