@@ -152,6 +152,8 @@ impl App for GameState {
             }
         }
 
+        let mut player_dead = false;
+        let mut do_next_level = false;
         let mut i = 0;
         while i < self.objects.len() {
             let (previous_objects, object, future_objects) =
@@ -177,12 +179,27 @@ impl App for GameState {
                 self.max_djump,
             );
 
+            player_dead = object.kind() == ObjectKind::Player && should_destroy;
+            if player_dead {
+                break;
+            }
+
+            if next_level {
+                do_next_level = true;
+                break;
+            }
             if should_destroy {
                 self.objects.remove(i);
             } else {
                 i += 1;
             }
             self.objects.append(&mut new_objects);
+        }
+
+        if player_dead {
+            kill_player(self)
+        } else if do_next_level {
+            next_room(self, state);
         }
 
         if !is_title(self) {
@@ -813,9 +830,10 @@ impl Player {
         }
 
         // -- next level
-        // if this.y < -4 && level_index(room) < 30 {
-        //     next_room(game_state, state)
-        // }
+        if this.y < -4 && level_index(room) < 30 {
+            // next_room(game_state, state)
+            update_action.next_level();
+        }
 
         self.was_on_ground = on_ground;
         update_action
@@ -1382,28 +1400,36 @@ impl ObjectType {
     }
 }
 
-fn kill_player(obj: &Object, game_state: &mut GameState) {
+fn kill_player(game_state: &mut GameState) {
     game_state.sfx_timer = 12;
     // sfx(0);
     game_state.deaths += 1;
     game_state.effects.shake = 10;
-    destroy_object(game_state, obj);
 
     game_state.dead_particles.clear();
-    for dir in 0..=7 {
-        let dir = dir as f32;
-        let angle = dir / 8.;
+    game_state.objects.retain(|obj| {
+        let is_player = obj.kind() == ObjectKind::Player;
 
-        game_state.dead_particles.push(DeadParticle {
-            x: (obj.base_object.x + 4) as f32,
-            y: (obj.base_object.y + 4) as f32,
-            t: 10,
-            spd: Vec2 {
-                x: sin(angle) * 3.,
-                y: cos(angle) * 3.,
-            },
-        });
-    }
+        if is_player {
+            for dir in 0..=7 {
+                let dir = dir as f32;
+                let angle = dir / 8.;
+
+                game_state.dead_particles.push(DeadParticle {
+                    x: (obj.base_object.x + 4) as f32,
+                    y: (obj.base_object.y + 4) as f32,
+                    t: 10,
+                    spd: Vec2 {
+                        x: sin(angle) * 3.,
+                        y: cos(angle) * 3.,
+                    },
+                });
+            }
+        }
+
+        !is_player
+    });
+
     restart_room(game_state)
 }
 
@@ -1879,6 +1905,10 @@ impl UpdateAction {
 
     fn destroy(self) -> Self {
         self.destroy_if(true)
+    }
+
+    fn next_level(&mut self) {
+        self.next_level = true;
     }
 
     fn push_mut(&mut self, object: Option<Object>) {
