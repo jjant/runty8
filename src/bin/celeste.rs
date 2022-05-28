@@ -471,7 +471,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 4, 0);
+        load_room(self, state, 5, 0);
     }
 }
 
@@ -1274,6 +1274,7 @@ impl Object {
             ObjectType::Spring(_) => default_draw(&mut self.base_object, draw),
             ObjectType::FlyFruit(fly_fruit) => fly_fruit.draw(&mut self.base_object, draw),
             ObjectType::Key => default_draw(&mut self.base_object, draw),
+            ObjectType::Balloon(balloon) => balloon.draw(&self.base_object, draw),
         }
     }
 
@@ -1428,6 +1429,7 @@ fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> b
 enum ObjectType {
     Platform,
     Chest(Chest),
+    Balloon(Balloon),
     // BigChest,
     Player(Player),
     PlayerSpawn(PlayerSpawn),
@@ -1459,6 +1461,7 @@ impl ObjectType {
             ObjectType::FallFloor(_) => ObjectKind::FallFloor,
             ObjectType::Key => ObjectKind::Key,
             ObjectType::Chest(_) => ObjectKind::Chest,
+            ObjectType::Balloon(_) => ObjectKind::Balloon,
         }
     }
 
@@ -1523,6 +1526,9 @@ impl ObjectType {
             ),
             ObjectType::Chest(chest) => {
                 chest.update(base_object, got_fruit, room, *has_key, max_djump)
+            }
+            ObjectType::Balloon(balloon) => {
+                balloon.update(base_object, other_objects, got_fruit, room, max_djump)
             }
         }
     }
@@ -1880,7 +1886,7 @@ enum ObjectKind {
     PlayerSpawn,
     Player,
     Spring,
-    // Balloon,
+    Balloon,
     FallFloor,
     Fruit,
     FlyFruit,
@@ -1908,7 +1914,7 @@ impl ObjectKind {
     const TYPES: &'static [Self] = &[
         ObjectKind::PlayerSpawn,
         ObjectKind::Spring,
-        // ObjectKind::Balloon,
+        ObjectKind::Balloon,
         ObjectKind::FallFloor,
         ObjectKind::Fruit,
         ObjectKind::FlyFruit,
@@ -1926,7 +1932,7 @@ impl ObjectKind {
             ObjectKind::Player => ObjectType::Player(Player::init(base_object, max_djump)),
 
             ObjectKind::Spring => ObjectType::Spring(Spring::init()),
-            // ObjectKind::Balloon => todo!(),
+            ObjectKind::Balloon => ObjectType::Balloon(Balloon::init(base_object)),
             ObjectKind::FallFloor => ObjectType::FallFloor(FallFloor::init()),
             ObjectKind::Fruit => ObjectType::Fruit(Fruit::init(base_object)),
             ObjectKind::FlyFruit => ObjectType::FlyFruit(FlyFruit::init(base_object)),
@@ -1950,7 +1956,7 @@ impl ObjectKind {
         match self {
             ObjectKind::PlayerSpawn => Some(1),
             ObjectKind::Spring => Some(18),
-            // ObjectKind::Balloon => Some(22),
+            ObjectKind::Balloon => Some(22),
             ObjectKind::FallFloor => Some(23),
             ObjectKind::Fruit => Some(26),
             ObjectKind::FlyFruit => Some(28),
@@ -2673,5 +2679,89 @@ impl Chest {
         }
 
         update_action
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Balloon {
+    offset: f32,
+    start: i32,
+    timer: i32,
+}
+
+impl Balloon {
+    fn init(this: &mut BaseObject) -> Self {
+        this.hitbox = Hitbox {
+            x: -1,
+            y: -1,
+            w: 10,
+            h: 10,
+        };
+
+        Self {
+            offset: rnd(1.0),
+            timer: 0,
+            start: this.y,
+        }
+    }
+
+    fn update(
+        &mut self,
+        this: &mut BaseObject,
+        objects: &mut OtherObjects<'_>,
+        got_fruit: &[bool],
+        room: Vec2<i32>,
+        max_djump: i32,
+    ) -> UpdateAction {
+        let mut update_action = UpdateAction::noop();
+
+        if this.spr == 22.0 {
+            self.offset += 0.01;
+            this.y = self.start + flr(sin(self.offset) * 2.0);
+
+            if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+                let (_, player) = hit.to_player_mut().unwrap();
+                if player.djump < max_djump {
+                    // psfx(6);
+                    update_action.push_mut(Object::init(
+                        got_fruit,
+                        room,
+                        ObjectKind::Smoke,
+                        this.x,
+                        this.y,
+                        max_djump,
+                    ));
+                    player.djump = max_djump;
+                    this.spr = 0.0;
+                    self.timer = 60;
+                }
+            }
+        } else if self.timer > 0 {
+            self.timer -= 1;
+        } else {
+            // psfx(7);
+            update_action.push_mut(Object::init(
+                got_fruit,
+                room,
+                ObjectKind::Smoke,
+                this.x,
+                this.y,
+                max_djump,
+            ));
+            this.spr = 22.0;
+        }
+
+        update_action
+    }
+
+    fn draw(&self, this: &BaseObject, draw: &mut DrawContext) {
+        if this.spr == 22.0 {
+            draw.spr(
+                flr(13.0 + (self.offset * 8.0) % 3.0) as usize,
+                this.x,
+                this.y + 6,
+            );
+            draw.spr(flr(this.spr) as usize, this.x, this.y);
+        }
     }
 }
