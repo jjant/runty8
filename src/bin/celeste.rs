@@ -177,6 +177,7 @@ impl App for GameState {
                 self.room,
                 state,
                 self.max_djump,
+                &mut self.has_dashed,
             );
 
             player_dead = object.kind() == ObjectKind::Player && should_destroy;
@@ -468,7 +469,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 2, 0);
+        load_room(self, state, 3, 0);
     }
 }
 
@@ -490,8 +491,8 @@ fn title_screen(game_state: &mut GameState, state: &State) {
     load_room(game_state, state, 7, 3)
 }
 
-fn level_index(room: Vec2<i32>) -> i32 {
-    room.x % 8 + room.y * 8
+fn level_index(room: Vec2<i32>) -> usize {
+    (room.x % 8 + room.y * 8) as usize
 }
 
 /// Starting title screen
@@ -552,6 +553,7 @@ impl Player {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update<'a>(
         &mut self,
         this: &mut BaseObject,
@@ -560,6 +562,7 @@ impl Player {
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
+        has_dashed: &mut bool,
     ) -> UpdateAction {
         let mut update_action = UpdateAction::noop();
 
@@ -763,7 +766,7 @@ impl Player {
                 self.djump -= 1;
                 self.dash_time = 4;
                 // below: used for flying fruits to leave
-                // has_dashed = true;
+                *has_dashed = true;
                 self.dash_effect_time = 10;
                 let v_input = vertical_input(state);
 
@@ -1226,6 +1229,7 @@ impl Object {
         room: Vec2<i32>,
         state: &State,
         max_djump: i32,
+        has_dashed: &mut bool,
     ) -> UpdateAction {
         self.object_type.update(
             &mut self.base_object,
@@ -1235,6 +1239,7 @@ impl Object {
             room,
             state,
             max_djump,
+            has_dashed,
         )
     }
 
@@ -1258,7 +1263,8 @@ impl Object {
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
             ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
             ObjectType::LifeUp(life_up) => life_up.draw(&self.base_object, draw),
-            ObjectType::Spring(spring) => default_draw(&mut self.base_object, draw),
+            ObjectType::Spring(_) => default_draw(&mut self.base_object, draw),
+            ObjectType::FlyFruit(fly_fruit) => fly_fruit.draw(&mut self.base_object, draw),
         }
     }
 
@@ -1411,6 +1417,7 @@ enum ObjectType {
     Smoke,
     LifeUp(LifeUp),
     Fruit(Fruit),
+    FlyFruit(FlyFruit),
     // Orb,
     FakeWall,
     // FallFloor,
@@ -1431,6 +1438,7 @@ impl ObjectType {
             ObjectType::Fruit(_) => ObjectKind::Fruit,
             ObjectType::LifeUp(_) => ObjectKind::LifeUp,
             ObjectType::Spring(_) => ObjectKind::Spring,
+            ObjectType::FlyFruit(_) => ObjectKind::FlyFruit,
         }
     }
 
@@ -1444,6 +1452,7 @@ impl ObjectType {
         room: Vec2<i32>,
         state: &State,
         max_djump: i32,
+        has_dashed: &mut bool,
     ) -> UpdateAction {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
@@ -1459,6 +1468,7 @@ impl ObjectType {
                 got_fruit,
                 room,
                 max_djump,
+                has_dashed,
             ),
             ObjectType::LifeUp(life_up) => life_up.update(),
             ObjectType::Fruit(fruit) => {
@@ -1479,6 +1489,15 @@ impl ObjectType {
             ObjectType::Spring(spring) => {
                 spring.update(base_object, other_objects, got_fruit, room, max_djump)
             }
+
+            ObjectType::FlyFruit(fly_fruit) => fly_fruit.update(
+                base_object,
+                other_objects,
+                got_fruit,
+                room,
+                max_djump,
+                *has_dashed,
+            ),
         }
     }
 }
@@ -1838,7 +1857,7 @@ enum ObjectKind {
     // Balloon,
     // FallFloor,
     Fruit,
-    // FlyFruit,
+    FlyFruit,
     FakeWall,
     // Key,
     // Chest,
@@ -1866,7 +1885,7 @@ impl ObjectKind {
         // ObjectKind::Balloon,
         // ObjectKind::FallFloor,
         ObjectKind::Fruit,
-        // ObjectKind::FlyFruit,
+        ObjectKind::FlyFruit,
         ObjectKind::FakeWall,
         // ObjectKind::Key,
         // ObjectKind::Chest,
@@ -1884,7 +1903,7 @@ impl ObjectKind {
             // ObjectKind::Balloon => todo!(),
             // ObjectKind::FallFloor => todo!(),
             ObjectKind::Fruit => ObjectType::Fruit(Fruit::init(base_object)),
-            // ObjectKind::FlyFruit => todo!(),
+            ObjectKind::FlyFruit => ObjectType::FlyFruit(FlyFruit::init(base_object)),
 
             // ObjectKind::Key => todo!(),
             // ObjectKind::Chest => todo!(),
@@ -1908,7 +1927,7 @@ impl ObjectKind {
             // ObjectKind::Balloon => Some(22),
             // ObjectKind::FallFloor => Some(23),
             ObjectKind::Fruit => Some(26),
-            // ObjectKind::FlyFruit => Some(28),
+            ObjectKind::FlyFruit => Some(28),
             ObjectKind::FakeWall => Some(64),
             // ObjectKind::Key => Some(8),
             // ObjectKind::Chest => Some(20),
@@ -1922,8 +1941,8 @@ impl ObjectKind {
     fn if_not_fruit(&self) -> bool {
         #[allow(clippy::match_like_matches_macro)]
         match self {
-            // ObjectKind::Fruit => true,
-            // ObjectKind::FlyFruit => true,
+            ObjectKind::Fruit => true,
+            ObjectKind::FlyFruit => true,
             ObjectKind::FakeWall => true,
             // ObjectKind::Key => true,
             // ObjectKind::Chest => true,
@@ -2330,5 +2349,105 @@ impl<'a> Iterator for OtherObjectsIter<'a> {
         } else {
             None
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct FlyFruit {
+    start: i32,
+    fly: bool,
+    step: f32,
+    sfx_delay: i32,
+}
+
+impl FlyFruit {
+    fn init(this: &mut BaseObject) -> Self {
+        this.is_solid = false;
+
+        Self {
+            start: this.y,
+            fly: false,
+            step: 0.5,
+            sfx_delay: 8,
+        }
+    }
+
+    fn update(
+        &mut self,
+        this: &mut BaseObject,
+        objects: &mut OtherObjects<'_>,
+        got_fruit: &mut [bool],
+        room: Vec2<i32>,
+        max_djump: i32,
+        has_dashed: bool,
+    ) -> UpdateAction {
+        let mut update_action = UpdateAction::noop();
+        // -- fly away
+        if self.fly {
+            if self.sfx_delay > 0 {
+                self.sfx_delay -= 1;
+
+                if self.sfx_delay <= 0 {
+                    // sfx_timer = 20;
+                    // sfx(14);
+                }
+            }
+            this.spd.y = appr(this.spd.y, -3.5, 0.25);
+
+            update_action.destroy_if_mut(this.y < -16);
+        }
+        // -- wait
+        else {
+            if has_dashed {
+                self.fly = true;
+            }
+            self.step += 0.05;
+            this.spd.y = sin(self.step) * 0.5;
+        }
+        // -- collect
+        if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+            let (_, player) = hit.to_player_mut().unwrap();
+            player.djump = max_djump;
+            // sfx_timer = 20;
+            // sfx(13);
+            got_fruit[1 + level_index(room)] = true;
+            update_action.push_mut(Object::init(
+                got_fruit,
+                room,
+                ObjectKind::LifeUp,
+                this.x,
+                this.y,
+                max_djump,
+            ));
+            update_action.destroy_if_mut(true);
+        }
+
+        update_action
+    }
+
+    fn draw(&mut self, this: &mut BaseObject, draw: &mut DrawContext) {
+        let mut off = 0.0;
+
+        if !self.fly {
+            let dir = sin(self.step);
+
+            if dir < 0.0 {
+                off = 1.0 + i32::max(0, signi(this.y - self.start)) as f32;
+            }
+        } else {
+            off = (off + 0.25) % 3.0;
+        }
+
+        draw.spr_(
+            flr(45.0 + off) as usize,
+            this.x - 6,
+            this.y - 2,
+            1.0,
+            1.0,
+            true,
+            false,
+        );
+        draw.spr(flr(this.spr) as usize, this.x, this.y);
+        draw.spr(flr(45.0 + off) as usize, this.x + 6, this.y - 2);
     }
 }
