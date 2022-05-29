@@ -304,44 +304,18 @@ impl App for GameState {
 
         // Platforms/big chest
         // TODO: Unify code somehow, loop below is identical, with a different if-check
-        {
-            for i in 0..self.objects.len() {
-                let (previous_objects, object, future_objects) =
-                    split_at_index(i, &mut self.objects).unwrap();
+        self.draw_objects(draw, |kind| {
+            [ObjectKind::Platform, ObjectKind::BigChest].contains(&kind)
+        });
 
-                let mut other_objects = OtherObjects {
-                    prev: previous_objects,
-                    next: future_objects,
-                };
-
-                if object.kind() == ObjectKind::Platform || object.kind() == ObjectKind::BigChest {
-                    object.draw(
-                        draw,
-                        &mut other_objects,
-                        self.room,
-                        &self.got_fruit,
-                        self.frames,
-                        self.max_djump,
-                    );
-                }
-            }
-        }
         // Draw terrain
         let off = if is_title(self) { -4 } else { 0 };
         draw.map(self.room.x * 16, self.room.y * 16, off, 0, 16, 16, 2);
 
         // Draw objects
-        // self.objects = self
-        //     .objects
-        //     .iter()
-        //     .copied()
-        //     .map(|mut object| {
-        //         if object.kind() != ObjectKind::Platform && object.kind() != ObjectKind::BigChest {
-        //             object.draw(draw, self);
-        //         }
-        //         object
-        //     })
-        //     .collect();
+        self.draw_objects(draw, |kind| {
+            ![ObjectKind::Platform, ObjectKind::BigChest].contains(&kind)
+        });
 
         // Draw fg terrain
         draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 8);
@@ -395,6 +369,34 @@ impl App for GameState {
         }
     }
 }
+
+impl GameState {
+    fn draw_objects(&mut self, draw: &mut DrawContext, pred: impl Fn(ObjectKind) -> bool) {
+        {
+            for i in 0..self.objects.len() {
+                let (previous_objects, object, future_objects) =
+                    split_at_index(i, &mut self.objects).unwrap();
+
+                let mut other_objects = OtherObjects {
+                    prev: previous_objects,
+                    next: future_objects,
+                };
+
+                if pred(object.kind()) {
+                    object.draw(
+                        draw,
+                        &mut other_objects,
+                        self.room,
+                        &self.got_fruit,
+                        self.frames,
+                        self.max_djump,
+                    );
+                }
+            }
+        }
+    }
+}
+
 struct Cloud {
     x: f32,
     y: f32,
@@ -1272,17 +1274,15 @@ impl Object {
         )
     }
 
-    fn draw<'a, T>(
+    fn draw<'a>(
         &mut self,
         draw: &mut DrawContext,
-        objects: &mut T,
+        objects: &mut OtherObjects<'a>,
         room: Vec2<i32>,
         got_fruit: &[bool],
         frames: i32,
         max_djump: i32,
-    ) where
-        for<'b> &'b mut T: IntoIterator<Item = &'a mut Object, IntoIter = OtherObjectsIter<'a>>,
-    {
+    ) {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
                 player_spawn.draw(&mut self.base_object, draw, frames, max_djump)
@@ -1959,7 +1959,7 @@ impl ObjectKind {
             ObjectKind::Key => ObjectType::Key,
             ObjectKind::Chest => ObjectType::Chest(Chest::init(base_object)),
             // ObjectKind::Message => todo!(),
-            ObjectKind::BigChest => todo!(),
+            ObjectKind::BigChest => ObjectType::BigChest(BigChest::init(base_object)),
             // ObjectKind::Flag => todo!(),
             ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle::init()),
             ObjectKind::Platform => {
@@ -2397,15 +2397,14 @@ impl<'a> OtherObjects<'a> {
     }
 }
 
-// impl<'a> IntoIterator for &mut OtherObjects<'a> {
-//     type Item = &'a mut Object;
-//     type IntoIter = OtherObjectsIter<'a>;
+impl<'a, 'objects: 'a> IntoIterator for &'a mut OtherObjects<'objects> {
+    type Item = &'a mut Object;
+    type IntoIter = OtherObjectsIter<'a>;
 
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.iter_mut()
-//     }
-
-// }
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
 
 struct OtherObjectsIter<'a> {
     prev: std::slice::IterMut<'a, Object>,
@@ -2831,17 +2830,15 @@ impl BigChest {
         Self::Idle
     }
 
-    fn draw<'a, T>(
+    fn draw<'a>(
         &mut self,
         this: &BaseObject,
         draw: &mut DrawContext,
-        objects: &mut T,
+        objects: &mut OtherObjects<'a>,
         room: Vec2<i32>,
         got_fruit: &[bool],
         max_djump: i32,
-    ) where
-        for<'b> &'b mut T: IntoIterator<Item = &'a mut Object>,
-    {
+    ) {
         let mut update_action = UpdateAction::noop();
 
         match self {
