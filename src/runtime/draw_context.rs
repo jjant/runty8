@@ -35,7 +35,8 @@ impl Default for DrawData {
 }
 pub struct DrawContext<'a, 'resources> {
     data: &'a mut DrawData,
-    pub(crate) state: &'a mut State<'resources>,
+    // TODO: make pub(crate)
+    pub state: &'a mut State<'resources>,
 }
 
 const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
@@ -133,8 +134,8 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         sprite: usize,
         x: i32,
         y: i32,
-        w: f32,
-        h: f32,
+        _w: f32,
+        _h: f32,
         flip_x: bool,
         flip_y: bool,
     ) {

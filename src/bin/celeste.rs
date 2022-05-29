@@ -81,7 +81,6 @@ impl App for GameState {
         let mut gs = Self {
             room: Vec2 { x: 0, y: 0 },
             objects: vec![],
-            // types: vec![],
             freeze: 0,
             will_restart: false,
             delay_restart: 0,
@@ -305,36 +304,44 @@ impl App for GameState {
 
         // Platforms/big chest
         // TODO: Unify code somehow, loop below is identical, with a different if-check
-        self.objects = self
-            .objects
-            .iter()
-            .copied()
-            .map(|mut object| {
-                if object.kind() == ObjectKind::Platform {
-                    //|| object.object_type == ObjectKind::BigChest {
-                    object.draw(draw, self);
-                }
-                object
-            })
-            .collect();
+        {
+            for i in 0..self.objects.len() {
+                let (previous_objects, object, future_objects) =
+                    split_at_index(i, &mut self.objects).unwrap();
 
+                let mut other_objects = OtherObjects {
+                    prev: previous_objects,
+                    next: future_objects,
+                };
+
+                if object.kind() == ObjectKind::Platform || object.kind() == ObjectKind::BigChest {
+                    object.draw(
+                        draw,
+                        &mut other_objects,
+                        self.room,
+                        &self.got_fruit,
+                        self.frames,
+                        self.max_djump,
+                    );
+                }
+            }
+        }
         // Draw terrain
         let off = if is_title(self) { -4 } else { 0 };
         draw.map(self.room.x * 16, self.room.y * 16, off, 0, 16, 16, 2);
 
         // Draw objects
-        self.objects = self
-            .objects
-            .iter()
-            .copied()
-            .map(|mut object| {
-                if object.kind() != ObjectKind::Platform {
-                    //&& object.kind() != ObjectKind::BigChest {
-                    object.draw(draw, self);
-                }
-                object
-            })
-            .collect();
+        // self.objects = self
+        //     .objects
+        //     .iter()
+        //     .copied()
+        //     .map(|mut object| {
+        //         if object.kind() != ObjectKind::Platform && object.kind() != ObjectKind::BigChest {
+        //             object.draw(draw, self);
+        //         }
+        //         object
+        //     })
+        //     .collect();
 
         // Draw fg terrain
         draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 8);
@@ -463,7 +470,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 6, 0);
+        load_room(self, state, 5, 2);
     }
 }
 
@@ -1265,20 +1272,30 @@ impl Object {
         )
     }
 
-    fn draw(&mut self, draw: &mut DrawContext, game_state: &GameState) {
+    fn draw<'a, T>(
+        &mut self,
+        draw: &mut DrawContext,
+        objects: &mut T,
+        room: Vec2<i32>,
+        got_fruit: &[bool],
+        frames: i32,
+        max_djump: i32,
+    ) where
+        for<'b> &'b mut T: IntoIterator<Item = &'a mut Object, IntoIter = OtherObjectsIter<'a>>,
+    {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
-                player_spawn.draw(&mut self.base_object, game_state, draw)
+                player_spawn.draw(&mut self.base_object, draw, frames, max_djump)
             }
-            // ObjectType::BigChest => todo!(),
+            ObjectType::BigChest(big_chest) => {
+                big_chest.draw(&self.base_object, draw, objects, room, got_fruit, max_djump)
+            }
             ObjectType::Chest(_) => default_draw(&mut self.base_object, draw),
-            ObjectType::Player(player) => {
-                player.draw(&mut self.base_object, draw, game_state.frames)
-            }
+            ObjectType::Player(player) => player.draw(&mut self.base_object, draw, frames),
             // ObjectType::Orb => todo!(),
-            ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, game_state, draw),
+            ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, draw),
             ObjectType::FallFloor(fall_floor) => fall_floor.draw(&mut self.base_object, draw),
-            ObjectType::RoomTitle(room_title) => room_title.draw(draw, game_state.room),
+            ObjectType::RoomTitle(room_title) => room_title.draw(draw, room),
             ObjectType::Platform => Platform::draw(&self.base_object, draw),
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
             ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
@@ -1439,7 +1456,7 @@ enum ObjectType {
     Platform,
     Chest(Chest),
     Balloon(Balloon),
-    // BigChest,
+    BigChest(BigChest),
     Player(Player),
     PlayerSpawn(PlayerSpawn),
     Smoke,
@@ -1471,6 +1488,7 @@ impl ObjectType {
             ObjectType::Key => ObjectKind::Key,
             ObjectType::Chest(_) => ObjectKind::Chest,
             ObjectType::Balloon(_) => ObjectKind::Balloon,
+            ObjectType::BigChest(_) => ObjectKind::BigChest,
         }
     }
 
@@ -1494,7 +1512,10 @@ impl ObjectType {
             }
             ObjectType::Smoke => Smoke::update(base_object),
             ObjectType::Platform => Platform::update(base_object, state, other_objects, room),
-            // ObjectType::BigChest => todo!(),
+            ObjectType::BigChest(_) => {
+                // TODO:
+                UpdateAction::noop()
+            }
             ObjectType::Player(player) => player.update(
                 base_object,
                 state,
@@ -1892,7 +1913,7 @@ enum ObjectKind {
     Key,
     Chest,
     // Message,
-    // BigChest,
+    BigChest,
     // Flag,
 
     // Non-tile-instantiable
@@ -1920,7 +1941,7 @@ impl ObjectKind {
         ObjectKind::Key,
         ObjectKind::Chest,
         // ObjectKind::Message,
-        // ObjectKind::BigChest,
+        ObjectKind::BigChest,
         // ObjectKind::Flag,
     ];
 
@@ -1938,7 +1959,7 @@ impl ObjectKind {
             ObjectKind::Key => ObjectType::Key,
             ObjectKind::Chest => ObjectType::Chest(Chest::init(base_object)),
             // ObjectKind::Message => todo!(),
-            // ObjectKind::BigChest => todo!(),
+            ObjectKind::BigChest => todo!(),
             // ObjectKind::Flag => todo!(),
             ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle::init()),
             ObjectKind::Platform => {
@@ -1966,7 +1987,7 @@ impl ObjectKind {
             ObjectKind::Key => Some(8),
             ObjectKind::Chest => Some(20),
             // ObjectKind::Message => Some(86),
-            // ObjectKind::BigChest => Some(96),
+            ObjectKind::BigChest => Some(96),
             // ObjectKind::Flag => Some(118),
             _ => None,
         }
@@ -2175,10 +2196,11 @@ impl PlayerSpawn {
     fn draw(
         &mut self,
         base_object: &mut BaseObject,
-        game_state: &GameState,
         draw: &mut DrawContext,
+        frames: i32,
+        max_djump: i32,
     ) {
-        set_hair_color(draw, game_state.frames, game_state.max_djump);
+        set_hair_color(draw, frames, max_djump);
 
         self.hair.draw(draw, base_object.x, base_object.y, 1);
         draw.spr_(
@@ -2286,7 +2308,7 @@ impl FakeWall {
         update_action
     }
 
-    fn draw(base_object: &mut BaseObject, _: &GameState, draw: &mut DrawContext) {
+    fn draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
         let x = base_object.x;
         let y = base_object.y;
         draw.spr(64, x, y);
@@ -2374,6 +2396,16 @@ impl<'a> OtherObjects<'a> {
         prev
     }
 }
+
+// impl<'a> IntoIterator for &mut OtherObjects<'a> {
+//     type Item = &'a mut Object;
+//     type IntoIter = OtherObjectsIter<'a>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.iter_mut()
+//     }
+
+// }
 
 struct OtherObjectsIter<'a> {
     prev: std::slice::IterMut<'a, Object>,
@@ -2773,5 +2805,131 @@ impl Balloon {
             );
             draw.spr(flr(this.spr) as usize, this.x, this.y);
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum BigChest {
+    Idle,
+    PickedUp {
+        timer: i32,
+        // particles: Vec<BigChestParticle>,
+    },
+    Invisible,
+}
+struct BigChestParticle {
+    x: i32,
+    y: i32,
+    h: i32,
+    spd: i32,
+}
+
+impl BigChest {
+    fn init(this: &mut BaseObject) -> Self {
+        this.hitbox.w = 16;
+
+        Self::Idle
+    }
+
+    fn draw<'a, T>(
+        &mut self,
+        this: &BaseObject,
+        draw: &mut DrawContext,
+        objects: &mut T,
+        room: Vec2<i32>,
+        got_fruit: &[bool],
+        max_djump: i32,
+    ) where
+        for<'b> &'b mut T: IntoIterator<Item = &'a mut Object>,
+    {
+        let mut update_action = UpdateAction::noop();
+
+        match self {
+            Self::Idle => {
+                if let Some((_, hit)) = this.collide(objects.into_iter(), &ObjectKind::Player, 0, 1)
+                {
+                    let objects = todo!();
+                    let (base, player) = hit.to_player_mut().unwrap();
+                    if base.is_solid(draw.state, objects, room, 0, 1) {
+                        // music(-1, 500, 7);
+                        // sfx(37);
+                        // pause_player = true;
+                        base.spd.x = 0.0;
+                        base.spd.y = 0.0;
+
+                        update_action.push_mut(Object::init(
+                            got_fruit,
+                            room,
+                            ObjectKind::Smoke,
+                            this.x,
+                            this.y,
+                            max_djump,
+                        ));
+                        update_action.push_mut(Object::init(
+                            got_fruit,
+                            room,
+                            ObjectKind::Smoke,
+                            this.x + 8,
+                            this.y,
+                            max_djump,
+                        ));
+
+                        *self = Self::PickedUp {
+                            // particles: vec![],
+                            timer: 60,
+                        };
+                    }
+                }
+                draw.spr(96, this.x, this.y);
+                draw.spr(97, this.x + 8, this.y);
+            }
+            Self::PickedUp {
+                timer,
+                // particles
+            } => {
+                *timer -= 1;
+                // shake = 5;
+                // flash_bg = true;
+                // if *timer <= 45 && particles.len() < 50 {
+                //     particles.push(BigChestParticle {
+                //         x: 1 + flr(rnd(14.0)),
+                //         y: 0,
+                //         h: 32 + flr(rnd(32.0)),
+                //         spd: 8 + flr(rnd(8.0)),
+                //     })
+                // }
+
+                // particles.iter_mut().for_each(|particle| {
+                //     particle.y += particle.spd;
+                //     draw.line(
+                //         this.x + particle.x,
+                //         this.y + 8 - particle.y,
+                //         this.x + particle.x,
+                //         i32::min(this.y + 8 - particle.y + particle.h, this.y + 8),
+                //         7,
+                //     );
+                // });
+
+                if *timer < 0 {
+                    *self = Self::Invisible;
+                    // flash_bg = false;
+                    // new_bg = true;
+
+                    // TODO: Init orb
+                    // update_action.push_mut(Object::init(
+                    //     got_fruit,
+                    //     room,
+                    //     ObjectKind::Orb,
+                    //     this.x + 4,
+                    //     this.y + 4,
+                    //     max_djump,
+                    // ));
+                }
+            }
+            Self::Invisible => {}
+        }
+
+        draw.spr(112, this.x, this.y + 8);
+        draw.spr(113, this.x + 8, this.y + 8);
     }
 }
