@@ -1323,7 +1323,10 @@ impl Object {
         }
     }
 
-    fn move_<'a>(&mut self, state: &State, objects: &mut OtherObjects<'a>, room: Vec2<i32>) {
+    fn move_<T>(&mut self, state: &State, objects: &mut T, room: Vec2<i32>)
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let ox = self.base_object.spd.x;
         let oy = self.base_object.spd.y;
 
@@ -1367,13 +1370,10 @@ impl Object {
         }
     }
 
-    fn move_y<'a>(
-        &mut self,
-        state: &State,
-        objects: &mut OtherObjects<'a>,
-        room: Vec2<i32>,
-        amount: i32,
-    ) {
+    fn move_y<T>(&mut self, state: &State, objects: &mut T, room: Vec2<i32>, amount: i32)
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         if self.base_object.is_solid {
             let step = signi(amount);
 
@@ -1820,9 +1820,9 @@ impl Platform {
         }
 
         // Platforms drag you
-        if !this.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+        if !this.check(objects.into_iter(), &ObjectKind::Player, 0, 0) {
             if let Some((objects, hit)) =
-                this.collide(objects.iter_mut(), &ObjectKind::Player, 0, -1)
+                this.collide(objects.into_iter(), &ObjectKind::Player, 0, -1)
             {
                 // TODO: other_objects here won't include the current platform. Is that a problem?
                 let mut other_objects = VecObjects { vec: objects };
@@ -2438,15 +2438,18 @@ impl FlyFruit {
         }
     }
 
-    fn update(
+    fn update<T>(
         &mut self,
         this: &mut BaseObject,
-        objects: &mut OtherObjects<'_>,
+        objects: &mut T,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
         max_djump: i32,
         has_dashed: bool,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let mut update_action = UpdateAction::noop();
         // -- fly away
         if self.fly {
@@ -2471,7 +2474,7 @@ impl FlyFruit {
             this.spd.y = sin(self.step) * 0.5;
         }
         // -- collect
-        if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+        if let Some((_, hit)) = this.collide(objects.into_iter(), &ObjectKind::Player, 0, 0) {
             let (_, player) = hit.to_player_mut().unwrap();
             player.djump = max_djump;
             // sfx_timer = 20;
