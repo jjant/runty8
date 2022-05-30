@@ -565,17 +565,20 @@ impl Player {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn update<'a>(
+    fn update<T>(
         &mut self,
         this: &mut BaseObject,
         state: &State,
-        objects: &'a mut OtherObjects<'a>,
+        objects: &mut T,
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
         has_dashed: &mut bool,
         pause_player: bool,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let mut update_action = UpdateAction::noop();
 
         if pause_player {
@@ -933,14 +936,17 @@ impl Spring {
         }
     }
 
-    fn update(
+    fn update<T>(
         &mut self,
         this: &mut BaseObject,
-        objects: &mut OtherObjects<'_>,
+        objects: &mut T,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
         max_djump: i32,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let mut update_action = UpdateAction::noop();
         if self.hide_for > 0 {
             self.hide_for -= 1;
@@ -950,7 +956,7 @@ impl Spring {
                 self.delay = 0;
             }
         } else if this.spr == 18.0 {
-            if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+            if let Some((_, hit)) = this.collide(objects.into_iter(), &ObjectKind::Player, 0, 0) {
                 let (player_base, player) = hit.to_player_mut().expect("Got wrong object back");
 
                 if player_base.spd.y >= 0.0 {
@@ -974,13 +980,13 @@ impl Spring {
                     // psfx(8)
                 }
                 // -- breakable below us
-                let below = this.collide(objects.iter_mut(), &ObjectKind::FallFloor, 0, 1);
+                let below = this.collide(objects.into_iter(), &ObjectKind::FallFloor, 0, 1);
                 if let Some((others, below)) = below {
                     let (fall_floor_object, fall_floor) = below.to_fall_floor_mut().unwrap();
 
                     // Have to break it here because others doesn't include this spring.
                     self.break_spring();
-                    fall_floor.break_fall_floor(
+                    fall_floor.break_fall_floor::<VecObjects>(
                         fall_floor_object,
                         &mut VecObjects { vec: others },
                         got_fruit,
@@ -1248,9 +1254,9 @@ impl Object {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn update<'a>(
+    fn update<T>(
         &mut self,
-        other_objects: &'a mut OtherObjects<'a>,
+        other_objects: &mut T,
         effects: &mut GameEffects,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
@@ -1260,7 +1266,10 @@ impl Object {
         frames: i32,
         has_key: &mut bool,
         pause_player: bool,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         self.object_type.update(
             &mut self.base_object,
             other_objects,
@@ -1277,10 +1286,10 @@ impl Object {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw<'a>(
+    fn draw<T>(
         &mut self,
         draw: &mut DrawContext,
-        objects: &mut OtherObjects<'a>,
+        objects: &mut T,
         room: Vec2<i32>,
         got_fruit: &[bool],
         frames: i32,
@@ -1289,7 +1298,9 @@ impl Object {
         flash_bg: &mut bool,
         new_bg: &mut bool,
         pause_player: &mut bool,
-    ) {
+    ) where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
                 player_spawn.draw(&mut self.base_object, draw, frames, max_djump)
@@ -1507,10 +1518,10 @@ impl ObjectType {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn update<'a>(
+    fn update<T>(
         &mut self,
         base_object: &mut BaseObject,
-        other_objects: &'a mut OtherObjects<'a>,
+        other_objects: &mut T,
         effects: &mut GameEffects,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
@@ -1520,7 +1531,10 @@ impl ObjectType {
         frames: i32,
         has_key: &mut bool,
         pause_player: bool,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
                 player_spawn.update(base_object, effects, got_fruit, room, max_djump, state)
@@ -1806,12 +1820,15 @@ impl Platform {
         this.last = this.x;
     }
 
-    fn update(
+    fn update<T>(
         this: &mut BaseObject,
         state: &State,
-        objects: &mut OtherObjects<'_>,
+        objects: &mut T,
         room: Vec2<i32>,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         this.spd.x = this.dir as f32 * 0.65;
         if this.x < -16 {
             this.x = 128;
@@ -1826,7 +1843,13 @@ impl Platform {
             {
                 // TODO: other_objects here won't include the current platform. Is that a problem?
                 let mut other_objects = VecObjects { vec: objects };
-                hit.move_x(state, &mut other_objects, room, this.x - this.last, 1);
+                hit.move_x::<VecObjects<'_>>(
+                    state,
+                    &mut other_objects,
+                    room,
+                    this.x - this.last,
+                    1,
+                );
             }
         }
 
@@ -1877,16 +1900,19 @@ impl Fruit {
         }
     }
 
-    fn update<'a>(
+    fn update<T>(
         &mut self,
         base_object: &mut BaseObject,
-        other_objects: &mut OtherObjects<'a>,
+        other_objects: &mut T,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
         max_djump: i32,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let update_action = if let Some((_, hit)) =
-            base_object.collide(other_objects.iter_mut(), &ObjectKind::Player, 0, 0)
+            base_object.collide(other_objects.into_iter(), &ObjectKind::Player, 0, 0)
         {
             let (_, player) = hit.to_player_mut().unwrap();
 
@@ -2233,14 +2259,17 @@ impl PlayerSpawn {
 struct FakeWall;
 
 impl FakeWall {
-    fn update<'a>(
+    fn update<T>(
         base_object: &mut BaseObject,
-        other_objects: &'a mut OtherObjects<'a>,
+        other_objects: &mut T,
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
         _: &State,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         base_object.hitbox = Hitbox {
             x: -1,
             y: -1,
@@ -2251,7 +2280,7 @@ impl FakeWall {
         let mut update_action = UpdateAction::noop();
 
         if let Some((_, hit_object)) =
-            base_object.collide(other_objects.iter_mut(), &ObjectKind::Player, 0, 0)
+            base_object.collide(other_objects.into_iter(), &ObjectKind::Player, 0, 0)
         {
             if let ObjectType::Player(player) = &mut hit_object.object_type {
                 if player.dash_effect_time > 0 {
@@ -2751,21 +2780,24 @@ impl Balloon {
         }
     }
 
-    fn update(
+    fn update<T>(
         &mut self,
         this: &mut BaseObject,
-        objects: &mut OtherObjects<'_>,
+        objects: &mut T,
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let mut update_action = UpdateAction::noop();
 
         if this.spr == 22.0 {
             self.offset += 0.01;
             this.y = self.start + flr(sin(self.offset) * 2.0);
 
-            if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+            if let Some((_, hit)) = this.collide(objects.into_iter(), &ObjectKind::Player, 0, 0) {
                 let (_, player) = hit.to_player_mut().unwrap();
                 if player.djump < max_djump {
                     // psfx(6);
@@ -2838,11 +2870,11 @@ impl BigChest {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw<'a>(
+    fn draw<T>(
         &mut self,
         this: &BaseObject,
         draw: &mut DrawContext,
-        objects: &mut OtherObjects<'a>,
+        objects: &mut T,
         room: Vec2<i32>,
         got_fruit: &[bool],
         max_djump: i32,
@@ -2850,7 +2882,9 @@ impl BigChest {
         flash_bg: &mut bool,
         new_bg: &mut bool,
         pause_player: &mut bool,
-    ) {
+    ) where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let mut update_action = UpdateAction::noop();
 
         match self {
@@ -2859,8 +2893,13 @@ impl BigChest {
                     this.collide(objects.into_iter(), &ObjectKind::Player, 0, 8)
                 {
                     let (base, _) = hit.to_player_mut().unwrap();
-                    let is_solid =
-                        base.is_solid(draw.state, &mut VecObjects { vec: objects }, room, 0, 1);
+                    let is_solid = base.is_solid::<VecObjects<'_>>(
+                        draw.state,
+                        &mut VecObjects { vec: objects },
+                        room,
+                        0,
+                        1,
+                    );
 
                     if is_solid {
                         // music(-1, 500, 7);
