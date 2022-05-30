@@ -7,6 +7,9 @@ use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
 use runty8::App;
 
+use std::iter::Map;
+use std::slice;
+
 // TODO: Deduplicate this code.
 fn assets_path() -> String {
     let buf = Path::new(file!()).with_extension("");
@@ -2783,10 +2786,12 @@ enum BigChest {
     Idle,
     PickedUp {
         timer: i32,
-        // particles: Vec<BigChestParticle>,
+        particles: Vec<BigChestParticle>,
     },
     Invisible,
 }
+
+#[derive(Clone, Debug)]
 struct BigChestParticle {
     x: i32,
     y: i32,
@@ -2815,9 +2820,9 @@ impl BigChest {
         match self {
             Self::Idle => {
                 if let Some((objects, hit)) =
-                    this.collide(objects.into_iter(), &ObjectKind::Player, 0, 1)
+                    this.collide(objects.into_iter(), &ObjectKind::Player, 0, 8)
                 {
-                    let (base, player) = hit.to_player_mut().unwrap();
+                    let (base, _) = hit.to_player_mut().unwrap();
                     let is_solid =
                         base.is_solid(draw.state, &mut VecObjects { vec: objects }, room, 0, 1);
 
@@ -2846,7 +2851,7 @@ impl BigChest {
                         ));
 
                         *self = Self::PickedUp {
-                            // particles: vec![],
+                            particles: vec![],
                             timer: 60,
                         };
                     }
@@ -2854,32 +2859,29 @@ impl BigChest {
                 draw.spr(96, this.x, this.y);
                 draw.spr(97, this.x + 8, this.y);
             }
-            Self::PickedUp {
-                timer,
-                // particles
-            } => {
+            Self::PickedUp { timer, particles } => {
                 *timer -= 1;
                 // shake = 5;
                 // flash_bg = true;
-                // if *timer <= 45 && particles.len() < 50 {
-                //     particles.push(BigChestParticle {
-                //         x: 1 + flr(rnd(14.0)),
-                //         y: 0,
-                //         h: 32 + flr(rnd(32.0)),
-                //         spd: 8 + flr(rnd(8.0)),
-                //     })
-                // }
+                if *timer <= 45 && particles.len() < 50 {
+                    particles.push(BigChestParticle {
+                        x: 1 + flr(rnd(14.0)),
+                        y: 0,
+                        h: 32 + flr(rnd(32.0)),
+                        spd: 8 + flr(rnd(8.0)),
+                    })
+                }
 
-                // particles.iter_mut().for_each(|particle| {
-                //     particle.y += particle.spd;
-                //     draw.line(
-                //         this.x + particle.x,
-                //         this.y + 8 - particle.y,
-                //         this.x + particle.x,
-                //         i32::min(this.y + 8 - particle.y + particle.h, this.y + 8),
-                //         7,
-                //     );
-                // });
+                particles.iter_mut().for_each(|particle| {
+                    particle.y += particle.spd;
+                    draw.line(
+                        this.x + particle.x,
+                        this.y + 8 - particle.y,
+                        this.x + particle.x,
+                        i32::min(this.y + 8 - particle.y + particle.h, this.y + 8),
+                        7,
+                    );
+                });
 
                 if *timer < 0 {
                     *self = Self::Invisible;
@@ -2902,15 +2904,13 @@ impl BigChest {
 
         draw.spr(112, this.x, this.y + 8);
         draw.spr(113, this.x + 8, this.y + 8);
+        this.hitbox.draw(draw, this.x, this.y, 8);
     }
 }
 
 struct OtherObjects<'a> {
     prev: &'a mut [Object],
     next: &'a mut [Object],
-}
-struct VecObjects<'a> {
-    vec: Vec<&'a mut Object>,
 }
 
 impl<'a, 'objects> IntoIterator for &'a mut OtherObjects<'objects> {
@@ -2922,29 +2922,18 @@ impl<'a, 'objects> IntoIterator for &'a mut OtherObjects<'objects> {
     }
 }
 
+struct VecObjects<'a> {
+    vec: Vec<&'a mut Object>,
+}
+
 impl<'a, 'objects> IntoIterator for &'a mut VecObjects<'objects> {
     type Item = &'a mut Object;
-    type IntoIter = MyStruct<'a, 'objects>;
+    type IntoIter = Map<
+        slice::IterMut<'a, &'objects mut Object>,
+        fn(&'a mut &'objects mut Object) -> &'a mut Object,
+    >;
 
     fn into_iter(self) -> Self::IntoIter {
-        MyStruct { vec: &mut self.vec }
-    }
-}
-
-struct MyStruct<'a, 'objects> {
-    vec: &'a mut Vec<&'objects mut Object>,
-}
-
-impl<'a, 'objects> Iterator for MyStruct<'a, 'objects> {
-    type Item = &'a mut Object;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if !self.vec.is_empty() {
-            let first = self.vec.remove(0);
-
-            Some(first)
-        } else {
-            None
-        }
+        self.vec.iter_mut().map(|r| &mut **r)
     }
 }
