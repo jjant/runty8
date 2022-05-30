@@ -393,6 +393,9 @@ impl GameState {
                         &self.got_fruit,
                         self.frames,
                         self.max_djump,
+                        &mut self.effects.shake,
+                        &mut self.flash_bg,
+                        &mut self.new_bg,
                     );
                 }
             }
@@ -1273,6 +1276,7 @@ impl Object {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw<'a>(
         &mut self,
         draw: &mut DrawContext,
@@ -1281,14 +1285,25 @@ impl Object {
         got_fruit: &[bool],
         frames: i32,
         max_djump: i32,
+        shake: &mut i32,
+        flash_bg: &mut bool,
+        new_bg: &mut bool,
     ) {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
                 player_spawn.draw(&mut self.base_object, draw, frames, max_djump)
             }
-            ObjectType::BigChest(big_chest) => {
-                big_chest.draw(&self.base_object, draw, objects, room, got_fruit, max_djump)
-            }
+            ObjectType::BigChest(big_chest) => big_chest.draw(
+                &self.base_object,
+                draw,
+                objects,
+                room,
+                got_fruit,
+                max_djump,
+                shake,
+                flash_bg,
+                new_bg,
+            ),
             ObjectType::Chest(_) => default_draw(&mut self.base_object, draw),
             ObjectType::Player(player) => player.draw(&mut self.base_object, draw, frames),
             // ObjectType::Orb => todo!(),
@@ -2806,6 +2821,7 @@ impl BigChest {
         Self::Idle
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw<'a>(
         &mut self,
         this: &BaseObject,
@@ -2814,6 +2830,9 @@ impl BigChest {
         room: Vec2<i32>,
         got_fruit: &[bool],
         max_djump: i32,
+        shake: &mut i32,
+        flash_bg: &mut bool,
+        new_bg: &mut bool,
     ) {
         let mut update_action = UpdateAction::noop();
 
@@ -2861,8 +2880,8 @@ impl BigChest {
             }
             Self::PickedUp { timer, particles } => {
                 *timer -= 1;
-                // shake = 5;
-                // flash_bg = true;
+                *shake = 5;
+                *flash_bg = true;
                 if *timer <= 45 && particles.len() < 50 {
                     particles.push(BigChestParticle {
                         x: 1 + flr(rnd(14.0)),
@@ -2885,8 +2904,8 @@ impl BigChest {
 
                 if *timer < 0 {
                     *self = Self::Invisible;
-                    // flash_bg = false;
-                    // new_bg = true;
+                    *flash_bg = false;
+                    *new_bg = true;
 
                     // TODO: Init orb
                     // update_action.push_mut(Object::init(
