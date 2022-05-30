@@ -1055,17 +1055,13 @@ impl BaseObject {
         result.map(|object| (others, object))
     }
 
-    fn is_solid<'a>(
-        &self,
-        state: &State,
-        objects: &mut OtherObjects<'a>,
-        room: Vec2<i32>,
-        ox: i32,
-        oy: i32,
-    ) -> bool {
+    fn is_solid<T>(&self, state: &State, objects: &mut T, room: Vec2<i32>, ox: i32, oy: i32) -> bool
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         if oy > 0
-            && !self.check(objects.iter_mut(), &ObjectKind::Platform, ox, 0)
-            && self.check(objects.iter_mut(), &ObjectKind::Platform, ox, oy)
+            && !self.check(objects.into_iter(), &ObjectKind::Platform, ox, 0)
+            && self.check(objects.into_iter(), &ObjectKind::Platform, ox, oy)
         {
             return true;
         }
@@ -1077,8 +1073,8 @@ impl BaseObject {
             self.y + self.hitbox.y + oy,
             self.hitbox.w,
             self.hitbox.h,
-        ) || self.check(objects.iter_mut(), &ObjectKind::FallFloor, ox, oy)
-            || self.check(objects.iter_mut(), &ObjectKind::FakeWall, ox, oy)
+        ) || self.check(objects.into_iter(), &ObjectKind::FallFloor, ox, oy)
+            || self.check(objects.into_iter(), &ObjectKind::FakeWall, ox, oy)
     }
 
     fn check<'a>(
@@ -1324,14 +1320,16 @@ impl Object {
         self.move_y(state, objects, room, amount_y as i32);
     }
 
-    fn move_x<'a, 'b>(
+    fn move_x<T>(
         &mut self,
         state: &State,
-        objects: &'a mut OtherObjects<'b>,
+        objects: &mut T,
         room: Vec2<i32>,
         amount: i32,
         start: i32,
-    ) {
+    ) where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         if self.base_object.is_solid {
             let step = signi(amount);
 
@@ -1373,14 +1371,10 @@ impl Object {
         }
     }
 
-    fn is_solid<'a>(
-        &self,
-        state: &State,
-        objects: &mut OtherObjects<'a>,
-        room: Vec2<i32>,
-        ox: i32,
-        oy: i32,
-    ) -> bool {
+    fn is_solid<T>(&self, state: &State, objects: &mut T, room: Vec2<i32>, ox: i32, oy: i32) -> bool
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         self.base_object.is_solid(state, objects, room, ox, oy)
     }
 
@@ -1803,16 +1797,19 @@ impl Platform {
             this.x = -16;
         }
 
-        // TODO: Make this better?
-        let mut cloned_objects = objects.cloned();
-        let mut other_other = OtherObjects {
-            prev: &mut [],
-            next: &mut cloned_objects,
-        };
+        // // TODO: Make this better?
+        // let mut cloned_objects = objects.cloned();
+        // let mut other_other = OtherObjects {
+        //     prev: &mut [],
+        //     next: &mut cloned_objects,
+        // };
         // Platforms drag you
         if !this.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
-            if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, -1) {
-                hit.move_x(state, &mut other_other, room, this.x - this.last, 1);
+            if let Some((objects, hit)) =
+                this.collide(objects.iter_mut(), &ObjectKind::Player, 0, -1)
+            {
+                let mut other_objects = VecObjects { vec: objects };
+                hit.move_x(state, &mut other_objects, room, this.x - this.last, 1);
             }
         }
 
@@ -2376,11 +2373,6 @@ fn flr(f: f32) -> i32 {
     f.floor() as i32
 }
 
-struct OtherObjects<'a> {
-    prev: &'a mut [Object],
-    next: &'a mut [Object],
-}
-
 impl<'a> OtherObjects<'a> {
     fn iter_mut(&mut self) -> OtherObjectsIter<'_> {
         OtherObjectsIter {
@@ -2394,15 +2386,6 @@ impl<'a> OtherObjects<'a> {
         prev.extend_from_slice(self.next);
 
         prev
-    }
-}
-
-impl<'a, 'objects: 'a> IntoIterator for &'a mut OtherObjects<'objects> {
-    type Item = &'a mut Object;
-    type IntoIter = OtherObjectsIter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
     }
 }
 
@@ -2843,11 +2826,14 @@ impl BigChest {
 
         match self {
             Self::Idle => {
-                if let Some((_, hit)) = this.collide(objects.into_iter(), &ObjectKind::Player, 0, 1)
+                if let Some((objects, hit)) =
+                    this.collide(objects.into_iter(), &ObjectKind::Player, 0, 1)
                 {
-                    let objects = todo!();
                     let (base, player) = hit.to_player_mut().unwrap();
-                    if base.is_solid(draw.state, objects, room, 0, 1) {
+                    let is_solid =
+                        base.is_solid(draw.state, &mut VecObjects { vec: objects }, room, 0, 1);
+
+                    if is_solid {
                         // music(-1, 500, 7);
                         // sfx(37);
                         // pause_player = true;
@@ -2928,5 +2914,49 @@ impl BigChest {
 
         draw.spr(112, this.x, this.y + 8);
         draw.spr(113, this.x + 8, this.y + 8);
+    }
+}
+
+struct OtherObjects<'a> {
+    prev: &'a mut [Object],
+    next: &'a mut [Object],
+}
+struct VecObjects<'a> {
+    vec: Vec<&'a mut Object>,
+}
+
+impl<'a, 'objects> IntoIterator for &'a mut OtherObjects<'objects> {
+    type Item = &'a mut Object;
+    type IntoIter = OtherObjectsIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
+impl<'a, 'objects> IntoIterator for &'a mut VecObjects<'objects> {
+    type Item = &'a mut Object;
+    type IntoIter = MyStruct<'a, 'objects>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        MyStruct { vec: &mut self.vec }
+    }
+}
+
+struct MyStruct<'a, 'objects> {
+    vec: &'a mut Vec<&'objects mut Object>,
+}
+
+impl<'a, 'objects> Iterator for MyStruct<'a, 'objects> {
+    type Item = &'a mut Object;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.vec.is_empty() {
+            let first = self.vec.remove(0);
+
+            Some(first)
+        } else {
+            None
+        }
     }
 }
