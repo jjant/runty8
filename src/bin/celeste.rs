@@ -2542,20 +2542,23 @@ impl FallFloor {
         }
     }
 
-    fn update(
+    fn update<T>(
         &mut self,
         this: &mut BaseObject,
-        objects: &mut OtherObjects<'_>,
+        objects: &mut T,
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let mut update_action = UpdateAction::noop();
         match self.state {
             FallFloorState::Idling => {
-                if this.check(objects.iter_mut(), &ObjectKind::Player, 0, -1)
-                    || this.check(objects.iter_mut(), &ObjectKind::Player, -1, 0)
-                    || this.check(objects.iter_mut(), &ObjectKind::Player, 1, 0)
+                if this.check(objects.into_iter(), &ObjectKind::Player, 0, -1)
+                    || this.check(objects.into_iter(), &ObjectKind::Player, -1, 0)
+                    || this.check(objects.into_iter(), &ObjectKind::Player, 1, 0)
                 {
                     self.break_fall_floor(
                         this,
@@ -2579,7 +2582,7 @@ impl FallFloor {
             FallFloorState::Invisible => {
                 self.delay -= 1;
 
-                if self.delay <= 0 && !this.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+                if self.delay <= 0 && !this.check(objects.into_iter(), &ObjectKind::Player, 0, 0) {
                     // psfx(7)
                     self.state = FallFloorState::Idling;
                     this.collideable = true;
@@ -2651,12 +2654,15 @@ impl FallFloor {
 struct Key;
 
 impl Key {
-    fn update(
+    fn update<T>(
         this: &mut BaseObject,
-        objects: &mut OtherObjects<'_>,
+        objects: &mut T,
         frames: i32,
         has_key: &mut bool,
-    ) -> UpdateAction {
+    ) -> UpdateAction
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         let mut update_action = UpdateAction::noop();
 
         let was = flr(this.spr);
@@ -2665,7 +2671,7 @@ impl Key {
         if is == 10 && is != was {
             this.flip.x = !this.flip.x;
         }
-        if this.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
+        if this.check(objects.into_iter(), &ObjectKind::Player, 0, 0) {
             // sfx(23);
             // sfx_timer = 10;
             update_action.destroy_if_mut(true);
