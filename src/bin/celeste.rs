@@ -182,6 +182,7 @@ impl App for GameState {
                 &mut self.has_dashed,
                 self.frames,
                 &mut self.has_key,
+                self.pause_player,
             );
 
             player_dead = object.kind() == ObjectKind::Player && should_destroy;
@@ -396,6 +397,7 @@ impl GameState {
                         &mut self.effects.shake,
                         &mut self.flash_bg,
                         &mut self.new_bg,
+                        &mut self.pause_player,
                     );
                 }
             }
@@ -572,13 +574,14 @@ impl Player {
         room: Vec2<i32>,
         max_djump: i32,
         has_dashed: &mut bool,
+        pause_player: bool,
     ) -> UpdateAction {
         let mut update_action = UpdateAction::noop();
 
-        // TODO:
-        // if pause_player {
-        //     return
-        // }
+        if pause_player {
+            return update_action;
+        }
+
         let input = horizontal_input(state);
 
         // -- spikes collide
@@ -1261,6 +1264,7 @@ impl Object {
         has_dashed: &mut bool,
         frames: i32,
         has_key: &mut bool,
+        pause_player: bool,
     ) -> UpdateAction {
         self.object_type.update(
             &mut self.base_object,
@@ -1273,6 +1277,7 @@ impl Object {
             has_dashed,
             frames,
             has_key,
+            pause_player,
         )
     }
 
@@ -1288,6 +1293,7 @@ impl Object {
         shake: &mut i32,
         flash_bg: &mut bool,
         new_bg: &mut bool,
+        pause_player: &mut bool,
     ) {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
@@ -1303,6 +1309,7 @@ impl Object {
                 shake,
                 flash_bg,
                 new_bg,
+                pause_player,
             ),
             ObjectType::Chest(_) => default_draw(&mut self.base_object, draw),
             ObjectType::Player(player) => player.draw(&mut self.base_object, draw, frames),
@@ -1517,6 +1524,7 @@ impl ObjectType {
         has_dashed: &mut bool,
         frames: i32,
         has_key: &mut bool,
+        pause_player: bool,
     ) -> UpdateAction {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
@@ -1536,6 +1544,7 @@ impl ObjectType {
                 room,
                 max_djump,
                 has_dashed,
+                pause_player,
             ),
             ObjectType::LifeUp(life_up) => life_up.update(),
             ObjectType::Fruit(fruit) => {
@@ -2833,6 +2842,7 @@ impl BigChest {
         shake: &mut i32,
         flash_bg: &mut bool,
         new_bg: &mut bool,
+        pause_player: &mut bool,
     ) {
         let mut update_action = UpdateAction::noop();
 
@@ -2848,7 +2858,7 @@ impl BigChest {
                     if is_solid {
                         // music(-1, 500, 7);
                         // sfx(37);
-                        // pause_player = true;
+                        *pause_player = true;
                         base.spd.x = 0.0;
                         base.spd.y = 0.0;
 
@@ -2916,6 +2926,7 @@ impl BigChest {
                     //     this.y + 4,
                     //     max_djump,
                     // ));
+                    *pause_player = false;
                 }
             }
             Self::Invisible => {}
