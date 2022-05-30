@@ -1037,7 +1037,7 @@ impl BaseObject {
 
         let mut result = None;
         for other_object in objects {
-            let other_type = other_object.object_type;
+            let other_type = &other_object.object_type;
             let other = other_object.base_object;
 
             if &other_type.kind() == kind && other.collideable // This kills rust-fmt?
@@ -1190,7 +1190,7 @@ impl Hitbox {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 struct Object {
     base_object: BaseObject,
     object_type: ObjectType,
@@ -1445,7 +1445,7 @@ fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> b
     tile_flag_at(state, room, x, y, w, h, 0)
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 enum ObjectType {
     Platform,
     Chest(Chest),
@@ -1797,17 +1797,12 @@ impl Platform {
             this.x = -16;
         }
 
-        // // TODO: Make this better?
-        // let mut cloned_objects = objects.cloned();
-        // let mut other_other = OtherObjects {
-        //     prev: &mut [],
-        //     next: &mut cloned_objects,
-        // };
         // Platforms drag you
         if !this.check(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
             if let Some((objects, hit)) =
                 this.collide(objects.iter_mut(), &ObjectKind::Player, 0, -1)
             {
+                // TODO: other_objects here won't include the current platform. Is that a problem?
                 let mut other_objects = VecObjects { vec: objects };
                 hit.move_x(state, &mut other_objects, room, this.x - this.last, 1);
             }
@@ -2380,13 +2375,6 @@ impl<'a> OtherObjects<'a> {
             next: self.next.iter_mut(),
         }
     }
-
-    fn cloned(&self) -> Vec<Object> {
-        let mut prev = self.prev.to_vec();
-        prev.extend_from_slice(self.next);
-
-        prev
-    }
 }
 
 struct OtherObjectsIter<'a> {
@@ -2790,7 +2778,7 @@ impl Balloon {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 enum BigChest {
     Idle,
     PickedUp {
