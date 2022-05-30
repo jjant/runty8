@@ -480,7 +480,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 5, 2);
+        load_room(self, state, 7, 0);
     }
 }
 
@@ -950,11 +950,8 @@ impl Spring {
                 self.delay = 0;
             }
         } else if this.spr == 18.0 {
-            let mut player_was_hit = false;
-
             if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Player, 0, 0) {
                 let (player_base, player) = hit.to_player_mut().expect("Got wrong object back");
-                player_was_hit = true;
 
                 if player_base.spd.y >= 0.0 {
                     this.spr = 19.0;
@@ -976,25 +973,23 @@ impl Spring {
 
                     // psfx(8)
                 }
+                // -- breakable below us
+                let below = this.collide(objects.iter_mut(), &ObjectKind::FallFloor, 0, 1);
+                if let Some((others, below)) = below {
+                    let (fall_floor_object, fall_floor) = below.to_fall_floor_mut().unwrap();
+
+                    // Have to break it here because others doesn't include this spring.
+                    self.break_spring();
+                    fall_floor.break_fall_floor(
+                        fall_floor_object,
+                        &mut VecObjects { vec: others },
+                        got_fruit,
+                        room,
+                        max_djump,
+                        &mut update_action,
+                    )
+                }
             }
-
-            // TODO: Fixup
-            // if player_was_hit {
-            //     // -- breakable below us
-            //     let below = this.collide(objects.iter_mut(), &ObjectKind::FallFloor, 0, 1);
-            //     if let Some((others, below)) = below {
-            //         let (fall_floor_object, fall_floor) = below.to_fall_floor_mut().unwrap();
-
-            //         fall_floor.break_fall_floor(
-            //             fall_floor_object,
-            //             objects,
-            //             got_fruit,
-            //             room,
-            //             max_djump,
-            //             &mut update_action,
-            //         )
-            //     }
-            // }
         } else if self.delay > 0 {
             self.delay -= 1;
             if self.delay <= 0 {
@@ -2610,15 +2605,17 @@ impl FallFloor {
         }
     }
 
-    fn break_fall_floor(
+    fn break_fall_floor<T>(
         &mut self,
         this: &mut BaseObject,
-        objects: &mut OtherObjects<'_>,
+        objects: &mut T,
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
         update_action: &mut UpdateAction,
-    ) {
+    ) where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
         match self.state {
             FallFloorState::Idling => {
                 // psfx(15);
@@ -2634,7 +2631,8 @@ impl FallFloor {
                     max_djump,
                 ));
 
-                if let Some((_, hit)) = this.collide(objects.iter_mut(), &ObjectKind::Spring, 0, -1)
+                if let Some((_, hit)) =
+                    this.collide(objects.into_iter(), &ObjectKind::Spring, 0, -1)
                 {
                     let (_, spring) = hit.to_spring_mut().unwrap();
 
