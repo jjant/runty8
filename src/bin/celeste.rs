@@ -480,7 +480,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 7, 0);
+        load_room(self, state, 5, 2);
     }
 }
 
@@ -1319,7 +1319,6 @@ impl Object {
             ),
             ObjectType::Chest(_) => default_draw(&mut self.base_object, draw),
             ObjectType::Player(player) => player.draw(&mut self.base_object, draw, frames),
-            // ObjectType::Orb => todo!(),
             ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, draw),
             ObjectType::FallFloor(fall_floor) => fall_floor.draw(&mut self.base_object, draw),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, room),
@@ -1331,6 +1330,7 @@ impl Object {
             ObjectType::FlyFruit(fly_fruit) => fly_fruit.draw(&mut self.base_object, draw),
             ObjectType::Key => default_draw(&mut self.base_object, draw),
             ObjectType::Balloon(balloon) => balloon.draw(&self.base_object, draw),
+            ObjectType::Orb(orb) => orb.draw(&mut self.base_object, draw, objects),
         }
     }
 
@@ -1488,7 +1488,7 @@ enum ObjectType {
     LifeUp(LifeUp),
     Fruit(Fruit),
     FlyFruit(FlyFruit),
-    // Orb,
+    Orb(Orb),
     FakeWall,
     FallFloor(FallFloor),
     Key,
@@ -1514,6 +1514,7 @@ impl ObjectType {
             ObjectType::Chest(_) => ObjectKind::Chest,
             ObjectType::Balloon(_) => ObjectKind::Balloon,
             ObjectType::BigChest(_) => ObjectKind::BigChest,
+            ObjectType::Orb(_) => ObjectKind::Orb,
         }
     }
 
@@ -1559,7 +1560,6 @@ impl ObjectType {
             ObjectType::Fruit(fruit) => {
                 fruit.update(base_object, other_objects, got_fruit, room, max_djump)
             }
-            // ObjectType::Orb => todo!(),
             ObjectType::FakeWall => FakeWall::update(
                 base_object,
                 other_objects,
@@ -1590,6 +1590,7 @@ impl ObjectType {
             ObjectType::Balloon(balloon) => {
                 balloon.update(base_object, other_objects, got_fruit, room, max_djump)
             }
+            ObjectType::Orb(_) => UpdateAction::noop(),
         }
     }
 }
@@ -1961,6 +1962,7 @@ enum ObjectKind {
     Platform,
     Smoke,
     LifeUp,
+    Orb,
 }
 
 impl ObjectKind {
@@ -2013,6 +2015,7 @@ impl ObjectKind {
             }
             ObjectKind::FakeWall => ObjectType::FakeWall,
             ObjectKind::LifeUp => ObjectType::LifeUp(LifeUp::init(base_object)),
+            ObjectKind::Orb => ObjectType::Orb(Orb::init(base_object)),
         }
     }
     fn tile(&self) -> Option<i32> {
@@ -2964,14 +2967,14 @@ impl BigChest {
                     *new_bg = true;
 
                     // TODO: Init orb
-                    // update_action.push_mut(Object::init(
-                    //     got_fruit,
-                    //     room,
-                    //     ObjectKind::Orb,
-                    //     this.x + 4,
-                    //     this.y + 4,
-                    //     max_djump,
-                    // ));
+                    update_action.push_mut(Object::init(
+                        got_fruit,
+                        room,
+                        ObjectKind::Orb,
+                        this.x + 4,
+                        this.y + 4,
+                        max_djump,
+                    ));
                     *pause_player = false;
                 }
             }
@@ -3011,5 +3014,50 @@ impl<'a, 'objects> IntoIterator for &'a mut VecObjects<'objects> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.vec.iter_mut().map(|r| &mut **r)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct Orb {}
+
+impl Orb {
+    fn init(this: &mut BaseObject) -> Self {
+        this.spd.y = 4.0;
+        this.is_solid = false;
+
+        Self {}
+    }
+
+    fn draw<T>(&mut self, this: &mut BaseObject, draw: &mut DrawContext, objects: &mut T)
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
+        this.spd.y = appr(this.spd.y, 0.0, 0.5);
+
+        if this.spd.y == 0.0 {
+            if let Some((_, hit)) = this.collide(objects.into_iter(), &ObjectKind::Player, 0, 0) {
+                let (_, player) = hit.to_player_mut().unwrap();
+                // music_timer = 45;
+                // sfx(51);
+                // freeze=10;
+                // shake=10;
+                // destroy_object(this)
+                // max_djump = 2;
+                player.djump = 2;
+            }
+        }
+
+        draw.spr(102, this.x, this.y);
+        // let off = frames/30;
+        let off = 0;
+
+        for i in 0..=7 {
+            draw.circfill(
+                this.x + 4 + flr(cos((off + i) as f32 / 8.0) * 8.0),
+                this.y + 4 + flr(sin((off + i) as f32 / 8.0) * 8.0),
+                1,
+                7,
+            )
+        }
     }
 }
