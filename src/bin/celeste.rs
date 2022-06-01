@@ -123,17 +123,17 @@ impl App for GameState {
             }
         }
 
-        // TODO: Implement `music` api
-        // if self.music_timer > 0 {
-        //     self.music_timer -= 1;
+        if self.music_timer > 0 {
+            self.music_timer -= 1;
 
-        //     if music_timer <= 0 {
-        //         music(10, 0, 7);
-        //     }
-        // }
-        // if self.sfx_timer > 0 {
-        //     self.sfx_timer -= 1;
-        // }
+            if self.music_timer <= 0 {
+                // TODO: Implement `music` api
+                // music(10, 0, 7);
+            }
+        }
+        if self.sfx_timer > 0 {
+            self.sfx_timer -= 1;
+        }
 
         if self.freeze > 0 {
             self.freeze -= 1;
@@ -178,6 +178,7 @@ impl App for GameState {
                 self.frames,
                 &mut self.has_key,
                 self.pause_player,
+                &mut self.freeze,
             );
 
             player_dead = object.kind() == ObjectKind::Player && should_destroy;
@@ -212,25 +213,21 @@ impl App for GameState {
         // Update and remove dead dead_particles
         self.dead_particles.drain_filter(DeadParticle::update);
 
-        // TODO: remove
+        // start game
         if is_title(self) {
-            self.begin_game(state);
+            if !self.start_game && (state.btn(K_JUMP) || state.btn(K_DASH)) {
+                // music(-1);
+                self.start_game_flash = 50;
+                self.start_game = true;
+                // sfx(38);
+            }
+            if self.start_game {
+                self.start_game_flash -= 1;
+                if self.start_game_flash <= -30 {
+                    self.begin_game(state);
+                }
+            }
         }
-        // // start game
-        // if is_title(self) {
-        //     if !self.start_game && (state.btn(K_JUMP) || state.btn(K_DASH)) {
-        //         // music(-1);
-        //         self.start_game_flash = 50;
-        //         self.start_game = true;
-        //         // sfx(38);
-        //     }
-        //     if self.start_game {
-        //         self.start_game_flash -= 1;
-        //         if self.start_game_flash <= -30 {
-        //             self.begin_game(state);
-        //         }
-        //     }
-        // }
     }
 
     fn draw(&mut self, draw: &mut DrawContext) {
@@ -302,7 +299,6 @@ impl App for GameState {
         draw.map(self.room.x * 16, self.room.y * 16, 0, 0, 16, 16, 4);
 
         // Platforms/big chest
-        // TODO: Unify code somehow, loop below is identical, with a different if-check
         self.draw_objects(draw, |kind| {
             [ObjectKind::Platform, ObjectKind::BigChest].contains(&kind)
         });
@@ -370,25 +366,41 @@ impl App for GameState {
 }
 
 impl GameState {
-    fn draw_objects(&mut self, draw: &mut DrawContext, pred: impl Fn(ObjectKind) -> bool) {
+    fn draw_objects(&mut self, draw: &mut DrawContext, predicate: impl Fn(ObjectKind) -> bool) {
         {
-            for i in 0..self.objects.len() {
+            let mut i = 0;
+            while i < self.objects.len() {
                 let (object, mut other_objects) =
                     OtherObjects::split_slice(i, &mut self.objects).unwrap();
 
-                if pred(object.kind()) {
-                    object.draw(
+                if predicate(object.kind()) {
+                    let UpdateAction {
+                        should_destroy,
+                        mut new_objects,
+                        ..
+                    } = object.draw(
                         draw,
                         &mut other_objects,
                         self.room,
                         &self.got_fruit,
                         self.frames,
-                        self.max_djump,
+                        &mut self.max_djump,
                         &mut self.effects.shake,
+                        &mut self.freeze,
                         &mut self.flash_bg,
                         &mut self.new_bg,
                         &mut self.pause_player,
                     );
+
+                    if should_destroy {
+                        self.objects.remove(i);
+                    } else {
+                        i += 1;
+                    }
+
+                    self.objects.append(&mut new_objects);
+                } else {
+                    i += 1;
                 }
             }
         }
@@ -470,7 +482,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        // load_room(self, state, 5, 2);
+        // load_room(self, state, 6, 3);
         load_room(self, state, 0, 0);
     }
 }
@@ -520,7 +532,6 @@ struct Player {
     hair: Hair,
 }
 
-// TODO: Fix player getting stuck on the right side (level 3)
 impl Player {
     fn init(base_object: &mut BaseObject, max_djump: i32) -> Self {
         base_object.hitbox = Hitbox {
@@ -566,6 +577,8 @@ impl Player {
         max_djump: i32,
         has_dashed: &mut bool,
         pause_player: bool,
+        shake: &mut i32,
+        freeze: &mut i32,
     ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
@@ -597,8 +610,6 @@ impl Player {
             update_action.destroy_if_mut(true);
         }
 
-        // TODO: Check is_solid, is_ice
-        // Check appr
         let on_ground = this.is_solid(state, objects, room, 0, 1);
         let on_ice = this.is_ice(state, room, 0, 1);
 
@@ -793,8 +804,8 @@ impl Player {
                 }
 
                 // psfx(3);
-                // freeze = 2;
-                // shake = 6;
+                // *freeze = 2;
+                *shake = 6;
                 self.dash_target.x = 2.0 * sign(this.spd.x);
                 self.dash_target.y = 2.0 * sign(this.spd.y);
                 self.dash_accel.x = 1.5;
@@ -1198,7 +1209,9 @@ struct Object {
 }
 
 fn got_fruit_for_room(got_fruit: &[bool], room: Vec2<i32>) -> bool {
-    got_fruit[1 + level_index(room) as usize]
+    *got_fruit
+        .get(1 + level_index(room) as usize)
+        .unwrap_or(&false)
 }
 
 impl Object {
@@ -1257,6 +1270,7 @@ impl Object {
         frames: i32,
         has_key: &mut bool,
         pause_player: bool,
+        freeze: &mut i32,
     ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
@@ -1273,6 +1287,7 @@ impl Object {
             frames,
             has_key,
             pause_player,
+            freeze,
         )
     }
 
@@ -1284,8 +1299,9 @@ impl Object {
         room: Vec2<i32>,
         got_fruit: &[bool],
         frames: i32,
-        max_djump: i32,
+        max_djump: &mut i32,
         shake: &mut i32,
+        freeze: &mut i32,
         flash_bg: &mut bool,
         new_bg: &mut bool,
         pause_player: &mut bool,
@@ -1295,7 +1311,7 @@ impl Object {
     {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
-                player_spawn.draw(&mut self.base_object, draw, frames, max_djump)
+                player_spawn.draw(&mut self.base_object, draw, frames, *max_djump)
             }
             ObjectType::BigChest(big_chest) => {
                 return big_chest.draw(
@@ -1304,7 +1320,7 @@ impl Object {
                     objects,
                     room,
                     got_fruit,
-                    max_djump,
+                    *max_djump,
                     shake,
                     flash_bg,
                     new_bg,
@@ -1324,7 +1340,17 @@ impl Object {
             ObjectType::FlyFruit(fly_fruit) => fly_fruit.draw(&mut self.base_object, draw),
             ObjectType::Key => default_draw(&mut self.base_object, draw),
             ObjectType::Balloon(balloon) => balloon.draw(&self.base_object, draw),
-            ObjectType::Orb(orb) => orb.draw(&mut self.base_object, draw, objects),
+            ObjectType::Orb(orb) => {
+                return orb.draw(
+                    &mut self.base_object,
+                    draw,
+                    objects,
+                    max_djump,
+                    freeze,
+                    shake,
+                    frames,
+                )
+            }
         }
 
         UpdateAction::noop()
@@ -1528,6 +1554,7 @@ impl ObjectType {
         frames: i32,
         has_key: &mut bool,
         pause_player: bool,
+        freeze: &mut i32,
     ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
@@ -1551,6 +1578,8 @@ impl ObjectType {
                 max_djump,
                 has_dashed,
                 pause_player,
+                &mut effects.shake,
+                freeze,
             ),
             ObjectType::LifeUp(life_up) => life_up.update(),
             ObjectType::Fruit(fruit) => {
@@ -2815,7 +2844,6 @@ enum BigChest {
         timer: i32,
         particles: Vec<BigChestParticle>,
     },
-    Invisible,
 }
 
 #[derive(Clone, Debug)]
@@ -2924,11 +2952,9 @@ impl BigChest {
                 });
 
                 if *timer < 0 {
-                    *self = Self::Invisible;
                     *flash_bg = false;
                     *new_bg = true;
 
-                    // TODO: Init orb
                     update_action.push_mut(Object::init(
                         got_fruit,
                         room,
@@ -2937,10 +2963,10 @@ impl BigChest {
                         this.y + 4,
                         max_djump,
                     ));
+                    update_action.destroy_if_mut(true);
                     *pause_player = false;
                 }
             }
-            Self::Invisible => {}
         }
 
         draw.spr(112, this.x, this.y + 8);
@@ -3010,16 +3036,27 @@ struct Orb {}
 
 impl Orb {
     fn init(this: &mut BaseObject) -> Self {
-        this.spd.y = 4.0;
+        this.spd.y = -4.0;
         this.is_solid = false;
 
         Self {}
     }
 
-    fn draw<T>(&mut self, this: &mut BaseObject, draw: &mut DrawContext, objects: &mut T)
+    #[allow(clippy::too_many_arguments)]
+    fn draw<T>(
+        &mut self,
+        this: &mut BaseObject,
+        draw: &mut DrawContext,
+        objects: &mut T,
+        max_djump: &mut i32,
+        freeze: &mut i32,
+        shake: &mut i32,
+        frames: i32,
+    ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
+        let mut update_action = UpdateAction::noop();
         this.spd.y = appr(this.spd.y, 0.0, 0.5);
 
         if this.spd.y == 0.0 {
@@ -3027,25 +3064,26 @@ impl Orb {
                 let (_, player) = hit.to_player_mut().unwrap();
                 // music_timer = 45;
                 // sfx(51);
-                // freeze=10;
-                // shake=10;
-                // destroy_object(this)
-                // max_djump = 2;
+                *freeze = 10;
+                *shake = 10;
+                update_action.destroy_if_mut(true);
+                *max_djump = 2;
                 player.djump = 2;
             }
         }
 
         draw.spr(102, this.x, this.y);
-        // let off = frames/30;
-        let off = 0;
+        let off = frames as f32 / 30.0;
 
-        for i in 0..=7 {
+        for i in (0..=7).map(|i| i as f32) {
             draw.circfill(
-                this.x + 4 + flr(cos((off + i) as f32 / 8.0) * 8.0),
-                this.y + 4 + flr(sin((off + i) as f32 / 8.0) * 8.0),
+                this.x + 4 + flr(cos(off + i / 8.0) * 8.0),
+                this.y + 4 + flr(sin(off + i / 8.0) * 8.0),
                 1,
                 7,
             )
         }
+
+        update_action
     }
 }
