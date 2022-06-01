@@ -7,7 +7,7 @@ use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
 use runty8::App;
 
-use std::iter::Map;
+use std::iter::{Chain, Map};
 use std::slice;
 
 // TODO: Deduplicate this code.
@@ -470,7 +470,8 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 5, 2);
+        // load_room(self, state, 5, 2);
+        load_room(self, state, 0, 0);
     }
 }
 
@@ -2410,34 +2411,6 @@ fn flr(f: f32) -> i32 {
     f.floor() as i32
 }
 
-impl<'a> OtherObjects<'a> {
-    fn iter_mut(&mut self) -> OtherObjectsIter<'_> {
-        OtherObjectsIter {
-            prev: self.prev.iter_mut(),
-            next: self.next.iter_mut(),
-        }
-    }
-}
-
-struct OtherObjectsIter<'a> {
-    prev: std::slice::IterMut<'a, Object>,
-    next: std::slice::IterMut<'a, Object>,
-}
-
-impl<'a> Iterator for OtherObjectsIter<'a> {
-    type Item = &'a mut Object;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(o) = self.prev.next() {
-            Some(o)
-        } else if let Some(o) = self.next.next() {
-            Some(o)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 struct FlyFruit {
     start: i32,
@@ -3009,10 +2982,10 @@ impl<'a> OtherObjects<'a> {
 
 impl<'a, 'objects> IntoIterator for &'a mut OtherObjects<'objects> {
     type Item = &'a mut Object;
-    type IntoIter = OtherObjectsIter<'a>;
+    type IntoIter = Chain<std::slice::IterMut<'a, Object>, std::slice::IterMut<'a, Object>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
+        self.prev.iter_mut().chain(self.next.iter_mut())
     }
 }
 
