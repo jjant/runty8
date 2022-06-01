@@ -158,13 +158,8 @@ impl App for GameState {
         let mut do_next_level = false;
         let mut i = 0;
         while i < self.objects.len() {
-            let (previous_objects, object, future_objects) =
-                split_at_index(i, &mut self.objects).unwrap();
-
-            let mut other_objects = OtherObjects {
-                prev: previous_objects,
-                next: future_objects,
-            };
+            let (object, mut other_objects) =
+                OtherObjects::split_slice(i, &mut self.objects).unwrap();
 
             // Apply velocity
             object.move_(state, &mut other_objects, self.room);
@@ -378,13 +373,8 @@ impl GameState {
     fn draw_objects(&mut self, draw: &mut DrawContext, pred: impl Fn(ObjectKind) -> bool) {
         {
             for i in 0..self.objects.len() {
-                let (previous_objects, object, future_objects) =
-                    split_at_index(i, &mut self.objects).unwrap();
-
-                let mut other_objects = OtherObjects {
-                    prev: previous_objects,
-                    next: future_objects,
-                };
+                let (object, mut other_objects) =
+                    OtherObjects::split_slice(i, &mut self.objects).unwrap();
 
                 if pred(object.kind()) {
                     object.draw(
@@ -1298,25 +1288,28 @@ impl Object {
         flash_bg: &mut bool,
         new_bg: &mut bool,
         pause_player: &mut bool,
-    ) where
+    ) -> UpdateAction
+    where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
                 player_spawn.draw(&mut self.base_object, draw, frames, max_djump)
             }
-            ObjectType::BigChest(big_chest) => big_chest.draw(
-                &self.base_object,
-                draw,
-                objects,
-                room,
-                got_fruit,
-                max_djump,
-                shake,
-                flash_bg,
-                new_bg,
-                pause_player,
-            ),
+            ObjectType::BigChest(big_chest) => {
+                return big_chest.draw(
+                    &self.base_object,
+                    draw,
+                    objects,
+                    room,
+                    got_fruit,
+                    max_djump,
+                    shake,
+                    flash_bg,
+                    new_bg,
+                    pause_player,
+                )
+            }
             ObjectType::Chest(_) => default_draw(&mut self.base_object, draw),
             ObjectType::Player(player) => player.draw(&mut self.base_object, draw, frames),
             ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, draw),
@@ -1332,6 +1325,8 @@ impl Object {
             ObjectType::Balloon(balloon) => balloon.draw(&self.base_object, draw),
             ObjectType::Orb(orb) => orb.draw(&mut self.base_object, draw, objects),
         }
+
+        UpdateAction::noop()
     }
 
     fn move_<T>(&mut self, state: &State, objects: &mut T, room: Vec2<i32>)
@@ -2364,13 +2359,6 @@ impl FakeWall {
     }
 }
 
-fn split_at_index<T>(index: usize, elements: &mut [T]) -> Option<(&mut [T], &mut T, &mut [T])> {
-    let (a, bc) = elements.split_at_mut(index);
-    let (b, c) = bc.split_first_mut()?;
-
-    Some((a, b, c))
-}
-
 fn horizontal_input(state: &State) -> i32 {
     if state.btn(K_RIGHT) {
         1
@@ -2885,7 +2873,8 @@ impl BigChest {
         flash_bg: &mut bool,
         new_bg: &mut bool,
         pause_player: &mut bool,
-    ) where
+    ) -> UpdateAction
+    where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
         let mut update_action = UpdateAction::noop();
@@ -2984,12 +2973,38 @@ impl BigChest {
         draw.spr(112, this.x, this.y + 8);
         draw.spr(113, this.x + 8, this.y + 8);
         this.hitbox.draw(draw, this.x, this.y, 8);
+
+        update_action
     }
 }
 
 struct OtherObjects<'a> {
     prev: &'a mut [Object],
     next: &'a mut [Object],
+}
+
+fn split_at_index<T>(index: usize, elements: &mut [T]) -> Option<(&mut [T], &mut T, &mut [T])> {
+    let (a, bc) = elements.split_at_mut(index);
+    let (b, c) = bc.split_first_mut()?;
+
+    Some((a, b, c))
+}
+
+impl<'a> OtherObjects<'a> {
+    fn split_slice(
+        index: usize,
+        elements: &mut [Object],
+    ) -> Option<(&mut Object, OtherObjects<'_>)> {
+        let (previous_objects, object, future_objects) = split_at_index(index, elements)?;
+
+        Some((
+            object,
+            OtherObjects {
+                prev: previous_objects,
+                next: future_objects,
+            },
+        ))
+    }
 }
 
 impl<'a, 'objects> IntoIterator for &'a mut OtherObjects<'objects> {
