@@ -390,6 +390,8 @@ impl GameState {
                         &mut self.flash_bg,
                         &mut self.new_bg,
                         &mut self.pause_player,
+                        self.seconds,
+                        self.minutes,
                     );
 
                     if should_destroy {
@@ -854,7 +856,6 @@ impl Player {
 
         // -- next level
         if this.y < -4 && level_index(room) < 30 {
-            // next_room(game_state, state)
             update_action.next_level();
         }
 
@@ -1159,7 +1160,7 @@ impl RoomTitle {
         UpdateAction::noop().destroy_if(self.delay < -30)
     }
 
-    fn draw(&self, draw: &mut DrawContext, room: Vec2<i32>) {
+    fn draw(&self, draw: &mut DrawContext, room: Vec2<i32>, seconds: i32, minutes: i32) {
         if self.delay < 0 {
             draw.rectfill(24, 58, 104, 70, 0);
 
@@ -1173,7 +1174,7 @@ impl RoomTitle {
                 draw.print(&format!("{} M", level), x, 62, 7);
             }
 
-            draw_time(draw, 4, 4);
+            draw_time(seconds, minutes, draw, 4, 4);
         }
     }
 }
@@ -1305,6 +1306,8 @@ impl Object {
         flash_bg: &mut bool,
         new_bg: &mut bool,
         pause_player: &mut bool,
+        seconds: i32,
+        minutes: i32,
     ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
@@ -1331,7 +1334,7 @@ impl Object {
             ObjectType::Player(player) => player.draw(&mut self.base_object, draw, frames),
             ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, draw),
             ObjectType::FallFloor(fall_floor) => fall_floor.draw(&mut self.base_object, draw),
-            ObjectType::RoomTitle(room_title) => room_title.draw(draw, room),
+            ObjectType::RoomTitle(room_title) => room_title.draw(draw, room, seconds, minutes),
             ObjectType::Platform => Platform::draw(&self.base_object, draw),
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
             ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
@@ -1753,14 +1756,10 @@ fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
     }
 }
 
-fn draw_time(draw: &mut DrawContext, x: i32, y: i32) {
-    // TODO
-    //  local s=seconds
-    //  local m=minutes%60
-    //  local h=flr(minutes/60)
-    let s = 42;
-    let m = 1;
-    let h = 0;
+fn draw_time(seconds: i32, minutes: i32, draw: &mut DrawContext, x: i32, y: i32) {
+    let s = seconds;
+    let m = minutes % 60;
+    let h = minutes / 60;
 
     let h_str = if h < 10 {
         format!("0{}", h)
