@@ -1031,7 +1031,6 @@ struct BaseObject {
     spr: f32, // hack they use
     spd: Vec2<f32>,
     rem: Vec2<f32>,
-    last: i32,
     dir: i32, // not sure if all objects use this?
     // obj.solids in original source
     is_solid: bool,
@@ -1245,7 +1244,6 @@ impl Object {
             },
             spd: Vec2 { x: 0., y: 0. },
             rem: Vec2 { x: 0., y: 0. },
-            last: 0,
             dir: 0,
             flip: Vec2 { x: false, y: false },
             // TODO: figure out if we need an option here
@@ -1336,7 +1334,7 @@ impl Object {
             ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, draw),
             ObjectType::FallFloor(fall_floor) => fall_floor.draw(&mut self.base_object, draw),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, room, seconds, minutes),
-            ObjectType::Platform => Platform::draw(&self.base_object, draw),
+            ObjectType::Platform(platform) => platform.draw(&self.base_object, draw),
             ObjectType::Smoke => default_draw(&mut self.base_object, draw),
             ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
             ObjectType::LifeUp(life_up) => life_up.draw(&self.base_object, draw),
@@ -1505,7 +1503,7 @@ fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> b
 
 #[derive(Clone, Debug)]
 enum ObjectType {
-    Platform,
+    Platform(Platform),
     Chest(Chest),
     Balloon(Balloon),
     BigChest(BigChest),
@@ -1527,7 +1525,7 @@ enum ObjectType {
 impl ObjectType {
     fn kind(&self) -> ObjectKind {
         match self {
-            ObjectType::Platform => ObjectKind::Platform,
+            ObjectType::Platform(_) => ObjectKind::Platform,
             ObjectType::Player(_) => ObjectKind::Player,
             ObjectType::PlayerSpawn(_) => ObjectKind::PlayerSpawn,
             ObjectType::RoomTitle(_) => ObjectKind::RoomTitle,
@@ -1571,7 +1569,9 @@ impl ObjectType {
                 player_spawn.update(base_object, effects, got_fruit, room, max_djump, state)
             }
             ObjectType::Smoke => Smoke::update(base_object),
-            ObjectType::Platform => Platform::update(base_object, state, other_objects, room),
+            ObjectType::Platform(platform) => {
+                platform.update(base_object, state, other_objects, room)
+            }
             ObjectType::BigChest(_) => {
                 // TODO:
                 UpdateAction::noop()
@@ -1840,17 +1840,22 @@ fn spikes_at(
     false
 }
 
-struct Platform {}
+#[derive(Clone, Debug)]
+struct Platform {
+    last: i32,
+}
 
 impl Platform {
-    fn init(this: &mut BaseObject) {
+    fn init(this: &mut BaseObject) -> Self {
         this.x -= 4;
         this.is_solid = false;
         this.hitbox.w = 16;
-        this.last = this.x;
+
+        Self { last: this.x }
     }
 
     fn update<T>(
+        &mut self,
         this: &mut BaseObject,
         state: &State,
         objects: &mut T,
@@ -1877,18 +1882,18 @@ impl Platform {
                     state,
                     &mut other_objects,
                     room,
-                    this.x - this.last,
+                    this.x - self.last,
                     1,
                 );
             }
         }
 
-        this.last = this.x;
+        self.last = this.x;
 
         UpdateAction::noop()
     }
 
-    fn draw(this: &BaseObject, draw: &mut DrawContext) {
+    fn draw(&self, this: &BaseObject, draw: &mut DrawContext) {
         draw.spr(11, this.x, this.y - 1);
         draw.spr(12, this.x + 8, this.y - 1)
     }
@@ -2029,15 +2034,11 @@ impl ObjectKind {
 
             ObjectKind::Key => ObjectType::Key,
             ObjectKind::Chest => ObjectType::Chest(Chest::init(base_object)),
-            ObjectKind::Message => ObjectType::Message(Message::init(base_object)),
+            ObjectKind::Message => ObjectType::Message(Message::init()),
             ObjectKind::BigChest => ObjectType::BigChest(BigChest::init(base_object)),
             // ObjectKind::Flag => todo!(),
             ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle::init()),
-            ObjectKind::Platform => {
-                Platform::init(base_object);
-
-                ObjectType::Platform
-            }
+            ObjectKind::Platform => ObjectType::Platform(Platform::init(base_object)),
             ObjectKind::Smoke => {
                 Smoke::init(base_object);
                 ObjectType::Smoke
@@ -3095,14 +3096,14 @@ impl Orb {
 #[derive(Debug, Clone)]
 struct Message {
     index: f32,
+    last: i32,
     off: Vec2<i32>,
 }
 
 impl Message {
-    fn init(this: &mut BaseObject) -> Self {
-        this.last = 0;
-
+    fn init() -> Self {
         Self {
+            last: 0,
             index: 0.0,
             off: Vec2 { x: 8, y: 96 },
         }
@@ -3118,14 +3119,14 @@ impl Message {
         if this.check(objects.into_iter(), &ObjectKind::Player, 4, 0) {
             if self.index < TEXT.len() as f32 {
                 self.index += 0.5;
-                if self.index >= (this.last + 1) as f32 {
-                    this.last += 1;
+                if self.index >= (self.last + 1) as f32 {
+                    self.last += 1;
                     //  sfx(35)
                 }
             }
 
             self.off = Vec2 { x: 8, y: 96 };
-            for i in 1..=(flr(self.index) as usize) {
+            for i in 0..(flr(self.index) as usize) {
                 if sub(TEXT, i, i) != "#" {
                     draw.rectfill(
                         self.off.x - 2,
@@ -3134,7 +3135,7 @@ impl Message {
                         self.off.y + 6,
                         7,
                     );
-                    draw.print(sub(TEXT, i, i), self.off.x, self.off.y, 2);
+                    draw.print(sub(TEXT, i, i), self.off.x, self.off.y, 0);
                     self.off.x += 5
                 } else {
                     self.off.x = 8;
@@ -3142,13 +3143,12 @@ impl Message {
                 }
             }
         } else {
-            // *self = Self::init(this);
             self.index = 0.0;
-            this.last = 0;
+            self.last = 0;
         }
     }
 }
 
 fn sub(str: &str, min: usize, max: usize) -> &str {
-    &str[min..=max.min(str.len() - 1)]
+    &str[min..=max]
 }
