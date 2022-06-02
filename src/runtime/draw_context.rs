@@ -1,7 +1,7 @@
 use crate::{draw, font};
 
 use super::sprite_sheet::{Color, Sprite};
-use super::state::State;
+use super::state::{Button, State};
 
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
@@ -9,7 +9,7 @@ type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
 
 // TODO: Make pub(crate)
-pub struct DrawData {
+pub(crate) struct DrawData {
     pub(crate) buffer: Buffer,
     transparent_color: Option<Color>,
     draw_palette: [Color; 16],
@@ -35,7 +35,8 @@ impl Default for DrawData {
 }
 pub struct DrawContext<'a, 'resources> {
     data: &'a mut DrawData,
-    pub(crate) state: &'a mut State<'resources>,
+    // TODO: make pub(crate)
+    pub state: &'a mut State<'resources>,
 }
 
 const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
@@ -73,22 +74,26 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         }
     }
 
-    fn set_pixel(
+    fn set_pixel_with_transparency(
         buffer: &mut [Color],
         draw_palette: &[Color; 16],
         transparent_color: Option<Color>,
         index: usize,
         color: Color,
     ) {
-        // https://pico-8.fandom.com/wiki/Pal
-        let color = draw_palette[color as usize];
-        let c = get_color(color);
-
         if let Some(transparent_color) = transparent_color {
             if color == transparent_color {
                 return;
             }
         }
+
+        DrawContext::set_pixel(buffer, draw_palette, index, color);
+    }
+
+    fn set_pixel(buffer: &mut [Color], draw_palette: &[Color; 16], index: usize, color: Color) {
+        // https://pico-8.fandom.com/wiki/Pal
+        let color = draw_palette[color as usize];
+        let c = get_color(color);
 
         #[allow(clippy::identity_op)]
         {
@@ -100,7 +105,6 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
             buffer[NUM_COMPONENTS * index + 2] = b;
         }
     }
-
     fn index(&self, x: i32, y: i32) -> Option<usize> {
         let x_in_bounds = 0 <= x && x < WIDTH as i32;
         let y_in_bounds = 0 <= y && y < WIDTH as i32;
@@ -119,15 +123,33 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
 
 // Pico8 api
 impl<'a, 'resources> DrawContext<'a, 'resources> {
-    pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
+    pub fn btn(&self, button: Button) -> bool {
+        self.state.btn(button)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    // TODO: Implement w and h params functionality
+    pub fn spr_(
+        &mut self,
+        sprite: usize,
+        x: i32,
+        y: i32,
+        _w: f32,
+        _h: f32,
+        flip_x: bool,
+        flip_y: bool,
+    ) {
         let sprite = self.state.sprite_sheet.get_sprite(sprite);
         let buffer = &sprite.sprite;
 
         for i in 0..8 {
             for j in 0..8 {
-                let (x, y) = self.apply_camera(x + i, y + j);
+                let world_x = if flip_x { x + 7 - i } else { x + i };
+                let world_y = if flip_y { y + 7 - j } else { y + j };
+
+                let (x, y) = self.apply_camera(world_x, world_y);
                 if let Some(index) = self.index(x, y) {
-                    Self::set_pixel(
+                    Self::set_pixel_with_transparency(
                         &mut self.data.buffer,
                         &self.data.draw_palette,
                         self.data.transparent_color,
@@ -137,6 +159,10 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
                 }
             }
         }
+    }
+
+    pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
+        self.spr_(sprite, x, y, 1.0, 1.0, false, false)
     }
 
     pub fn print(&mut self, str: &str, x: i32, y: i32, color: Color) {
@@ -157,8 +183,8 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
 
     pub fn reset_pal(&mut self) {
         self.data.draw_palette = ORIGINAL_PALETTE;
-        // pal() makes colors opaque
-        self.palt(None);
+        // pal() resets transparency to default
+        self.palt(Some(0));
     }
 
     pub fn pal(&mut self, c0: Color, c1: Color) {
@@ -169,13 +195,7 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
         let (x, y) = self.apply_camera(x, y);
         if let Some(index) = self.index(x, y) {
-            Self::set_pixel(
-                &mut self.data.buffer,
-                &self.data.draw_palette,
-                self.data.transparent_color,
-                index,
-                color,
-            );
+            Self::set_pixel(&mut self.data.buffer, &self.data.draw_palette, index, color);
         }
     }
 
@@ -220,6 +240,36 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         self.line(x0, y0, x0, y1, color);
         self.line(x0, y1, x1, y1, color);
         self.line(x1, y0, x1, y1, color);
+    }
+
+    /// https://pico-8.fandom.com/wiki/Map
+    #[allow(clippy::too_many_arguments)]
+    pub fn map(
+        &mut self,
+        cell_x: i32,
+        cell_y: i32,
+        screen_x: i32,
+        screen_y: i32,
+        cell_w: i32,
+        cell_h: i32,
+        // TODO: Use layer
+        layer: u8,
+    ) {
+        // TODO: Handle like pico8
+
+        for (i_x, map_x) in (cell_x..=(cell_x + cell_w)).enumerate() {
+            for (i_y, map_y) in (cell_y..=(cell_y + cell_h)).enumerate() {
+                let spr = self.state.map.mget(map_x, map_y);
+                let flags = self.fget(spr.into());
+
+                if flags & layer == layer {
+                    let x = screen_x + 8 * i_x as i32;
+                    let y = screen_y + 8 * i_y as i32;
+
+                    self.spr(spr as usize, x, y);
+                }
+            }
+        }
     }
 }
 

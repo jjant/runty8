@@ -1,7 +1,8 @@
 pub type Color = u8; // Actually a u4
 
 use itertools::Itertools;
-use std::{fs::File, io::Read};
+
+use crate::editor::serialize::Serialize;
 
 #[derive(Debug)]
 pub struct SpriteSheet {
@@ -9,11 +10,13 @@ pub struct SpriteSheet {
 }
 
 impl SpriteSheet {
-    pub const SPRITE_COUNT: usize = 256;
+    pub const SPRITES_PER_ROW: usize = 16;
 
-    pub fn file_name() -> &'static str {
-        "sprite_sheet.txt"
-    }
+    /// This is kind of a lie.
+    /// The pico8 sprite sheet supports 128 "real" sprites
+    /// The other 128 share memory with the map,
+    /// and will override its data if used
+    pub const SPRITE_COUNT: usize = 256;
 
     #[allow(dead_code)]
     pub fn new() -> Self {
@@ -64,15 +67,6 @@ impl SpriteSheet {
         sprite * Sprite::WIDTH * Sprite::HEIGHT
     }
 
-    pub fn serialize(&self) -> String {
-        let lines = self.sprite_sheet.chunks(128).map(|chunk| {
-            Itertools::intersperse(chunk.iter().map(|n| format!("{:X}", n)), "".to_owned())
-                .collect()
-        });
-
-        Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
-    }
-
     pub fn deserialize(str: &str) -> Result<Self, String> {
         let sprite_sheet = str
             .as_bytes()
@@ -86,21 +80,19 @@ impl SpriteSheet {
     }
 }
 
-// TODO: Make a more reliable version of this.
-// TODO: Improve capacity calculation? It's kinda flakey
-pub(crate) fn deserialize(file_name: &str) -> Result<SpriteSheet, String> {
-    println!("[Editor] Deserialising sprite sheet from: {}", file_name);
-    let capacity = 128 * 128 + 128;
-    let mut file_contents = String::with_capacity(capacity);
-    let mut file = File::open(file_name).map_err(|_| "Couldn't OPEN file")?;
+impl Serialize for SpriteSheet {
+    fn file_name() -> String {
+        "sprite_sheet.txt".to_owned()
+    }
 
-    file.read_to_string(&mut file_contents)
-        .map_err(|_| "Couldn't READ file")?;
+    fn serialize(&self) -> String {
+        let lines = self.sprite_sheet.chunks(128).map(|chunk| {
+            Itertools::intersperse(chunk.iter().map(|n| format!("{:X}", n)), "".to_owned())
+                .collect()
+        });
 
-    let sprite_sheet = SpriteSheet::deserialize(&file_contents)?;
-
-    println!("[Editor] Deserialising successful");
-    Ok(sprite_sheet)
+        Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
+    }
 }
 
 #[repr(transparent)]

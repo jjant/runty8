@@ -9,18 +9,32 @@ pub struct Button<'a, Msg> {
     width: i32,
     height: i32,
     on_press: Option<Msg>,
+    on_hover: Option<Msg>,
     state: &'a mut State,
     content: Element<'a, Msg>,
+    active_mode: ActiveMode,
+}
+
+#[derive(PartialEq)]
+enum ActiveMode {
+    Release,
+    Press,
 }
 
 #[derive(Debug, Clone)]
 pub struct State {
     pressed: bool,
+    mouse_pressed: bool,
+    mouse_contained: bool,
 }
 
 impl State {
     pub fn new() -> Self {
-        Self { pressed: false }
+        Self {
+            pressed: false,
+            mouse_pressed: false,
+            mouse_contained: false,
+        }
     }
 }
 
@@ -46,9 +60,23 @@ impl<'a, Msg> Button<'a, Msg> {
             width,
             height,
             on_press,
+            on_hover: None,
             state,
             content: content.into(),
+            active_mode: ActiveMode::Release,
         }
+    }
+
+    pub fn event_on_press(mut self) -> Self {
+        self.active_mode = ActiveMode::Press;
+
+        self
+    }
+
+    pub fn on_hover(mut self, on_hover: Msg) -> Self {
+        self.on_hover = Some(on_hover);
+
+        self
     }
 
     fn contains(&self, x: i32, y: i32) -> bool {
@@ -74,18 +102,58 @@ impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
         // TODO: Dispatch events for content?
         match event {
             Mouse(Down(MouseButton::Left)) => {
+                self.state.mouse_pressed = true;
+
                 if self.contains(cursor_position.0, cursor_position.1) {
+                    if self.active_mode == ActiveMode::Press && !self.state.pressed {
+                        if let Some(on_press) = self.on_press {
+                            dispatch_event.call(on_press);
+                        }
+                    }
+
                     self.state.pressed = true;
                 }
             }
             Mouse(Up(MouseButton::Left)) => {
-                if self.contains(cursor_position.0, cursor_position.1) && self.state.pressed {
+                self.state.mouse_pressed = false;
+
+                if self.contains(cursor_position.0, cursor_position.1)
+                    && self.state.pressed
+                    && self.active_mode == ActiveMode::Release
+                {
                     if let Some(on_press) = self.on_press {
                         dispatch_event.call(on_press);
                     }
                 }
 
                 self.state.pressed = false;
+            }
+            Mouse(Move { .. }) => {
+                let currently_contained = self.contains(cursor_position.0, cursor_position.1);
+
+                if currently_contained && !self.state.mouse_contained {
+                    if let Some(on_hover) = self.on_hover {
+                        dispatch_event.call(on_hover);
+                    }
+                }
+
+                self.state.mouse_contained = currently_contained;
+
+                match self.active_mode {
+                    ActiveMode::Press => {
+                        if self.state.mouse_contained {
+                            if self.state.mouse_pressed && !self.state.pressed {
+                                self.state.pressed = true;
+                                if let Some(on_press) = self.on_press {
+                                    dispatch_event.call(on_press);
+                                }
+                            }
+                        } else {
+                            self.state.pressed = false;
+                        }
+                    }
+                    ActiveMode::Release => {}
+                };
             }
             _ => {}
         }

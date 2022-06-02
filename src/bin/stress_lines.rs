@@ -1,5 +1,4 @@
 use runty8::{
-    app,
     runtime::{
         draw_context::DrawContext,
         state::{Button, State},
@@ -8,7 +7,7 @@ use runty8::{
 };
 
 fn main() {
-    app::pico8::run_app::<StressLines>();
+    runty8::run_app::<StressLines>("".to_owned());
 }
 struct StressLines {
     mouse: MouseState,
@@ -66,15 +65,16 @@ impl MouseState {
 }
 
 impl App for StressLines {
-    fn init() -> Self {
+    fn init(_: &State) -> Self {
         Self {
             mouse: MouseState::new(64, 64),
         }
     }
 
     fn update(&mut self, state: &State) {
+        let (mouse_x, mouse_y) = state.mouse();
         self.mouse
-            .update(state.btn(Button::Mouse), state.mouse_x, state.mouse_y);
+            .update(state.btn(Button::Mouse), mouse_x, mouse_y);
         // let mut i = 0;
         // while i < self.particles.len() {
         //     if self.particles[i].ttl == 0 {
@@ -87,7 +87,7 @@ impl App for StressLines {
         // }
     }
 
-    fn draw(&self, draw_context: &mut DrawContext) {
+    fn draw(&mut self, draw_context: &mut DrawContext) {
         draw_context.cls();
 
         // Diagonal line

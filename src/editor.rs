@@ -1,13 +1,16 @@
+pub mod serialize;
+use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
-use crate::runtime::state::Flags;
 use crate::ui::button::{self, Button};
 use crate::ui::{
     cursor::{self, Cursor},
     text::Text,
 };
 use crate::ui::{DrawFn, Element, Tree};
+use crate::{Event, Key, KeyboardEvent};
 use itertools::Itertools;
+use serialize::serialize;
 
 #[derive(Debug)]
 pub struct Editor {
@@ -23,6 +26,12 @@ pub struct Editor {
     flag_buttons: Vec<button::State>,
     sprite_buttons: Vec<button::State>,
     pixel_buttons: Vec<button::State>,
+    selected_tool: usize,
+    tool_buttons: Vec<button::State>,
+    bottom_bar_text: String,
+    map_buttons: Vec<button::State>,
+    hovered_map_button: usize,
+    show_sprites_in_map: bool,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -32,15 +41,20 @@ enum Tab {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Msg {
+pub(crate) enum Msg {
     SpriteTabClicked,
     MapButtonClicked,
     ColorSelected(usize),
+    ColorHovered(usize),
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
-    // TODO: Improve
-    SpriteEdited { x: usize, y: usize },
+    SpriteEdited { x: usize, y: usize }, // TODO: Improve
+    ToolSelected(usize),
+    SerializeRequested,
+    ShiftSprite(ShiftDirection),
+    MapSpriteHovered(usize),
+    SwitchMapMode,
 }
 
 impl Editor {
@@ -65,10 +79,23 @@ impl Editor {
             flag_buttons: vec![button::State::new(); 8],
             sprite_buttons: vec![button::State::new(); 64],
             pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
+            selected_tool: 0,
+            tool_buttons: vec![button::State::new(); 2],
+            bottom_bar_text: "".to_owned(),
+            map_buttons: vec![button::State::new(); 144],
+            hovered_map_button: 0,
+            show_sprites_in_map: false,
         }
     }
 
-    pub fn update(&mut self, flags: &mut Flags, sprite_sheet: &mut SpriteSheet, msg: &Msg) {
+    pub(crate) fn update(
+        &mut self,
+        assets_path: &str,
+        flags: &mut Flags,
+        sprite_sheet: &mut SpriteSheet,
+        map: &mut Map,
+        msg: &Msg,
+    ) {
         match msg {
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
@@ -98,18 +125,37 @@ impl Editor {
 
                 sprite.pset(x as isize, y as isize, self.selected_color);
             }
+            &Msg::ToolSelected(selected_tool) => {
+                self.selected_tool = selected_tool;
+            }
+            &Msg::ColorHovered(color) => {
+                self.bottom_bar_text = format!("COLOUR {}", color);
+            }
+            Msg::SerializeRequested => {
+                serialize(assets_path, flags);
+                serialize(assets_path, sprite_sheet);
+                serialize(assets_path, map);
+            }
+            Msg::ShiftSprite(shift_direction) => {
+                let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
+                shift_direction.shift(sprite);
+            }
+            &Msg::MapSpriteHovered(sprite) => {
+                self.hovered_map_button = sprite;
+            }
+            Msg::SwitchMapMode => {
+                self.show_sprites_in_map = !self.show_sprites_in_map;
+            }
         }
     }
 
-    pub fn view<'a, 'b>(
+    pub(crate) fn view<'a, 'b>(
         &'a mut self,
         flags: &'b Flags,
         map: &'b Map,
         sprite_sheet: &'b SpriteSheet,
     ) -> Element<'a, Msg> {
         const BACKGROUND: u8 = 5;
-
-        let bottom_bar_text = "THIS IS THE BOT BAR".to_owned();
 
         Tree::new()
             .push(DrawFn::new(|draw| {
@@ -130,8 +176,14 @@ impl Editor {
                     &mut self.pixel_buttons,
                 ),
                 Tab::MapEditor => Tree::new()
-                    .push(map_view(map, 0, 8))
-                    .push(Text::new("MAP VIEW".to_owned(), 0, 8, 7))
+                    .push(map_view(
+                        map,
+                        0,
+                        8,
+                        &mut self.map_buttons,
+                        self.hovered_map_button,
+                        self.show_sprites_in_map,
+                    ))
                     .into(),
             })
             .push(tools_row(
@@ -139,6 +191,8 @@ impl Editor {
                 self.selected_sprite,
                 self.selected_sprite_page,
                 &mut self.tab_buttons,
+                self.selected_tool,
+                &mut self.tool_buttons,
             ))
             .push(sprite_view(
                 self.selected_sprite,
@@ -146,9 +200,21 @@ impl Editor {
                 &mut self.sprite_buttons,
                 87,
             ))
-            .push(bottom_bar(bottom_bar_text))
+            .push(bottom_bar(&self.bottom_bar_text))
             .push(Cursor::new(&mut self.cursor))
             .into()
+    }
+
+    pub(crate) fn subscriptions(&self, event: &Event) -> Option<Msg> {
+        match event {
+            Event::Mouse(_) => None,
+            Event::Keyboard(KeyboardEvent::Down(Key::X)) => Some(Msg::SerializeRequested),
+            Event::Keyboard(KeyboardEvent::Down(Key::C)) => Some(Msg::SwitchMapMode),
+            Event::Keyboard(KeyboardEvent::Down(key)) => {
+                ShiftDirection::from_key(key).map(Msg::ShiftSprite)
+            }
+            Event::Keyboard(_) => None,
+        }
     }
 }
 
@@ -183,31 +249,65 @@ fn sprite_editor_view<'a, 'b>(
             selected_color,
             color_selector_state,
             Msg::ColorSelected,
+            Msg::ColorHovered,
         ))
         .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
         .into()
 }
 
-fn map_view(map: &Map, x: i32, y: i32) -> Element<'static, Msg> {
-    let v: Vec<Element<'_, Msg>> = map
-        .iter()
+fn map_view<'a, 'b>(
+    map: &'a Map,
+    x: i32,
+    y: i32,
+    map_buttons: &'b mut [button::State],
+    hovered_map_button: usize,
+    show_sprites_in_map: bool,
+) -> Element<'b, Msg> {
+    let mut v: Vec<Element<'_, Msg>> = map_buttons
+        .iter_mut()
+        // .zip(map)
         .chunks(16)
         .into_iter()
-        .take(9)
+        .take(9) // 9 rows
         .enumerate()
         .flat_map(|(row_index, row)| {
-            row.into_iter().enumerate().map(move |(col_index, sprite)| {
-                DrawFn::new(move |draw| {
-                    let x = x as usize + col_index * 8;
-                    let y = y as usize + row_index * 8;
+            row.into_iter().enumerate().map(move |(col_index, state)| {
+                let sprite = map.mget(col_index as i32, row_index as i32);
+                let x = x as usize + col_index * 8;
+                let y = y as usize + row_index * 8;
 
-                    draw.spr(sprite.into(), x as i32, y as i32);
-                })
+                Button::new(
+                    x as i32,
+                    y as i32,
+                    8,
+                    8,
+                    None,
+                    state,
+                    DrawFn::new(move |draw| {
+                        draw.palt(None);
+                        if show_sprites_in_map {
+                            draw.spr(sprite.into(), 0, 0);
+                        } else {
+                            draw.print(&format!("{:0>2X}", sprite), 0, 1, 7);
+                        }
+                    }),
+                )
+                .on_hover(Msg::MapSpriteHovered(col_index + row_index * 16))
                 .into()
             })
         })
         .collect();
+
+    // Draw highlight
+    let col_index = hovered_map_button % 16;
+    let row_index = hovered_map_button / 16;
+    let x = x as usize + col_index * 8;
+    let y = y as usize + row_index * 8;
+    v.push(
+        DrawFn::new(move |draw| draw.rect(x as i32, y as i32, (x + 7) as i32, (y + 7) as i32, 7))
+            .into(),
+    );
 
     Tree::with_children(v).into()
 }
@@ -261,6 +361,7 @@ fn color_selector<'a>(
     selected_color: u8,
     states: &'a mut [button::State],
     on_press: impl (Fn(usize) -> Msg) + Copy + 'static,
+    on_hover: impl (Fn(usize) -> Msg) + Copy + 'static,
 ) -> Element<'_, Msg> {
     let mut v = Vec::with_capacity(16);
 
@@ -289,6 +390,8 @@ fn color_selector<'a>(
                 draw.palt(Some(0));
             }),
         )
+        .event_on_press()
+        .on_hover(on_hover(index))
         .into();
         v.push(button);
     }
@@ -325,17 +428,46 @@ fn color_selector<'a>(
     Tree::with_children(v).into()
 }
 
-fn tools_row(
+fn tools_row<'a>(
     y: i32,
     sprite: usize,
     selected_tab: usize,
-    tab_buttons: &mut [button::State],
-) -> Element<'_, Msg> {
+    tab_buttons: &'a mut [button::State],
+    selected_tool: usize,
+    tool_buttons: &'a mut [button::State],
+) -> Element<'a, Msg> {
     let mut children = vec![DrawFn::new(move |draw| {
         const HEIGHT: i32 = 11;
         draw.rectfill(0, y, 127, y + HEIGHT - 1, 5)
     })
     .into()];
+
+    const TOOLS: &[usize] = &[15, 31];
+
+    for (tool_index, tool_button) in tool_buttons.iter_mut().enumerate() {
+        let spr = TOOLS[tool_index];
+
+        let x = (9 + 8 * tool_index) as i32;
+        let y = y + 2;
+        children.push(
+            Button::new(
+                x,
+                y,
+                8,
+                8,
+                Some(Msg::ToolSelected(tool_index)),
+                tool_button,
+                DrawFn::new(move |draw| {
+                    if selected_tool == tool_index {
+                        draw.pal(13, 7);
+                    }
+                    draw.spr(spr, 0, 0);
+                    draw.pal(13, 13);
+                }),
+            )
+            .into(),
+        );
+    }
 
     for (sprite_tab, tab_button_state) in tab_buttons.iter_mut().enumerate() {
         let base_sprite = if selected_tab == sprite_tab { 33 } else { 17 };
@@ -413,6 +545,7 @@ fn sprite_view(
                     draw.spr(sprite, 0, 0);
                 }),
             )
+            .event_on_press()
             .into(),
         );
     }
@@ -432,7 +565,7 @@ fn sprite_view(
     Tree::with_children(children).into()
 }
 
-fn bottom_bar(text: String) -> Element<'static, Msg> {
+fn bottom_bar(text: &str) -> Element<'_, Msg> {
     const X: i32 = 0;
     const Y: i32 = 121;
     const BAR_WIDTH: i32 = 128;
@@ -535,9 +668,11 @@ fn canvas_view<'a, 'b>(
                     }),
                     button,
                     DrawFn::new(move |draw| {
+                        draw.palt(None);
                         draw.rectfill(0, 0, 7, 7, pixel_color);
                     }),
                 )
+                .event_on_press()
                 .into(),
             )
         }
@@ -572,3 +707,33 @@ pub static MOUSE_SPRITE: &[Color] = &[
 //     0, 0, 0, 1, 0, 0, 0, 0, //
 //     0, 0, 0, 0, 0, 0, 0, 0, //
 // ];
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum ShiftDirection {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl ShiftDirection {
+    fn from_key(key: &Key) -> Option<Self> {
+        use ShiftDirection::*;
+
+        match key {
+            Key::W => Some(Up),
+            Key::D => Some(Right),
+            Key::S => Some(Down),
+            Key::A => Some(Left),
+            _ => None,
+        }
+    }
+    fn shift(&self, sprite: &mut Sprite) {
+        match self {
+            ShiftDirection::Up => sprite.shift_up(),
+            ShiftDirection::Down => sprite.shift_down(),
+            ShiftDirection::Left => sprite.shift_left(),
+            ShiftDirection::Right => sprite.shift_right(),
+        }
+    }
+}

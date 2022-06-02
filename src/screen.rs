@@ -1,11 +1,12 @@
 use crate::editor::Editor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::{DrawContext, DrawData};
+use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
-use crate::runtime::state::{Flags, InternalState, Scene};
+use crate::runtime::state::{InternalState, Scene};
 use crate::ui::DispatchEvent;
-use crate::{App, State};
+use crate::{App, Key, KeyboardEvent, State};
 
 use crate::{Event, MouseButton, MouseEvent};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
@@ -16,16 +17,23 @@ use glium::uniform;
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
-pub fn run_app<T: App + 'static>(
+pub(crate) fn run_app<T: App + 'static>(
     assets_path: String,
     map: Map,
     sprite_flags: Flags,
     sprite_sheet: SpriteSheet,
     mut draw_data: DrawData,
 ) {
-    let mut app = T::init();
-    let mut editor = Editor::init();
     let mut internal_state = InternalState::new();
+    let mut resources = Resources {
+        assets_path,
+        sprite_flags,
+        sprite_sheet,
+        map,
+    };
+    let state = State::new(&internal_state, &mut resources);
+    let mut app = T::init(&state);
+    let mut editor = Editor::init();
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
@@ -48,15 +56,9 @@ pub fn run_app<T: App + 'static>(
 
     let mut keys = Keys::new();
 
-    let fps = 60_u64;
+    let fps = 30_u64;
     let nanoseconds_per_frame = 1_000_000_000 / fps;
 
-    let mut resources = Resources {
-        assets_path,
-        sprite_flags,
-        sprite_sheet,
-        map,
-    };
     event_loop.run(move |glutin_event, _, control_flow| {
         let event: Option<Event> = handle_event(
             &glutin_event,
@@ -98,7 +100,9 @@ pub fn run_app<T: App + 'static>(
         );
 
         if internal_state.escape.btnp() {
-            internal_state.scene.flip();
+            // internal_state.scene.flip();
+            // TODO: remove below and uncomment above
+            app = T::init(&State::new(&internal_state, &mut resources));
         }
         keys.reset();
 
@@ -162,8 +166,7 @@ fn handle_event(
                 Some(Event::Mouse(mouse_event))
             }
             glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                handle_key(input, keys);
-                None
+                handle_key(input, keys).map(Event::Keyboard)
             }
             _ => None,
         },
@@ -179,22 +182,28 @@ fn handle_event(
     }
 }
 
-fn handle_key(input: &KeyboardInput, keys: &mut Keys) {
-    if let Some(key) = input.virtual_keycode {
-        let key_ref = match key {
-            VirtualKeyCode::X => &mut keys.x,
-            VirtualKeyCode::C => &mut keys.c,
-            VirtualKeyCode::Left => &mut keys.left,
-            VirtualKeyCode::Up => &mut keys.up,
-            VirtualKeyCode::Right => &mut keys.right,
-            VirtualKeyCode::Down => &mut keys.down,
-            VirtualKeyCode::Escape => &mut keys.escape,
+fn handle_key(input: &KeyboardInput, keys: &mut Keys) -> Option<KeyboardEvent> {
+    let key = input.virtual_keycode?;
 
-            _ => return,
-        };
+    let mut other = None;
+    let key_ref = match key {
+        VirtualKeyCode::X => &mut keys.x,
+        VirtualKeyCode::C => &mut keys.c,
+        VirtualKeyCode::Left => &mut keys.left,
+        VirtualKeyCode::Up => &mut keys.up,
+        VirtualKeyCode::Right => &mut keys.right,
+        VirtualKeyCode::Down => &mut keys.down,
+        VirtualKeyCode::Escape => &mut keys.escape,
+        _ => &mut other,
+    };
+    *key_ref = Some(input.state == ElementState::Pressed);
 
-        *key_ref = Some(input.state == ElementState::Pressed);
-    }
+    let runty8_key = Key::from_virtual_keycode(key)?;
+
+    Some(match input.state {
+        ElementState::Pressed => KeyboardEvent::Down(runty8_key),
+        ElementState::Released => KeyboardEvent::Up(runty8_key),
+    })
 }
 
 pub(crate) struct Keys {
@@ -259,6 +268,7 @@ fn update_app<'a>(
 
             let mut msg_queue = vec![];
             let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
+
             if let Some(event) = event {
                 view.as_widget_mut().on_event(
                     event,
@@ -272,10 +282,15 @@ fn update_app<'a>(
             view.as_widget().draw(&mut draw_context);
             drop(view);
 
+            if let Some(sub_msg) = event.and_then(|e| editor.subscriptions(&e)) {
+                msg_queue.push(sub_msg);
+            }
             for msg in msg_queue.into_iter() {
                 editor.update(
+                    &resources.assets_path,
                     &mut resources.sprite_flags,
                     &mut resources.sprite_sheet,
+                    &mut resources.map,
                     &msg,
                 );
             }

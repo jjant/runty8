@@ -1,9 +1,9 @@
 use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
-use runty8::{app, App};
+use runty8::App;
 
 fn main() {
-    app::pico8::run_app::<ExampleApp>();
+    runty8::run_app::<ExampleApp>("".to_owned());
 }
 
 pub struct ExampleApp {
@@ -15,7 +15,7 @@ pub struct ExampleApp {
 }
 
 impl App for ExampleApp {
-    fn init() -> Self {
+    fn init(_: &State) -> Self {
         Self {
             x: 6400,
             y: 6400,
@@ -25,7 +25,7 @@ impl App for ExampleApp {
         }
     }
 
-    fn draw(&self, draw_context: &mut DrawContext) {
+    fn draw(&mut self, draw_context: &mut DrawContext) {
         draw_context.cls();
         draw_context.print(
             &format!("X={} Y={} YC={}", self.x / 100, self.y / 100, self.yc),
