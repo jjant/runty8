@@ -213,6 +213,7 @@ impl App for GameState {
         // Update and remove dead dead_particles
         self.dead_particles.drain_filter(DeadParticle::update);
 
+        // self.begin_game(state);
         // start game
         if is_title(self) {
             if !self.start_game && (state.btn(K_JUMP) || state.btn(K_DASH)) {
@@ -485,7 +486,7 @@ impl GameState {
         self.start_game = false;
         // music(0, 0, 7);
         // load_room(self, state, 6, 3);
-        load_room(self, state, 0, 0);
+        load_room(self, state, 3, 1);
     }
 }
 
@@ -1354,6 +1355,7 @@ impl Object {
                     frames,
                 )
             }
+            ObjectType::Message(message) => message.draw(&mut self.base_object, draw, objects),
         }
 
         UpdateAction::noop()
@@ -1519,6 +1521,7 @@ enum ObjectType {
     Key,
     RoomTitle(RoomTitle),
     Spring(Spring),
+    Message(Message),
 }
 
 impl ObjectType {
@@ -1540,6 +1543,7 @@ impl ObjectType {
             ObjectType::Balloon(_) => ObjectKind::Balloon,
             ObjectType::BigChest(_) => ObjectKind::BigChest,
             ObjectType::Orb(_) => ObjectKind::Orb,
+            ObjectType::Message(_) => ObjectKind::Message,
         }
     }
 
@@ -1619,6 +1623,7 @@ impl ObjectType {
                 balloon.update(base_object, other_objects, got_fruit, room, max_djump)
             }
             ObjectType::Orb(_) => UpdateAction::noop(),
+            ObjectType::Message(_) => UpdateAction::noop(),
         }
     }
 }
@@ -1977,7 +1982,7 @@ enum ObjectKind {
     FakeWall,
     Key,
     Chest,
-    // Message,
+    Message,
     BigChest,
     // Flag,
 
@@ -2006,7 +2011,7 @@ impl ObjectKind {
         ObjectKind::FakeWall,
         ObjectKind::Key,
         ObjectKind::Chest,
-        // ObjectKind::Message,
+        ObjectKind::Message,
         ObjectKind::BigChest,
         // ObjectKind::Flag,
     ];
@@ -2024,7 +2029,7 @@ impl ObjectKind {
 
             ObjectKind::Key => ObjectType::Key,
             ObjectKind::Chest => ObjectType::Chest(Chest::init(base_object)),
-            // ObjectKind::Message => todo!(),
+            ObjectKind::Message => ObjectType::Message(Message::init(base_object)),
             ObjectKind::BigChest => ObjectType::BigChest(BigChest::init(base_object)),
             // ObjectKind::Flag => todo!(),
             ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle::init()),
@@ -2053,7 +2058,7 @@ impl ObjectKind {
             ObjectKind::FakeWall => Some(64),
             ObjectKind::Key => Some(8),
             ObjectKind::Chest => Some(20),
-            // ObjectKind::Message => Some(86),
+            ObjectKind::Message => Some(86),
             ObjectKind::BigChest => Some(96),
             // ObjectKind::Flag => Some(118),
             _ => None,
@@ -3085,4 +3090,65 @@ impl Orb {
 
         update_action
     }
+}
+
+#[derive(Debug, Clone)]
+struct Message {
+    index: f32,
+    off: Vec2<i32>,
+}
+
+impl Message {
+    fn init(this: &mut BaseObject) -> Self {
+        this.last = 0;
+
+        Self {
+            index: 0.0,
+            off: Vec2 { x: 8, y: 96 },
+        }
+    }
+
+    fn draw<T>(&mut self, this: &mut BaseObject, draw: &mut DrawContext, objects: &mut T)
+    where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
+        // TODO: Fix font in runty8, this shouldn't need to be uppercase here.
+        const TEXT: &str = "-- CELESTE MOUNTAIN --#THIS MEMORIAL TO THOSE# PERISHED ON THE CLIMB";
+
+        if this.check(objects.into_iter(), &ObjectKind::Player, 4, 0) {
+            if self.index < TEXT.len() as f32 {
+                self.index += 0.5;
+                if self.index >= (this.last + 1) as f32 {
+                    this.last += 1;
+                    //  sfx(35)
+                }
+            }
+
+            self.off = Vec2 { x: 8, y: 96 };
+            for i in 1..=(flr(self.index) as usize) {
+                if sub(TEXT, i, i) != "#" {
+                    draw.rectfill(
+                        self.off.x - 2,
+                        self.off.y - 2,
+                        self.off.x + 7,
+                        self.off.y + 6,
+                        7,
+                    );
+                    draw.print(sub(TEXT, i, i), self.off.x, self.off.y, 2);
+                    self.off.x += 5
+                } else {
+                    self.off.x = 8;
+                    self.off.y += 7;
+                }
+            }
+        } else {
+            // *self = Self::init(this);
+            self.index = 0.0;
+            this.last = 0;
+        }
+    }
+}
+
+fn sub(str: &str, min: usize, max: usize) -> &str {
+    &str[min..=max.min(str.len() - 1)]
 }
