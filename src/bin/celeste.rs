@@ -393,6 +393,7 @@ impl GameState {
                         &mut self.pause_player,
                         self.seconds,
                         self.minutes,
+                        self.deaths,
                     );
 
                     if should_destroy {
@@ -485,8 +486,8 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        // load_room(self, state, 6, 3);
-        load_room(self, state, 3, 1);
+        load_room(self, state, 6, 3);
+        // load_room(self, state, 3, 1);
     }
 }
 
@@ -1249,7 +1250,7 @@ impl Object {
             // TODO: figure out if we need an option here
             spr: kind.tile().map(|t| t as f32).unwrap_or(-42.),
         };
-        let object_type = ObjectKind::create(&kind, &mut base_object, max_djump);
+        let object_type = ObjectKind::create(&kind, &mut base_object, got_fruit, max_djump);
 
         Some(Self {
             base_object,
@@ -1307,6 +1308,7 @@ impl Object {
         pause_player: &mut bool,
         seconds: i32,
         minutes: i32,
+        deaths: i32,
     ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
@@ -1354,6 +1356,15 @@ impl Object {
                 )
             }
             ObjectType::Message(message) => message.draw(&mut self.base_object, draw, objects),
+            ObjectType::Flag(flag) => flag.draw(
+                &mut self.base_object,
+                draw,
+                objects,
+                frames,
+                seconds,
+                minutes,
+                deaths,
+            ),
         }
 
         UpdateAction::noop()
@@ -1520,6 +1531,7 @@ enum ObjectType {
     RoomTitle(RoomTitle),
     Spring(Spring),
     Message(Message),
+    Flag(Flag),
 }
 
 impl ObjectType {
@@ -1542,6 +1554,7 @@ impl ObjectType {
             ObjectType::BigChest(_) => ObjectKind::BigChest,
             ObjectType::Orb(_) => ObjectKind::Orb,
             ObjectType::Message(_) => ObjectKind::Message,
+            ObjectType::Flag(_) => ObjectKind::Flag,
         }
     }
 
@@ -1572,10 +1585,7 @@ impl ObjectType {
             ObjectType::Platform(platform) => {
                 platform.update(base_object, state, other_objects, room)
             }
-            ObjectType::BigChest(_) => {
-                // TODO:
-                UpdateAction::noop()
-            }
+            ObjectType::BigChest(_) => UpdateAction::noop(),
             ObjectType::Player(player) => player.update(
                 base_object,
                 state,
@@ -1624,6 +1634,7 @@ impl ObjectType {
             }
             ObjectType::Orb(_) => UpdateAction::noop(),
             ObjectType::Message(_) => UpdateAction::noop(),
+            ObjectType::Flag(_) => UpdateAction::noop(),
         }
     }
 }
@@ -1989,7 +2000,7 @@ enum ObjectKind {
     Chest,
     Message,
     BigChest,
-    // Flag,
+    Flag,
 
     // Non-tile-instantiable
     RoomTitle,
@@ -2018,10 +2029,15 @@ impl ObjectKind {
         ObjectKind::Chest,
         ObjectKind::Message,
         ObjectKind::BigChest,
-        // ObjectKind::Flag,
+        ObjectKind::Flag,
     ];
 
-    fn create(&self, base_object: &mut BaseObject, max_djump: i32) -> ObjectType {
+    fn create(
+        &self,
+        base_object: &mut BaseObject,
+        got_fruit: &[bool],
+        max_djump: i32,
+    ) -> ObjectType {
         match self {
             ObjectKind::PlayerSpawn => ObjectType::PlayerSpawn(PlayerSpawn::init(base_object)),
             ObjectKind::Player => ObjectType::Player(Player::init(base_object, max_djump)),
@@ -2036,7 +2052,7 @@ impl ObjectKind {
             ObjectKind::Chest => ObjectType::Chest(Chest::init(base_object)),
             ObjectKind::Message => ObjectType::Message(Message::init()),
             ObjectKind::BigChest => ObjectType::BigChest(BigChest::init(base_object)),
-            // ObjectKind::Flag => todo!(),
+            ObjectKind::Flag => ObjectType::Flag(Flag::init(base_object, got_fruit)),
             ObjectKind::RoomTitle => ObjectType::RoomTitle(RoomTitle::init()),
             ObjectKind::Platform => ObjectType::Platform(Platform::init(base_object)),
             ObjectKind::Smoke => {
@@ -2061,7 +2077,7 @@ impl ObjectKind {
             ObjectKind::Chest => Some(20),
             ObjectKind::Message => Some(86),
             ObjectKind::BigChest => Some(96),
-            // ObjectKind::Flag => Some(118),
+            ObjectKind::Flag => Some(118),
             _ => None,
         }
     }
@@ -3151,4 +3167,50 @@ impl Message {
 
 fn sub(str: &str, min: usize, max: usize) -> &str {
     &str[min..=max]
+}
+
+#[derive(Clone, Debug)]
+struct Flag {
+    score: i32,
+    show: bool,
+}
+
+impl Flag {
+    fn init(this: &mut BaseObject, got_fruit: &[bool]) -> Self {
+        this.x += 5;
+
+        Self {
+            score: got_fruit.iter().map(|b| *b as i32).sum(),
+            show: false,
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn draw<T>(
+        &mut self,
+        this: &mut BaseObject,
+        draw: &mut DrawContext,
+        objects: &mut T,
+        frames: i32,
+        seconds: i32,
+        minutes: i32,
+        deaths: i32,
+    ) where
+        for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
+    {
+        this.spr = 118.0 + ((frames as f32) / 5.0) % 3.0;
+        draw.spr(flr(this.spr) as usize, this.x, this.y);
+
+        if self.show {
+            draw.rectfill(32, 2, 96, 31, 0);
+            draw.spr(26, 55, 6);
+            draw.print(&format!("X{}", self.score), 64, 9, 7);
+            draw_time(seconds, minutes, draw, 49, 16);
+            draw.print(&format!("DEATHS:{}", deaths), 48, 24, 7);
+        } else if this.check(objects.into_iter(), &ObjectKind::Player, 0, 0) {
+            // sfx(55);
+            // sfx_timer = 30;
+            self.show = true;
+        }
+    }
 }
