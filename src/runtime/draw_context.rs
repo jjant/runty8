@@ -18,7 +18,7 @@ pub(crate) struct DrawData {
 
 impl DrawData {
     // TODO: Make pub(crate)
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         DrawData {
             buffer: BLACK_BUFFER,
             transparent_color: Some(0),
