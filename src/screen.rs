@@ -100,9 +100,9 @@ pub(crate) fn run_app<T: App + 'static>(
         );
 
         if internal_state.escape.btnp() {
-            // internal_state.scene.flip();
+            internal_state.scene.flip();
             // TODO: remove below and uncomment above
-            app = T::init(&State::new(&internal_state, &mut resources));
+            // app = T::init(&State::new(&internal_state, &mut resources));
         }
         keys.reset();
 
@@ -260,11 +260,7 @@ fn update_app<'a>(
             app.update(&state);
         }
         Scene::Editor => {
-            let mut view = editor.view(
-                &resources.sprite_flags,
-                &resources.map,
-                &resources.sprite_sheet,
-            );
+            let mut view = editor.view(resources);
 
             let mut msg_queue = vec![];
             let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);

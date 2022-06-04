@@ -1,7 +1,6 @@
 pub mod serialize;
-use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
-use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
+use crate::runtime::sprite_sheet::{Color, Sprite};
 use crate::screen::Resources;
 use crate::ui::button::{self, Button};
 use crate::ui::{
@@ -147,12 +146,7 @@ impl Editor {
         }
     }
 
-    pub(crate) fn view<'b>(
-        &mut self,
-        flags: &'b Flags,
-        map: &'b Map,
-        sprite_sheet: &'b SpriteSheet,
-    ) -> Element<'_, Msg> {
+    pub(crate) fn view(&mut self, resources: &Resources) -> Element<'_, Msg> {
         const BACKGROUND: u8 = 5;
 
         Tree::new()
@@ -168,14 +162,14 @@ impl Editor {
                 Tab::SpriteEditor => sprite_editor_view(
                     self.selected_color,
                     &mut self.color_selector_state,
-                    flags.get(self.selected_sprite).unwrap(),
-                    sprite_sheet.get_sprite(self.selected_sprite),
+                    resources.sprite_flags.get(self.selected_sprite).unwrap(),
+                    resources.sprite_sheet.get_sprite(self.selected_sprite),
                     &mut self.flag_buttons,
                     &mut self.pixel_buttons,
                 ),
                 Tab::MapEditor => Tree::new()
                     .push(map_view(
-                        map,
+                        &resources.map,
                         0,
                         8,
                         &mut self.map_buttons,
