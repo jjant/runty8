@@ -207,11 +207,18 @@ impl ImportantApp for Editor {
     fn subscriptions(&self, event: &Event) -> Option<Msg> {
         match event {
             Event::Mouse(_) => None,
-            Event::Keyboard(KeyboardEvent::Down(Key::X)) => Some(Msg::SerializeRequested),
-            Event::Keyboard(KeyboardEvent::Down(Key::C)) => Some(Msg::SwitchMapMode),
-            Event::Keyboard(KeyboardEvent::Down(key)) => {
-                ShiftDirection::from_key(key).map(Msg::ShiftSprite)
-            }
+            Event::Keyboard(KeyboardEvent {
+                key: Key::X,
+                state: Down,
+            }) => Some(Msg::SerializeRequested),
+            Event::Keyboard(KeyboardEvent {
+                key: Key::C,
+                state: Down,
+            }) => Some(Msg::SwitchMapMode),
+            Event::Keyboard(KeyboardEvent {
+                key: key,
+                state: Down,
+            }) => ShiftDirection::from_key(key).map(Msg::ShiftSprite),
             Event::Keyboard(_) => None,
             Event::Tick { .. } => None,
         }

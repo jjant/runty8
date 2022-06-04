@@ -1,12 +1,9 @@
-// use rand::Rng;
-// use runty8::{self, app::ElmApp, Button, Color, DrawContext, State};
-// use std::fmt;
-
-use runty8::app::{App, Left, WhichOne};
-use runty8::runtime::{
-    draw_context::DrawContext,
-    state::{Button, State},
-};
+use runty8::app::{ImportantApp, Right, WhichOne};
+use runty8::runtime::draw_context::DrawContext;
+use runty8::screen::Resources;
+use runty8::ui::cursor::{self, Cursor};
+use runty8::ui::{DrawFn, Element, Tree};
+use runty8::{Event, Key, KeyState, KeyboardEvent};
 
 fn main() {
     runty8::run_app::<GameState>("src/bin/game".to_owned());
@@ -22,37 +19,106 @@ struct GameState {
     // mouse_clicked: bool,
     // highlighted_item: Option<usize>,
     // selected_item: Option<usize>,
+    keys: Keys,
+    cursor: cursor::State,
 }
+
+#[derive(Debug, Clone, Copy)]
+enum Msg {
+    Tick,
+    ToggleInventory,
+    KeyEvent { key_event: KeyboardEvent },
+}
+use Msg::*;
 
 impl WhichOne for GameState {
-    type Which = Left;
+    type Which = Right;
 }
 
-impl App for GameState {
-    fn init(_: &State) -> Self {
+struct Keys {
+    left: bool,
+    right: bool,
+    up: bool,
+    down: bool,
+}
+impl Keys {
+    fn new() -> Self {
+        Self {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+        }
+    }
+
+    fn update(&mut self, key_event: KeyboardEvent) {
+        match key_event {
+            KeyboardEvent { key: Key::W, state } => {
+                self.up = state == KeyState::Down;
+            }
+            KeyboardEvent { key: Key::A, state } => {
+                self.left = state == KeyState::Down;
+            }
+            KeyboardEvent { key: Key::S, state } => {
+                self.down = state == KeyState::Down;
+            }
+            KeyboardEvent { key: Key::D, state } => {
+                self.right = state == KeyState::Down;
+            }
+            _ => {}
+        }
+    }
+}
+impl ImportantApp for GameState {
+    type Msg = Msg;
+
+    fn init() -> Self {
         Self {
             player: Player::new(),
             frames: 0,
             inventory_open: false,
             inventory: Inventory::new(),
+            keys: Keys::new(),
+            cursor: cursor::State::new(),
         }
     }
 
-    fn update(&mut self, state: &State) {
-        self.frames += 1;
-        self.player.update(state);
-
-        if state.btnp(Button::C) {
-            self.inventory_open = !self.inventory_open;
+    fn update(&mut self, msg: &Msg, _: &mut Resources) {
+        match msg {
+            ToggleInventory => {
+                self.inventory_open = !self.inventory_open;
+            }
+            &KeyEvent { key_event } => self.keys.update(key_event),
+            Tick => {
+                self.frames += 1;
+                self.player.update(&self.keys);
+            }
         }
     }
 
-    fn draw(&mut self, draw: &mut DrawContext) {
-        draw.cls();
-        self.player.draw(draw, self.frames);
+    fn view(&mut self, _: &Resources) -> Element<'_, Self::Msg> {
+        Tree::new()
+            .push(DrawFn::new(|draw| {
+                draw.cls();
+                self.player.draw(draw, self.frames);
 
-        if self.inventory_open {
-            self.inventory.draw(draw)
+                if self.inventory_open {
+                    self.inventory.draw(draw)
+                }
+            }))
+            .push(Cursor::new(&mut self.cursor))
+            .into()
+    }
+
+    fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
+        match event {
+            Event::Keyboard(KeyboardEvent {
+                key: Key::C,
+                state: KeyState::Down,
+            }) => Some(ToggleInventory),
+            &Event::Keyboard(key_event) => Some(KeyEvent { key_event }),
+            Event::Mouse(_) => None,
+            Event::Tick { .. } => Some(Tick),
         }
     }
 }
@@ -203,14 +269,14 @@ impl Player {
         }
     }
 
-    fn update(&mut self, state: &State) {
-        self.vx = state.btn(Button::Right) as i32 - state.btn(Button::Left) as i32;
-        self.vy = state.btn(Button::Down) as i32 - state.btn(Button::Up) as i32;
+    fn update(&mut self, keys: &Keys) {
+        self.vx = keys.right as i32 - keys.left as i32;
+        self.vy = keys.down as i32 - keys.up as i32;
 
         self.x += self.vx;
-        self.x = clamp(self.x, 0, 121);
+        self.x = clamp(self.x, 0, 120);
         self.y += self.vy;
-        self.y = clamp(self.y, 0, 121);
+        self.y = clamp(self.y, 0, 120);
     }
 
     fn draw(&self, draw_context: &mut DrawContext, frames: usize) {

@@ -43,7 +43,7 @@ trait RightTrait: WhichOne<Which = Right> {}
 ///////////////////////////////////////////////////////////////////////////////
 
 // Not intended for direct use
-pub(crate) trait AppCompat {
+pub trait AppCompat {
     type Msg: Copy + Debug;
     fn init(state: &State) -> Self;
     fn update(&mut self, msg: &Self::Msg, resources: &mut Resources, state: &InternalState);

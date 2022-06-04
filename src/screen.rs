@@ -7,7 +7,7 @@ use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::runtime::state::{InternalState, Scene};
 use crate::ui::DispatchEvent;
-use crate::{Event, MouseButton, MouseEvent};
+use crate::{Event, KeyState, MouseButton, MouseEvent};
 use crate::{Key, KeyboardEvent, State};
 use glium::backend::Facade;
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
@@ -185,10 +185,11 @@ fn handle_key(input: &KeyboardInput, keys: &mut Keys) -> Option<KeyboardEvent> {
     *key_ref = Some(input.state == ElementState::Pressed);
 
     let runty8_key = Key::from_virtual_keycode(key)?;
+    let state = KeyState::from_state(input.state);
 
-    Some(match input.state {
-        ElementState::Pressed => KeyboardEvent::Down(runty8_key),
-        ElementState::Released => KeyboardEvent::Up(runty8_key),
+    Some(KeyboardEvent {
+        key: runty8_key,
+        state,
     })
 }
 

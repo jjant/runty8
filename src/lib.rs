@@ -8,8 +8,8 @@ pub mod runtime;
 pub mod screen;
 pub mod ui;
 use crate::editor::serialize::Serialize;
-use app::App;
-use glium::glutin::event::VirtualKeyCode;
+use app::AppCompat;
+use glium::glutin::event::{ElementState, VirtualKeyCode};
 use runtime::{
     draw_context::DrawData,
     flags::Flags,
@@ -101,9 +101,24 @@ impl Key {
     }
 }
 #[derive(Clone, Copy, Debug)]
-pub enum KeyboardEvent {
-    Up(Key),
-    Down(Key),
+pub struct KeyboardEvent {
+    pub key: Key,
+    pub state: KeyState,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeyState {
+    Up,
+    Down,
+}
+
+impl KeyState {
+    fn from_state(state: ElementState) -> Self {
+        match state {
+            ElementState::Pressed => Self::Down,
+            ElementState::Released => Self::Up,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -164,7 +179,7 @@ fn create_directory(path: &str) {
     };
 }
 
-pub fn run_app<T: App + 'static>(assets_path: String) {
+pub fn run_app<T: AppCompat + 'static>(assets_path: String) {
     create_directory(&assets_path);
 
     let map: Map = create_map(&assets_path);
