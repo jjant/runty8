@@ -70,6 +70,10 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
 
         if let Some(Event::Tick { .. }) = event {
             internal_state.update_keys(&keys);
+
+            if internal_state.escape.btnp() {
+                internal_state.scene.flip();
+            }
         }
 
         update_app(
@@ -80,10 +84,6 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
             &mut draw_data,
             event,
         );
-
-        if internal_state.escape.btnp() {
-            internal_state.scene.flip();
-        }
 
         do_draw(
             &display,
