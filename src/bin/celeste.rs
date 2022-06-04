@@ -486,8 +486,7 @@ impl GameState {
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 6, 3);
-        // load_room(self, state, 3, 1);
+        load_room(self, state, 0, 0);
     }
 }
 
@@ -886,10 +885,6 @@ impl Player {
             base_object.flip.y,
         );
         unset_hair_color(draw);
-
-        base_object
-            .hitbox
-            .draw(draw, base_object.x, base_object.y, 7);
     }
 }
 
@@ -1190,18 +1185,6 @@ struct Hitbox {
     y: i32,
     w: i32,
     h: i32,
-}
-impl Hitbox {
-    // TODO: Remove, for debugging purposes only
-    fn draw(&self, draw: &mut DrawContext, x: i32, y: i32, color: u8) {
-        draw.rect(
-            x + self.x,
-            y + self.y,
-            x + self.x + self.w - 1,
-            y + self.y + self.h - 1,
-            color,
-        );
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -2011,12 +1994,9 @@ enum ObjectKind {
 }
 
 impl ObjectKind {
-    // I think these are the "instantiable" objects
+    // These are the "instantiable" objects
     // (you put a "marker" tile in the map and this creates the object for it)
     // see line 1135 of source.p8
-    //
-    // TODO: Make this just an array of all the variants with a macro or the strum crate.
-    // and depend on the tile function for tile-instantiability
     const TYPES: &'static [Self] = &[
         ObjectKind::PlayerSpawn,
         ObjectKind::Spring,
@@ -2992,7 +2972,6 @@ impl BigChest {
 
         draw.spr(112, this.x, this.y + 8);
         draw.spr(113, this.x + 8, this.y + 8);
-        this.hitbox.draw(draw, this.x, this.y, 8);
 
         update_action
     }
