@@ -1,8 +1,10 @@
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::DrawContext;
 use runty8::screen::Resources;
+use runty8::ui::button::Button;
 use runty8::ui::cursor::{self, Cursor};
-use runty8::ui::{DrawFn, Element, Tree};
+use runty8::ui::text::Text;
+use runty8::ui::{button, DrawFn, Element, Tree};
 use runty8::{Event, Key, KeyState, KeyboardEvent};
 
 fn main() {
@@ -101,11 +103,12 @@ impl ImportantApp for GameState {
             .push(DrawFn::new(|draw| {
                 draw.cls();
                 self.player.draw(draw, self.frames);
-
-                if self.inventory_open {
-                    self.inventory.draw(draw)
-                }
             }))
+            .push(if self.inventory_open {
+                self.inventory.view()
+            } else {
+                Tree::new().into()
+            })
             .push(Cursor::new(&mut self.cursor))
             .into()
     }
@@ -123,15 +126,41 @@ impl ImportantApp for GameState {
     }
 }
 
-struct Inventory {}
+#[derive(Clone)]
+struct Item {
+    name: String,
+}
+
+impl Item {
+    fn view<'a>(&'a self, button: &'a mut button::State, x: i32, y: i32) -> Element<'a, Msg> {
+        Button::new(x, y, 16, 16, None, button, Text::new(&self.name, 0, 0, 7)).into()
+    }
+}
+
+struct Inventory {
+    items: Vec<Item>,
+    buttons: Vec<button::State>,
+}
 
 impl Inventory {
+    const NUM_ITEMS: usize = 10;
     fn new() -> Self {
-        Self {}
+        Self {
+            items: vec![
+                Item {
+                    name: "BDE STAFF".to_owned()
+                };
+                Self::NUM_ITEMS
+            ],
+            buttons: vec![button::State::new(); Self::NUM_ITEMS],
+        }
     }
 
-    fn draw(&self, draw: &mut DrawContext) {
-        draw.rectfill(64, 0, 128, 128, 8);
+    fn view(&mut self) -> Element<'_, Msg> {
+        Tree::new()
+            .push(DrawFn::new(|draw| draw.rectfill(64, 0, 128, 128, 8)))
+            .push(self.items[0].view(&mut self.buttons[0], 30, 30))
+            .into()
     }
 }
 
