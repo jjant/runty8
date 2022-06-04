@@ -1,3 +1,4 @@
+use crate::app::{AppCompat, ImportantApp};
 use crate::editor::Editor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::{DrawContext, DrawData};
@@ -6,9 +7,8 @@ use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::runtime::state::{InternalState, Scene};
 use crate::ui::DispatchEvent;
-use crate::{App, Key, KeyboardEvent, State};
-
 use crate::{Event, MouseButton, MouseEvent};
+use crate::{Key, KeyboardEvent, State};
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
 use glium::glutin::event::{self, ElementState, KeyboardInput, VirtualKeyCode};
 use glium::glutin::event_loop::ControlFlow;
@@ -17,7 +17,7 @@ use glium::uniform;
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Surface};
 
-pub(crate) fn run_app<T: App + 'static>(
+pub(crate) fn run_app<T: AppCompat + 'static>(
     assets_path: String,
     map: Map,
     sprite_flags: Flags,
@@ -33,7 +33,7 @@ pub(crate) fn run_app<T: App + 'static>(
     };
     let state = State::new(&internal_state, &mut resources);
     let mut app = T::init(&state);
-    let mut editor = Editor::init();
+    let mut editor = <Editor as ImportantApp>::init();
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
@@ -56,9 +56,6 @@ pub(crate) fn run_app<T: App + 'static>(
 
     let mut keys = Keys::new();
 
-    let fps = 30_u64;
-    let nanoseconds_per_frame = 1_000_000_000 / fps;
-
     event_loop.run(move |glutin_event, _, control_flow| {
         let event: Option<Event> = handle_event(
             &glutin_event,
@@ -69,22 +66,6 @@ pub(crate) fn run_app<T: App + 'static>(
             &mut keys,
         );
 
-        let should_update_pico8_app = matches!(
-            glutin_event,
-            event::Event::NewEvents(glutin::event::StartCause::ResumeTimeReached { .. })
-                | event::Event::NewEvents(glutin::event::StartCause::Init { .. })
-        );
-        let should_update = (should_update_pico8_app && matches!(internal_state.scene, Scene::App))
-            || matches!(internal_state.scene, Scene::Editor);
-
-        if !should_update {
-            return;
-        }
-
-        let next_frame_time =
-            std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
-        *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
-
         let mut target = display.draw();
         target.clear_color(1.0, 0.0, 0.0, 1.0);
 
@@ -93,16 +74,14 @@ pub(crate) fn run_app<T: App + 'static>(
         update_app(
             &mut app,
             &mut editor,
-            &internal_state,
-            event,
+            &mut internal_state,
             &mut resources,
             &mut draw_data,
+            event,
         );
 
         if internal_state.escape.btnp() {
             internal_state.scene.flip();
-            // TODO: remove below and uncomment above
-            // app = T::init(&State::new(&internal_state, &mut resources));
         }
         keys.reset();
 
@@ -171,11 +150,26 @@ fn handle_event(
             _ => None,
         },
         event::Event::NewEvents(cause) => match cause {
-            glutin::event::StartCause::ResumeTimeReached { .. } => {
-                // Tick
+            glutin::event::StartCause::ResumeTimeReached {
+                start,
+                requested_resume,
+            } => {
+                set_next_timer(control_flow);
+
+                let delta: Result<i32, _> = requested_resume
+                    .duration_since(*start)
+                    .as_millis()
+                    .try_into();
+
+                Some(Event::Tick {
+                    delta_millis: delta.unwrap().try_into().unwrap(),
+                })
+            }
+            glutin::event::StartCause::Init => {
+                set_next_timer(control_flow);
+
                 None
-            } // todo!(),
-            glutin::event::StartCause::Init => None, // todo!(),
+            }
             _ => None,
         },
         _ => None,
@@ -236,54 +230,66 @@ impl Keys {
     }
 }
 
-pub(crate) struct Resources {
-    pub(crate) assets_path: String,
-    pub(crate) sprite_sheet: SpriteSheet,
-    pub(crate) sprite_flags: Flags,
-    pub(crate) map: Map,
+pub struct Resources {
+    pub assets_path: String,
+    pub sprite_sheet: SpriteSheet,
+    pub sprite_flags: Flags,
+    pub map: Map,
 }
 
 fn update_app<'a>(
-    app: &'a mut (impl App + 'static),
+    app: &'a mut (impl AppCompat + 'static),
     editor: &'a mut Editor,
-    internal_state: &'a InternalState,
-    event: Option<Event>,
+    internal_state: &'a mut InternalState,
     resources: &'a mut Resources,
     draw_data: &'a mut DrawData,
+    event: Option<Event>,
 ) {
     match internal_state.scene {
         // TODO: App is refreshed too much (check celeste)
-        Scene::App => {
-            let mut state = State::new(internal_state, resources);
-            let mut draw_context = DrawContext::new(&mut state, draw_data);
-            app.draw(&mut draw_context);
-            app.update(&state);
-        }
-        Scene::Editor => {
-            let mut view = editor.view(resources);
-
-            let mut msg_queue = vec![];
-            let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
-
-            if let Some(event) = event {
-                view.as_widget_mut().on_event(
-                    event,
-                    (internal_state.mouse_x, internal_state.mouse_y),
-                    dispatch_event,
-                );
-            }
-
-            let mut state = State::new(internal_state, resources);
-            let mut draw_context = DrawContext::new(&mut state, draw_data);
-            view.as_widget().draw(&mut draw_context);
-            drop(view);
-
-            if let Some(sub_msg) = event.and_then(|e| editor.subscriptions(&e)) {
-                msg_queue.push(sub_msg);
-            }
-            for msg in msg_queue.into_iter() {
-                editor.update(&msg, resources);
-            }
-        }
+        Scene::App => refresh_app(app, resources, internal_state, draw_data, event),
+        Scene::Editor => refresh_app(editor, resources, internal_state, draw_data, event),
     }
+}
+
+fn refresh_app(
+    app: &mut impl AppCompat,
+    resources: &mut Resources,
+    internal_state: &mut InternalState,
+    draw_data: &mut DrawData,
+    event: Option<Event>,
+) {
+    let mut view = app.view(resources, internal_state, draw_data);
+
+    let mut msg_queue = vec![];
+    let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
+
+    if let Some(event) = event {
+        view.as_widget_mut().on_event(
+            event,
+            (internal_state.mouse_x, internal_state.mouse_y),
+            dispatch_event,
+        );
+    }
+
+    let mut state = State::new(internal_state, resources);
+    let mut draw_context = DrawContext::new(&mut state, draw_data);
+    view.as_widget().draw(&mut draw_context);
+    drop(view);
+
+    if let Some(sub_msg) = event.and_then(|e| app.subscriptions(&e)) {
+        msg_queue.push(sub_msg);
+    }
+    for msg in msg_queue.into_iter() {
+        app.update(&msg, resources, internal_state);
+    }
+}
+
+fn set_next_timer(control_flow: &mut ControlFlow) {
+    let fps = 30_u64;
+    let nanoseconds_per_frame = 1_000_000_000 / fps;
+
+    let next_frame_time =
+        std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
+    *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
 }

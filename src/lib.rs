@@ -1,4 +1,5 @@
 #![allow(clippy::new_without_default)]
+pub mod app;
 mod draw;
 pub mod editor;
 mod font;
@@ -7,21 +8,16 @@ pub mod runtime;
 pub mod screen;
 pub mod ui;
 use crate::editor::serialize::Serialize;
+use app::App;
 use glium::glutin::event::VirtualKeyCode;
 use runtime::{
-    draw_context::{DrawContext, DrawData},
+    draw_context::DrawData,
     flags::Flags,
     map::Map,
     sprite_sheet::{Color, Sprite, SpriteSheet},
     state::State,
 };
-
-/// A regular pico8 app
-pub trait App {
-    fn init(state: &State) -> Self;
-    fn update(&mut self, state: &State);
-    fn draw(&mut self, draw_context: &mut DrawContext);
-}
+use std::fmt::Debug;
 
 #[derive(Clone, Copy, Debug)]
 pub enum MouseButton {
@@ -114,6 +110,7 @@ pub enum KeyboardEvent {
 pub enum Event {
     Mouse(MouseEvent),
     Keyboard(KeyboardEvent),
+    Tick { delta_millis: f64 },
 }
 
 fn create_sprite_flags(assets_path: &str) -> Flags {

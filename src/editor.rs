@@ -1,4 +1,5 @@
 pub mod serialize;
+use crate::app::{ImportantApp, Right, WhichOne};
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite};
 use crate::screen::Resources;
@@ -41,7 +42,7 @@ enum Tab {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum Msg {
+pub enum Msg {
     SpriteTabClicked,
     MapButtonClicked,
     ColorSelected(usize),
@@ -57,8 +58,14 @@ pub(crate) enum Msg {
     SwitchMapMode,
 }
 
-impl Editor {
-    pub fn init() -> Self {
+impl WhichOne for Editor {
+    type Which = Right;
+}
+
+impl ImportantApp for Editor {
+    type Msg = Msg;
+
+    fn init() -> Self {
         let selected_sprite = 0;
 
         Self {
@@ -88,7 +95,7 @@ impl Editor {
         }
     }
 
-    pub(crate) fn update(&mut self, msg: &Msg, resources: &mut Resources) {
+    fn update(&mut self, msg: &Msg, resources: &mut Resources) {
         match msg {
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
@@ -146,7 +153,7 @@ impl Editor {
         }
     }
 
-    pub(crate) fn view(&mut self, resources: &Resources) -> Element<'_, Msg> {
+    fn view(&mut self, resources: &Resources) -> Element<'_, Msg> {
         const BACKGROUND: u8 = 5;
 
         Tree::new()
@@ -197,7 +204,7 @@ impl Editor {
             .into()
     }
 
-    pub(crate) fn subscriptions(&self, event: &Event) -> Option<Msg> {
+    fn subscriptions(&self, event: &Event) -> Option<Msg> {
         match event {
             Event::Mouse(_) => None,
             Event::Keyboard(KeyboardEvent::Down(Key::X)) => Some(Msg::SerializeRequested),
@@ -206,6 +213,7 @@ impl Editor {
                 ShiftDirection::from_key(key).map(Msg::ShiftSprite)
             }
             Event::Keyboard(_) => None,
+            Event::Tick { .. } => None,
         }
     }
 }
@@ -701,7 +709,7 @@ pub static MOUSE_SPRITE: &[Color] = &[
 // ];
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum ShiftDirection {
+pub enum ShiftDirection {
     Up,
     Down,
     Left,

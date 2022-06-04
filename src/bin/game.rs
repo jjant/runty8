@@ -2,20 +2,72 @@
 // use runty8::{self, app::ElmApp, Button, Color, DrawContext, State};
 // use std::fmt;
 
+use runty8::app::{App, Left, WhichOne};
+use runty8::runtime::{
+    draw_context::DrawContext,
+    state::{Button, State},
+};
+
 fn main() {
-    // runty8::run_app::<GameState>();
+    runty8::run_app::<GameState>("src/bin/game".to_owned());
 }
 
-// struct GameState {
-//     player: Player,
-//     inventory_open: bool,
-//     inventory: Inventory,
-//     mouse_x: i32,
-//     mouse_y: i32,
-//     mouse_clicked: bool,
-//     highlighted_item: Option<usize>,
-//     selected_item: Option<usize>,
-// }
+struct GameState {
+    player: Player,
+    frames: usize,
+    inventory_open: bool,
+    inventory: Inventory,
+    // mouse_x: i32,
+    // mouse_y: i32,
+    // mouse_clicked: bool,
+    // highlighted_item: Option<usize>,
+    // selected_item: Option<usize>,
+}
+
+impl WhichOne for GameState {
+    type Which = Left;
+}
+
+impl App for GameState {
+    fn init(_: &State) -> Self {
+        Self {
+            player: Player::new(),
+            frames: 0,
+            inventory_open: false,
+            inventory: Inventory::new(),
+        }
+    }
+
+    fn update(&mut self, state: &State) {
+        self.frames += 1;
+        self.player.update(state);
+
+        if state.btnp(Button::C) {
+            self.inventory_open = !self.inventory_open;
+        }
+    }
+
+    fn draw(&mut self, draw: &mut DrawContext) {
+        draw.cls();
+        self.player.draw(draw, self.frames);
+
+        if self.inventory_open {
+            self.inventory.draw(draw)
+        }
+    }
+}
+
+struct Inventory {}
+
+impl Inventory {
+    fn new() -> Self {
+        Self {}
+    }
+
+    fn draw(&self, draw: &mut DrawContext) {
+        draw.rectfill(64, 0, 128, 128, 8);
+    }
+}
 
 // enum Action {
 //     HighlightItem(usize),
@@ -134,20 +186,49 @@ fn main() {
 //         Some((index, item))
 //     }
 // }
-// struct Player {
-//     x: i32,
-//     y: i32,
-// }
+struct Player {
+    x: i32,
+    y: i32,
+    vx: i32,
+    vy: i32,
+}
 
-// impl Player {
-//     fn new() -> Self {
-//         Self { x: 64, y: 64 }
-//     }
+impl Player {
+    fn new() -> Self {
+        Self {
+            x: 64,
+            y: 64,
+            vx: 0,
+            vy: 0,
+        }
+    }
 
-//     fn draw(&self, draw_context: &mut DrawContext) {
-//         draw_context.spr(1, self.x, self.y)
-//     }
-// }
+    fn update(&mut self, state: &State) {
+        self.vx = state.btn(Button::Right) as i32 - state.btn(Button::Left) as i32;
+        self.vy = state.btn(Button::Down) as i32 - state.btn(Button::Up) as i32;
+
+        self.x += self.vx;
+        self.x = clamp(self.x, 0, 121);
+        self.y += self.vy;
+        self.y = clamp(self.y, 0, 121);
+    }
+
+    fn draw(&self, draw_context: &mut DrawContext, frames: usize) {
+        const BASE_SPR: usize = 1;
+        const NUM_SPR: usize = 2;
+        let sprite = if self.vx != 0 {
+            animate(BASE_SPR, NUM_SPR, 5, frames)
+        } else {
+            BASE_SPR
+        };
+
+        draw_context.spr(sprite, self.x, self.y);
+    }
+}
+
+fn animate(base: usize, count: usize, every_num_frames: usize, t: usize) -> usize {
+    base + (t / every_num_frames) % count
+}
 
 // #[derive(Debug, Clone, Copy)]
 // enum Attribute {
@@ -445,3 +526,7 @@ fn main() {
 //         )
 //     }
 // }
+
+fn clamp(val: i32, a: i32, b: i32) -> i32 {
+    a.max(b.min(val))
+}

@@ -1,9 +1,6 @@
 use std::path::Path;
 
-use runty8::{
-    runtime::{draw_context::DrawContext, state::State},
-    App,
-};
+use runty8::runtime::{draw_context::DrawContext, state::State};
 
 fn assets_path() -> String {
     let buf = Path::new("src/bin/ui_demo").to_path_buf();
