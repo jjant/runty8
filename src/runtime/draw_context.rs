@@ -8,7 +8,6 @@ const NUM_COMPONENTS: usize = 3;
 type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
 
-// TODO: Make pub(crate)
 pub(crate) struct DrawData {
     pub(crate) buffer: Buffer,
     transparent_color: Option<Color>,
@@ -17,7 +16,6 @@ pub(crate) struct DrawData {
 }
 
 impl DrawData {
-    // TODO: Make pub(crate)
     pub(crate) fn new() -> Self {
         DrawData {
             buffer: BLACK_BUFFER,

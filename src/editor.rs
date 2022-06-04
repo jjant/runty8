@@ -2,6 +2,7 @@ pub mod serialize;
 use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
+use crate::screen::Resources;
 use crate::ui::button::{self, Button};
 use crate::ui::{
     cursor::{self, Cursor},
@@ -88,14 +89,7 @@ impl Editor {
         }
     }
 
-    pub(crate) fn update(
-        &mut self,
-        assets_path: &str,
-        flags: &mut Flags,
-        sprite_sheet: &mut SpriteSheet,
-        map: &mut Map,
-        msg: &Msg,
-    ) {
+    pub(crate) fn update(&mut self, msg: &Msg, resources: &mut Resources) {
         match msg {
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
@@ -117,11 +111,15 @@ impl Editor {
             Msg::FlagToggled(flag_index) => {
                 let flag_index = *flag_index;
 
-                let flag_value = flags.fget_n(self.selected_sprite, flag_index as u8);
-                flags.fset(self.selected_sprite, flag_index, !flag_value);
+                let flag_value = resources
+                    .sprite_flags
+                    .fget_n(self.selected_sprite, flag_index as u8);
+                resources
+                    .sprite_flags
+                    .fset(self.selected_sprite, flag_index, !flag_value);
             }
             &Msg::SpriteEdited { x, y } => {
-                let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
+                let sprite = resources.sprite_sheet.get_sprite_mut(self.selected_sprite);
 
                 sprite.pset(x as isize, y as isize, self.selected_color);
             }
@@ -132,12 +130,12 @@ impl Editor {
                 self.bottom_bar_text = format!("COLOUR {}", color);
             }
             Msg::SerializeRequested => {
-                serialize(assets_path, flags);
-                serialize(assets_path, sprite_sheet);
-                serialize(assets_path, map);
+                serialize(&resources.assets_path, &resources.sprite_flags);
+                serialize(&resources.assets_path, &resources.sprite_sheet);
+                serialize(&resources.assets_path, &resources.map);
             }
             Msg::ShiftSprite(shift_direction) => {
-                let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
+                let sprite = resources.sprite_sheet.get_sprite_mut(self.selected_sprite);
                 shift_direction.shift(sprite);
             }
             &Msg::MapSpriteHovered(sprite) => {
