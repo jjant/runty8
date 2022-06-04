@@ -80,7 +80,13 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
 
         for i in 0..8 {
             for j in 0..8 {
-                self.pset(x + i, y + j, buffer[(i + j * 8) as usize]);
+                let x = x + i;
+                let y = y + j;
+
+                if let Some(index) = self.index(x, y) {
+                    self.data
+                        .set_pixel_with_transparency(index, buffer[(i + j * 8) as usize]);
+                }
             }
         }
     }

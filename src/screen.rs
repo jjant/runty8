@@ -9,13 +9,15 @@ use crate::runtime::state::{InternalState, Scene};
 use crate::ui::DispatchEvent;
 use crate::{Event, MouseButton, MouseEvent};
 use crate::{Key, KeyboardEvent, State};
+use glium::backend::Facade;
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
 use glium::glutin::event::{self, ElementState, KeyboardInput, VirtualKeyCode};
 use glium::glutin::event_loop::ControlFlow;
+use glium::index::NoIndices;
 use glium::texture::{RawImage2d, SrgbTexture2d};
-use glium::uniform;
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
-use glium::{glutin, Surface};
+use glium::{glutin, Program, Surface};
+use glium::{uniform, Frame};
 
 pub(crate) fn run_app<T: AppCompat + 'static>(
     assets_path: String,
@@ -66,10 +68,9 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
             &mut keys,
         );
 
-        let mut target = display.draw();
-        target.clear_color(1.0, 0.0, 0.0, 1.0);
-
-        internal_state.update_keys(&keys);
+        if let Some(Event::Tick { .. }) = event {
+            internal_state.update_keys(&keys);
+        }
 
         update_app(
             &mut app,
@@ -83,23 +84,14 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
         if internal_state.escape.btnp() {
             internal_state.scene.flip();
         }
-        keys.reset();
 
-        let image = RawImage2d::from_raw_rgb(draw_data.buffer.to_vec(), (128, 128));
-        let texture = SrgbTexture2d::new(&display, image).unwrap();
-        let uniforms = uniform! {
-            tex: Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
-        };
-        target
-            .draw(
-                &whole_screen_vertex_buffer(&display),
-                &indices,
-                &program,
-                &uniforms,
-                &Default::default(),
-            )
-            .unwrap();
-        target.finish().unwrap();
+        do_draw(
+            &display,
+            display.draw(),
+            &draw_data.buffer,
+            &indices,
+            &program,
+        );
     });
 }
 
@@ -224,10 +216,6 @@ impl Keys {
             mouse: None,
         }
     }
-
-    pub(crate) fn reset(&mut self) {
-        *self = Self::new()
-    }
 }
 
 pub struct Resources {
@@ -246,7 +234,6 @@ fn update_app<'a>(
     event: Option<Event>,
 ) {
     match internal_state.scene {
-        // TODO: App is refreshed too much (check celeste)
         Scene::App => refresh_app(app, resources, internal_state, draw_data, event),
         Scene::Editor => refresh_app(editor, resources, internal_state, draw_data, event),
     }
@@ -292,4 +279,29 @@ fn set_next_timer(control_flow: &mut ControlFlow) {
     let next_frame_time =
         std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
     *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
+}
+
+fn do_draw(
+    display: &impl Facade,
+    mut target: Frame,
+    buffer: &[u8],
+    indices: &NoIndices,
+    program: &Program,
+) {
+    target.clear_color(1.0, 0.0, 0.0, 1.0);
+    let image = RawImage2d::from_raw_rgb(buffer.to_vec(), (128, 128));
+    let texture = SrgbTexture2d::new(display, image).unwrap();
+    let uniforms = uniform! {
+        tex: Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
+    };
+    target
+        .draw(
+            &whole_screen_vertex_buffer(display),
+            indices,
+            program,
+            &uniforms,
+            &Default::default(),
+        )
+        .unwrap();
+    target.finish().unwrap();
 }
