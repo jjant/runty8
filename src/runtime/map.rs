@@ -79,16 +79,8 @@ impl Map {
     // TODO: Make sure this works
     pub(crate) fn deserialize(str: &str) -> Result<Self, String> {
         let map: [SpriteId; Self::MAP_SIZE] = str
-            .as_bytes()
-            .iter()
-            .copied()
-            .filter_map(|c| {
-                let c = c as char;
-
-                c.to_digit(16).map(|c| c as u8)
-            })
-            .tuples()
-            .map(|(high, low)| high << 4 | low)
+            .split_ascii_whitespace()
+            .map(|num| u8::from_str_radix(num, 16).unwrap())
             .collect::<Vec<_>>()
             .try_into()
             .map_err(|error: Vec<u8>| format!("Error deserializing map {}", error.len()))?;

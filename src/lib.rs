@@ -138,7 +138,7 @@ fn create_map(assets_path: &str) -> Map {
     );
 
     if let Ok(content) = std::fs::read_to_string(&path) {
-        Map::deserialize(&content).unwrap_or_else(|_| panic!("Couldn't read map from {}", path))
+        Map::deserialize(&content).unwrap()
     } else {
         println!("Couldn't read map from {}", path);
         Map::new()

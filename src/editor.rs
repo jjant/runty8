@@ -149,12 +149,12 @@ impl Editor {
         }
     }
 
-    pub(crate) fn view<'a, 'b>(
-        &'a mut self,
+    pub(crate) fn view<'b>(
+        &mut self,
         flags: &'b Flags,
         map: &'b Map,
         sprite_sheet: &'b SpriteSheet,
-    ) -> Element<'a, Msg> {
+    ) -> Element<'_, Msg> {
         const BACKGROUND: u8 = 5;
 
         Tree::new()

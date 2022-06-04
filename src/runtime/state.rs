@@ -195,10 +195,9 @@ pub enum Scene {
     App,
 }
 
-// TODO: Switch back to editor
 impl Scene {
     fn initial() -> Self {
-        Scene::App
+        Scene::Editor
     }
 
     pub fn flip(&mut self) {
