@@ -3,7 +3,6 @@ use runty8::runtime::draw_context::{colors, DrawContext};
 use runty8::screen::Resources;
 use runty8::ui::button::Button;
 use runty8::ui::cursor::{self, Cursor};
-use runty8::ui::text::Text;
 use runty8::ui::{button, DrawFn, Element, Tree};
 use runty8::{Event, Key, KeyState, KeyboardEvent};
 
@@ -32,6 +31,7 @@ enum Msg {
     ToggleInventory,
     KeyEvent { key_event: KeyboardEvent },
     HoveredItem(usize),
+    UnHoveredItem(usize),
 }
 use Msg::*;
 
@@ -99,6 +99,11 @@ impl ImportantApp for GameState {
                 self.player.update(&self.keys);
             }
             HoveredItem(index) => self.hovered_item = Some(index),
+            UnHoveredItem(item) => {
+                if self.hovered_item == Some(item) {
+                    self.hovered_item = None;
+                }
+            }
         }
     }
 
@@ -182,6 +187,7 @@ impl Item {
             }),
         )
         .on_hover(HoveredItem(index))
+        .on_leave(UnHoveredItem(index))
         .into()
     }
 
