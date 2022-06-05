@@ -21,6 +21,7 @@ struct GameState {
     // mouse_clicked: bool,
     // highlighted_item: Option<usize>,
     // selected_item: Option<usize>,
+    hovered_item: Option<usize>,
     keys: Keys,
     cursor: cursor::State,
 }
@@ -30,6 +31,7 @@ enum Msg {
     Tick,
     ToggleInventory,
     KeyEvent { key_event: KeyboardEvent },
+    HoveredItem(usize),
 }
 use Msg::*;
 
@@ -82,23 +84,31 @@ impl ImportantApp for GameState {
             inventory: Inventory::new(),
             keys: Keys::new(),
             cursor: cursor::State::new(),
+            hovered_item: None,
         }
     }
 
     fn update(&mut self, msg: &Msg, _: &mut Resources) {
-        match msg {
+        match *msg {
             ToggleInventory => {
                 self.inventory_open = !self.inventory_open;
             }
-            &KeyEvent { key_event } => self.keys.update(key_event),
+            KeyEvent { key_event } => self.keys.update(key_event),
             Tick => {
                 self.frames += 1;
                 self.player.update(&self.keys);
             }
+            HoveredItem(index) => self.hovered_item = Some(index),
         }
     }
 
     fn view(&mut self, _: &Resources) -> Element<'_, Self::Msg> {
+        let tooltip = self
+            .hovered_item
+            .and_then(|item_index| self.inventory.get(item_index))
+            .map(|item| item.view_tooltip(20, 10))
+            .unwrap_or(Tree::new().into());
+
         Tree::new()
             .push(DrawFn::new(|draw| {
                 draw.cls();
@@ -109,6 +119,7 @@ impl ImportantApp for GameState {
             } else {
                 Tree::new().into()
             })
+            .push(tooltip)
             .push(Cursor::new(&mut self.cursor))
             .into()
     }
@@ -129,13 +140,20 @@ impl ImportantApp for GameState {
 #[derive(Clone)]
 struct Item {
     name: String,
+    sprite: usize,
 }
 
 impl Item {
     const HEIGHT: usize = 10;
     const WIDTH: usize = 10;
 
-    fn view<'a>(&'a self, button: &'a mut button::State, x: i32, y: i32) -> Element<'a, Msg> {
+    fn view<'a>(
+        &'a self,
+        button: &'a mut button::State,
+        x: i32,
+        y: i32,
+        index: usize,
+    ) -> Element<'a, Msg> {
         Button::new(
             x,
             y,
@@ -145,6 +163,24 @@ impl Item {
             button,
             Text::new(&self.name, 0, 0, 7),
         )
+        .on_hover(HoveredItem(index))
+        .into()
+    }
+
+    fn view_tooltip<'a>(&self, x: i32, y: i32) -> Element<'a, Msg> {
+        let name = self.name.clone();
+        let sprite = self.sprite;
+
+        DrawFn::new(move |draw| {
+            let height = 20;
+            let end_x = 127 - x;
+            let end_y = y + height - 1;
+
+            draw.rectfill(x, y, end_x, end_y, 13);
+            draw.rect(x + 1, y + 1, end_x - 1, end_y - 1, 7);
+            draw.print(&name, x + 3, y + 3, 7);
+            draw.spr(sprite, end_x - 10, end_y - 10);
+        })
         .into()
     }
 }
@@ -160,12 +196,17 @@ impl Inventory {
         Self {
             items: vec![
                 Item {
-                    name: "BDE STAFF".to_owned()
+                    name: "BDE STAFF".to_owned(),
+                    sprite: 51
                 };
                 Self::NUM_ITEMS
             ],
             buttons: vec![button::State::new(); Self::NUM_ITEMS],
         }
+    }
+
+    fn get(&self, index: usize) -> Option<&Item> {
+        self.items.get(index)
     }
 
     fn view(&mut self) -> Element<'_, Msg> {
@@ -182,7 +223,7 @@ impl Inventory {
                         let x = 30 + (index % items_per_row) * (Item::WIDTH + 2);
                         let y = 30 + (index / items_per_row) * (Item::HEIGHT + 2);
 
-                        item.view(button, x as i32, y as i32)
+                        item.view(button, x as i32, y as i32, index)
                     })
                     .collect::<Vec<Element<'_, Msg>>>(),
             )
