@@ -1,3 +1,5 @@
+mod rpg;
+use rpg::modifier::Modifier;
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
 use runty8::screen::Resources;
@@ -146,6 +148,7 @@ impl ImportantApp for GameState {
 struct Item {
     name: String,
     sprite: usize,
+    mods: Vec<Modifier>,
 }
 
 impl Item {
@@ -194,6 +197,7 @@ impl Item {
     fn view_tooltip(&self, x: i32, y: i32) -> Element<'static, Msg> {
         let name = self.name.clone();
         let sprite = self.sprite;
+        let modifiers: Vec<Modifier> = self.mods.clone();
 
         DrawFn::new(move |draw| {
             let height = 20;
@@ -203,6 +207,14 @@ impl Item {
             draw.rectfill(x, y, end_x, end_y, 13);
             draw.rect(x + 1, y + 1, end_x - 1, end_y - 1, 7);
             draw.print(&name, x + 3, y + 3, 7);
+
+            for (index, modifier) in modifiers.iter().enumerate() {
+                let x = x + 3;
+                let y = y + 3 + (index as i32 + 1) * 8;
+
+                draw.print(&modifier.to_string(), x, y, colors::WHITE);
+            }
+
             draw.spr(sprite, end_x - 10, end_y - 10);
         })
         .into()
@@ -221,7 +233,8 @@ impl Inventory {
             items: vec![
                 Item {
                     name: "BDE STAFF".to_owned(),
-                    sprite: 51
+                    sprite: 51,
+                    mods: vec![Modifier::Attack(32)]
                 };
                 Self::NUM_ITEMS
             ],
@@ -423,20 +436,6 @@ impl Player {
 fn animate(base: usize, count: usize, every_num_frames: usize, t: usize) -> usize {
     base + (t / every_num_frames) % count
 }
-
-// #[derive(Debug, Clone, Copy)]
-// enum Attribute {
-//     Attack(i32),
-//     AttackSpeed(i32),
-// }
-// impl fmt::Display for Attribute {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         match self {
-//             Attribute::Attack(attack) => write!(f, "{:+} ATTACK", attack),
-//             Attribute::AttackSpeed(attack_speed) => write!(f, "{:+} ATTACK SPEED", attack_speed),
-//         }
-//     }
-// }
 
 // struct Inventory {
 //     items: Box<[ItemSlot]>,
