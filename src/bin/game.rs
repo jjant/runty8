@@ -132,15 +132,15 @@ struct Item {
 }
 
 impl Item {
-    const HEIGHT: i32 = 10;
-    const WIDTH: i32 = 10;
+    const HEIGHT: usize = 10;
+    const WIDTH: usize = 10;
 
     fn view<'a>(&'a self, button: &'a mut button::State, x: i32, y: i32) -> Element<'a, Msg> {
         Button::new(
             x,
             y,
-            Self::WIDTH,
-            Self::HEIGHT,
+            Self::WIDTH as i32,
+            Self::HEIGHT as i32,
             None,
             button,
             Text::new(&self.name, 0, 0, 7),
@@ -178,10 +178,11 @@ impl Inventory {
                     .enumerate()
                     .map(|(index, (button, item))| {
                         let rows = 2;
-                        let x = 30 + (index as i32 % rows) * (Item::WIDTH + 2);
-                        let y = 30 + (index as i32 / rows) * (Item::HEIGHT + 2);
+                        let items_per_row = Inventory::NUM_ITEMS / rows;
+                        let x = 30 + (index % items_per_row) * (Item::WIDTH + 2);
+                        let y = 30 + (index / items_per_row) * (Item::HEIGHT + 2);
 
-                        item.view(button, x, y)
+                        item.view(button, x as i32, y as i32)
                     })
                     .collect::<Vec<Element<'_, Msg>>>(),
             )
