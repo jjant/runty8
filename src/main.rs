@@ -1,6 +1,9 @@
 use std::path::Path;
 
-use runty8::runtime::{draw_context::DrawContext, state::State};
+use runty8::{
+    app::{App, Left, WhichOne},
+    runtime::{draw_context::DrawContext, state::State},
+};
 
 fn assets_path() -> String {
     let buf = Path::new("src/bin/ui_demo").to_path_buf();
@@ -13,7 +16,9 @@ fn main() {
 }
 
 struct EmptyApp;
-
+impl WhichOne for EmptyApp {
+    type Which = Left;
+}
 impl App for EmptyApp {
     fn init(_: &State) -> Self {
         Self

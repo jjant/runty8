@@ -9,7 +9,7 @@ use crate::ui::{
     text::Text,
 };
 use crate::ui::{DrawFn, Element, Tree};
-use crate::{Event, Key, KeyboardEvent};
+use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;
 
@@ -209,15 +209,15 @@ impl ImportantApp for Editor {
             Event::Mouse(_) => None,
             Event::Keyboard(KeyboardEvent {
                 key: Key::X,
-                state: Down,
+                state: KeyState::Down,
             }) => Some(Msg::SerializeRequested),
             Event::Keyboard(KeyboardEvent {
                 key: Key::C,
-                state: Down,
+                state: KeyState::Down,
             }) => Some(Msg::SwitchMapMode),
             Event::Keyboard(KeyboardEvent {
-                key: key,
-                state: Down,
+                key,
+                state: KeyState::Down,
             }) => ShiftDirection::from_key(key).map(Msg::ShiftSprite),
             Event::Keyboard(_) => None,
             Event::Tick { .. } => None,

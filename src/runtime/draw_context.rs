@@ -291,3 +291,24 @@ pub const COLORS: [u32; 16] = [
     0xFF77A8, // _FF,
     0xFFCCAA, // _FF,
 ];
+
+pub mod colors {
+    use crate::runtime::sprite_sheet::Color;
+
+    pub const BLACK: Color = 0;
+    pub const DARK_BLUE: Color = 1;
+    pub const DARK_PURPLE: Color = 2;
+    pub const DARK_GREEN: Color = 3;
+    pub const BROWN: Color = 4;
+    pub const DARK_GREY: Color = 5;
+    pub const LIGHT_GREY: Color = 6;
+    pub const WHITE: Color = 7;
+    pub const RED: Color = 8;
+    pub const ORANGE: Color = 9;
+    pub const YELLOW: Color = 10;
+    pub const GREEN: Color = 11;
+    pub const BLUE: Color = 12;
+    pub const LAVENDER: Color = 13;
+    pub const PINK: Color = 14;
+    pub const LIGHT_PEACH: Color = 15;
+}

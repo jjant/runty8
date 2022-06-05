@@ -1,5 +1,5 @@
 use runty8::app::{ImportantApp, Right, WhichOne};
-use runty8::runtime::draw_context::DrawContext;
+use runty8::runtime::draw_context::{colors, DrawContext};
 use runty8::screen::Resources;
 use runty8::ui::button::Button;
 use runty8::ui::cursor::{self, Cursor};
@@ -144,8 +144,8 @@ struct Item {
 }
 
 impl Item {
-    const HEIGHT: usize = 10;
-    const WIDTH: usize = 10;
+    const HEIGHT: usize = 12;
+    const WIDTH: usize = 12;
 
     fn view<'a>(
         &'a self,
@@ -154,6 +154,8 @@ impl Item {
         y: i32,
         index: usize,
     ) -> Element<'a, Msg> {
+        let sprite = self.sprite;
+
         Button::new(
             x,
             y,
@@ -161,7 +163,23 @@ impl Item {
             Self::HEIGHT as i32,
             None,
             button,
-            Text::new(&self.name, 0, 0, 7),
+            DrawFn::new(move |draw| {
+                let w = Self::WIDTH as i32;
+                let h = Self::HEIGHT as i32;
+
+                // top
+                draw.line(1, 0, w - 2, 0, colors::LAVENDER);
+                // bottom
+                draw.line(1, h - 1, w - 2, h - 1, colors::LAVENDER);
+                // left
+                draw.line(0, 1, 0, h - 2, colors::LAVENDER);
+                // right
+                draw.line(w - 1, 1, w - 1, h - 2, colors::LAVENDER);
+
+                draw.rectfill(1, 1, w - 2, h - 2, colors::LIGHT_GREY);
+
+                draw.spr(sprite, 2, 2);
+            }),
         )
         .on_hover(HoveredItem(index))
         .into()
@@ -191,7 +209,7 @@ struct Inventory {
 }
 
 impl Inventory {
-    const NUM_ITEMS: usize = 10;
+    const NUM_ITEMS: usize = 16;
     fn new() -> Self {
         Self {
             items: vec![
@@ -210,18 +228,26 @@ impl Inventory {
     }
 
     fn view(&mut self) -> Element<'_, Msg> {
+        const BASE_X: i32 = 64;
+
         Tree::new()
-            .push(DrawFn::new(|draw| draw.rectfill(64, 0, 128, 128, 6)))
+            .push(DrawFn::new(|draw| {
+                draw.rectfill(BASE_X, 0, 128, 128, colors::BROWN)
+            }))
             .push(
                 self.buttons
                     .iter_mut()
                     .zip(self.items.iter())
                     .enumerate()
                     .map(|(index, (button, item))| {
-                        let rows = 2;
-                        let items_per_row = Inventory::NUM_ITEMS / rows;
-                        let x = 30 + (index % items_per_row) * (Item::WIDTH + 2);
-                        let y = 30 + (index / items_per_row) * (Item::HEIGHT + 2);
+                        const ITEMS_PER_ROW: usize = 4;
+                        // TODO: Center
+                        const OFFSET_X: usize = 5;
+
+                        let x = OFFSET_X
+                            + BASE_X as usize
+                            + (index % ITEMS_PER_ROW) * (Item::WIDTH + 2);
+                        let y = BASE_X as usize + (index / ITEMS_PER_ROW) * (Item::HEIGHT + 2);
 
                         item.view(button, x as i32, y as i32, index)
                     })
