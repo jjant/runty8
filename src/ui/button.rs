@@ -10,6 +10,7 @@ pub struct Button<'a, Msg> {
     height: i32,
     on_press: Option<Msg>,
     on_hover: Option<Msg>,
+    on_leave: Option<Msg>,
     state: &'a mut State,
     content: Element<'a, Msg>,
     active_mode: ActiveMode,
@@ -61,6 +62,7 @@ impl<'a, Msg> Button<'a, Msg> {
             height,
             on_press,
             on_hover: None,
+            on_leave: None,
             state,
             content: content.into(),
             active_mode: ActiveMode::Release,
@@ -79,12 +81,23 @@ impl<'a, Msg> Button<'a, Msg> {
         self
     }
 
+    pub fn on_leave(mut self, on_leave: Msg) -> Self {
+        self.on_leave = Some(on_leave);
+
+        self
+    }
+
     fn contains(&self, x: i32, y: i32) -> bool {
         let contains_x = x >= self.x && x < self.x + self.width;
         let contains_y = y >= self.y && y < self.y + self.height;
 
         contains_x && contains_y
     }
+}
+
+struct Delta<T> {
+    old: T,
+    new: T,
 }
 
 impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
@@ -131,10 +144,27 @@ impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
             Mouse(Move { .. }) => {
                 let currently_contained = self.contains(cursor_position.0, cursor_position.1);
 
-                if currently_contained && !self.state.mouse_contained {
-                    if let Some(on_hover) = self.on_hover {
-                        dispatch_event.call(on_hover);
+                match (Delta {
+                    old: self.state.mouse_contained,
+                    new: currently_contained,
+                }) {
+                    Delta {
+                        old: false,
+                        new: true,
+                    } => {
+                        if let Some(on_hover) = self.on_hover {
+                            dispatch_event.call(on_hover);
+                        }
                     }
+                    Delta {
+                        old: true,
+                        new: false,
+                    } => {
+                        if let Some(on_leave) = self.on_leave {
+                            dispatch_event.call(on_leave)
+                        }
+                    }
+                    _ => {}
                 }
 
                 self.state.mouse_contained = currently_contained;
