@@ -73,6 +73,12 @@ impl<'a, Msg> Tree<'a, Msg> {
     }
 }
 
+impl<'a, Msg: Copy + Debug + 'a> From<Vec<Element<'a, Msg>>> for Element<'a, Msg> {
+    fn from(children: Vec<Element<'a, Msg>>) -> Self {
+        Tree::with_children(children).into()
+    }
+}
+
 impl<'a, Msg: Copy + Debug> Widget for Tree<'a, Msg> {
     type Msg = Msg;
 

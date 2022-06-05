@@ -132,8 +132,20 @@ struct Item {
 }
 
 impl Item {
+    const HEIGHT: i32 = 10;
+    const WIDTH: i32 = 10;
+
     fn view<'a>(&'a self, button: &'a mut button::State, x: i32, y: i32) -> Element<'a, Msg> {
-        Button::new(x, y, 16, 16, None, button, Text::new(&self.name, 0, 0, 7)).into()
+        Button::new(
+            x,
+            y,
+            Self::WIDTH,
+            Self::HEIGHT,
+            None,
+            button,
+            Text::new(&self.name, 0, 0, 7),
+        )
+        .into()
     }
 }
 
@@ -158,8 +170,21 @@ impl Inventory {
 
     fn view(&mut self) -> Element<'_, Msg> {
         Tree::new()
-            .push(DrawFn::new(|draw| draw.rectfill(64, 0, 128, 128, 8)))
-            .push(self.items[0].view(&mut self.buttons[0], 30, 30))
+            .push(DrawFn::new(|draw| draw.rectfill(64, 0, 128, 128, 6)))
+            .push(
+                self.buttons
+                    .iter_mut()
+                    .zip(self.items.iter())
+                    .enumerate()
+                    .map(|(index, (button, item))| {
+                        let rows = 2;
+                        let x = 30 + (index as i32 % rows) * (Item::WIDTH + 2);
+                        let y = 30 + (index as i32 / rows) * (Item::HEIGHT + 2);
+
+                        item.view(button, x, y)
+                    })
+                    .collect::<Vec<Element<'_, Msg>>>(),
+            )
             .into()
     }
 }
