@@ -107,7 +107,7 @@ impl ImportantApp for GameState {
             .hovered_item
             .and_then(|item_index| self.inventory.get(item_index))
             .map(|item| item.view_tooltip(20, 10))
-            .unwrap_or(Tree::new().into());
+            .unwrap_or_else(|| Tree::new().into());
 
         Tree::new()
             .push(DrawFn::new(|draw| {
@@ -167,7 +167,7 @@ impl Item {
         .into()
     }
 
-    fn view_tooltip<'a>(&self, x: i32, y: i32) -> Element<'a, Msg> {
+    fn view_tooltip(&self, x: i32, y: i32) -> Element<'static, Msg> {
         let name = self.name.clone();
         let sprite = self.sprite;
 
