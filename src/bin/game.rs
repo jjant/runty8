@@ -273,6 +273,16 @@ impl Inventory {
     fn view(&mut self) -> Element<'_, Msg> {
         const BASE_X: i32 = 64;
 
+        let weapon_slot = DrawFn::new(|draw| {
+            let x = BASE_X + 3;
+            let y = 20;
+
+            draw.spr(6, x, y);
+            draw.spr(7, x + 8, y);
+            draw.spr(22, x, y + 8);
+            draw.spr(23, x + 8, y + 8);
+        });
+
         Tree::new()
             .push(DrawFn::new(|draw| {
                 draw.rectfill(BASE_X, 0, 128, 128, colors::BROWN)
@@ -296,6 +306,7 @@ impl Inventory {
                     })
                     .collect::<Vec<Element<'_, Msg>>>(),
             )
+            .push(weapon_slot)
             .into()
     }
 }
