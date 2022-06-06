@@ -1,4 +1,5 @@
 mod rpg;
+use rpg::currency::Currency;
 use rpg::modifier::Modifier;
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
@@ -34,6 +35,7 @@ enum Msg {
     KeyEvent { key_event: KeyboardEvent },
     HoveredItem(usize),
     UnHoveredItem(usize),
+    RerollItem,
 }
 use Msg::*;
 
@@ -106,6 +108,9 @@ impl ImportantApp for GameState {
                     self.hovered_item = None;
                 }
             }
+            RerollItem => {
+                self.reroll_hovered();
+            }
         }
     }
 
@@ -132,20 +137,34 @@ impl ImportantApp for GameState {
     }
 
     fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
-        match event {
+        match *event {
             Event::Keyboard(KeyboardEvent {
                 key: Key::C,
                 state: KeyState::Down,
             }) => Some(ToggleInventory),
-            &Event::Keyboard(key_event) => Some(KeyEvent { key_event }),
+            Event::Keyboard(KeyboardEvent {
+                key: Key::X,
+                state: KeyState::Down,
+            }) => Some(RerollItem),
+            Event::Keyboard(key_event) => Some(KeyEvent { key_event }),
             Event::Mouse(_) => None,
             Event::Tick { .. } => Some(Tick),
         }
     }
 }
 
+impl GameState {
+    fn reroll_hovered(&mut self) -> Option<()> {
+        let hovered_item = self.hovered_item?;
+        let item = self.inventory.get_mut(hovered_item)?;
+        Currency::Chaos.apply(item);
+
+        Some(())
+    }
+}
+
 #[derive(Clone)]
-struct Item {
+pub struct Item {
     name: String,
     sprite: usize,
     mods: Vec<Modifier>,
@@ -200,7 +219,8 @@ impl Item {
         let modifiers: Vec<Modifier> = self.mods.clone();
 
         DrawFn::new(move |draw| {
-            let height = 20;
+            let mod_height = 6 * modifiers.len();
+            let height = 20 + mod_height as i32;
             let end_x = 127 - x;
             let end_y = y + height - 1;
 
@@ -244,6 +264,10 @@ impl Inventory {
 
     fn get(&self, index: usize) -> Option<&Item> {
         self.items.get(index)
+    }
+
+    fn get_mut(&mut self, index: usize) -> Option<&mut Item> {
+        self.items.get_mut(index)
     }
 
     fn view(&mut self) -> Element<'_, Msg> {
