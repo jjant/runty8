@@ -109,29 +109,23 @@ impl ImportantApp for GameState {
                 }
             }
             RerollItem => {
-                self.reroll_hovered();
+                self.orb_hovered(Currency::Blessed);
             }
         }
     }
 
     fn view(&mut self, _: &Resources) -> Element<'_, Self::Msg> {
-        let tooltip = self
-            .hovered_item
-            .and_then(|item_index| self.inventory.get(item_index))
-            .map(|item| item.view_tooltip(20, 10))
-            .unwrap_or_else(|| Tree::new().into());
-
         Tree::new()
             .push(DrawFn::new(|draw| {
                 draw.cls();
                 self.player.draw(draw, self.frames);
             }))
             .push(if self.inventory_open {
-                self.inventory.view()
+                self.inventory.view(self.hovered_item)
             } else {
                 Tree::new().into()
             })
-            .push(tooltip)
+            // .push(tooltip)
             .push(Cursor::new(&mut self.cursor))
             .into()
     }
@@ -154,14 +148,15 @@ impl ImportantApp for GameState {
 }
 
 impl GameState {
-    fn reroll_hovered(&mut self) -> Option<()> {
+    fn orb_hovered(&mut self, orb: Currency) -> Option<()> {
         let hovered_item = self.hovered_item?;
         let item = self.inventory.get_mut(hovered_item)?;
-        Currency::Chaos.apply(item);
+        orb.apply(item);
 
         Some(())
     }
 }
+
 #[derive(Clone)]
 pub struct Item {
     name: String,
@@ -213,38 +208,33 @@ impl Item {
         .into()
     }
 
-    fn view_tooltip(&self, x: i32, y: i32) -> Element<'static, Msg> {
-        let name = self.name.clone();
-        let sprite = self.sprite;
-        let implicits = self.implicits.clone();
-        let modifiers = self.mods.clone();
-
+    fn view_tooltip(&self, x: i32, y: i32) -> Element<'_, Msg> {
         DrawFn::new(move |draw| {
-            let implicits_height = 6 * implicits.len() as i32;
-            let mod_height = 6 * modifiers.len() as i32;
+            let implicits_height = 6 * self.implicits.len() as i32;
+            let mod_height = 6 * self.mods.len() as i32;
             let height = 20 + implicits_height + mod_height;
             let end_x = 127 - x;
             let end_y = y + height - 1;
 
             draw.rectfill(x, y, end_x, end_y, 13);
             draw.rect(x + 1, y + 1, end_x - 1, end_y - 1, 7);
-            draw.print(&name, x + 3, y + 3, 7);
+            draw.print(&self.name, x + 3, y + 3, 7);
 
-            for (index, modifier) in implicits.iter().enumerate() {
+            for (index, modifier) in self.implicits.iter().enumerate() {
                 let x = x + 3;
                 let y = y + 3 + (index as i32 + 1) * 8;
 
                 draw.print(&modifier.to_string(), x, y, colors::ORANGE);
             }
 
-            for (index, modifier) in modifiers.iter().enumerate() {
+            for (index, modifier) in self.mods.iter().enumerate() {
                 let x = x + 3;
                 let y = y + 3 + (index as i32 + 1) * 8 + implicits_height;
 
                 draw.print(&modifier.to_string(), x, y, colors::WHITE);
             }
 
-            draw.spr(sprite, end_x - 10, end_y - 10);
+            draw.spr(self.sprite, end_x - 10, end_y - 10);
         })
         .into()
     }
@@ -280,7 +270,7 @@ impl Inventory {
         self.items.get_mut(index)
     }
 
-    fn view(&mut self) -> Element<'_, Msg> {
+    fn view(&mut self, hovered_item: Option<usize>) -> Element<'_, Msg> {
         const BASE_X: i32 = 64;
 
         let weapon_slot = DrawFn::new(|draw| {
@@ -293,6 +283,12 @@ impl Inventory {
             draw.spr(23, x + 8, y + 8);
         });
 
+        let items = &self.items;
+        let tooltip = hovered_item
+            .and_then(|item_index| items.get(item_index))
+            .map(|item| item.view_tooltip(20, 10))
+            .unwrap_or_else(|| Tree::new().into());
+
         Tree::new()
             .push(DrawFn::new(|draw| {
                 draw.rectfill(BASE_X, 0, 128, 128, colors::BROWN)
@@ -300,7 +296,7 @@ impl Inventory {
             .push(
                 self.buttons
                     .iter_mut()
-                    .zip(self.items.iter())
+                    .zip(items.iter())
                     .enumerate()
                     .map(|(index, (button, item))| {
                         const ITEMS_PER_ROW: usize = 4;
@@ -317,6 +313,7 @@ impl Inventory {
                     .collect::<Vec<Element<'_, Msg>>>(),
             )
             .push(weapon_slot)
+            .push(tooltip)
             .into()
     }
 }

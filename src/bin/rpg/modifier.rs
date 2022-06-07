@@ -1,6 +1,6 @@
 use rand::{
     distributions::{Distribution, Standard},
-    Rng,
+    thread_rng, Rng,
 };
 use std::fmt;
 
@@ -38,6 +38,17 @@ impl fmt::Display for Modifier {
 #[derive(Clone)]
 pub enum ImplicitModifier {
     AttackDamage { min: i32, max: i32 },
+}
+
+impl ImplicitModifier {
+    pub fn reroll(&mut self) {
+        match self {
+            ImplicitModifier::AttackDamage { min, max } => {
+                *min = thread_rng().gen_range(1..=5);
+                *max = *min + thread_rng().gen_range(1..=3);
+            }
+        }
+    }
 }
 
 impl fmt::Display for ImplicitModifier {

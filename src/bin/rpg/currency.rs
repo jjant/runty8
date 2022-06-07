@@ -5,12 +5,14 @@ use super::modifier::Modifier;
 
 pub enum Currency {
     Chaos,
+    Blessed,
 }
 
 impl Currency {
     pub fn apply(&self, item: &mut Item) {
         match self {
             Currency::Chaos => chaos_orb(item),
+            Currency::Blessed => blessed_orb(item),
         }
     }
 }
@@ -30,4 +32,10 @@ fn chaos_orb(item: &mut Item) {
         .collect();
 
     item.mods = mods;
+}
+
+fn blessed_orb(item: &mut Item) {
+    for implicit in item.implicits.iter_mut() {
+        implicit.reroll()
+    }
 }
