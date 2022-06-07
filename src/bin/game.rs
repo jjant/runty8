@@ -1,9 +1,10 @@
 mod rpg;
 use rpg::currency::Currency;
-use rpg::item::Item;
+use rpg::item::{Item, ItemType};
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
 use runty8::screen::Resources;
+use runty8::ui::button::Button;
 use runty8::ui::cursor::{self, Cursor};
 use runty8::ui::{button, DrawFn, Element, Tree};
 use runty8::{Event, Key, KeyState, KeyboardEvent};
@@ -156,26 +157,101 @@ impl GameState {
     }
 }
 
+#[derive(Clone)]
+struct ItemSlot {
+    item: Option<Item>,
+}
+
+impl ItemSlot {
+    fn new(item: Item) -> Self {
+        Self { item: Some(item) }
+    }
+
+    fn empty() -> Self {
+        Self { item: None }
+    }
+
+    pub fn view<'a>(
+        &'a self,
+        button: &'a mut button::State,
+        x: i32,
+        y: i32,
+        index: usize,
+    ) -> Element<'a, Msg> {
+        const WIDTH: i32 = Item::WIDTH as i32;
+        const HEIGHT: i32 = Item::HEIGHT as i32;
+
+        let item_view = self
+            .item
+            .as_ref()
+            .map(|item| item.view())
+            .unwrap_or_else(|| Tree::new().into());
+
+        Button::new(
+            x,
+            y,
+            WIDTH,
+            HEIGHT,
+            None,
+            button,
+            Tree::new()
+                .push(DrawFn::new(move |draw| {
+                    // top
+                    draw.line(1, 0, WIDTH - 2, 0, colors::LAVENDER);
+                    // bottom
+                    draw.line(1, HEIGHT - 1, WIDTH - 2, HEIGHT - 1, colors::LAVENDER);
+                    // left
+                    draw.line(0, 1, 0, HEIGHT - 2, colors::LAVENDER);
+                    // right
+                    draw.line(WIDTH - 1, 1, WIDTH - 1, HEIGHT - 2, colors::LAVENDER);
+
+                    draw.rectfill(1, 1, WIDTH - 2, HEIGHT - 2, colors::LIGHT_GREY);
+                }))
+                .push(item_view),
+        )
+        .on_hover(Msg::HoveredItem(index))
+        .on_leave(Msg::UnHoveredItem(index))
+        .into()
+    }
+}
 struct Inventory {
-    items: Vec<Item>,
+    items: Vec<ItemSlot>,
     buttons: Vec<button::State>,
 }
 
 impl Inventory {
     const NUM_ITEMS: usize = 16;
+
     fn new() -> Self {
+        let mut items = vec![ItemSlot::empty(); Self::NUM_ITEMS];
+        items[0] = ItemSlot::new(Item::bde_staff());
+        items[1] = ItemSlot::new(Item {
+            name: "CHAOS ORB".to_owned(),
+            sprite: 48,
+            item_type: ItemType::Currency(Currency::Chaos),
+        });
+        items[2] = ItemSlot::new(Item {
+            name: "BLESSED ORB".to_owned(),
+            sprite: 49,
+            item_type: ItemType::Currency(Currency::Blessed),
+        });
+
         Self {
-            items: vec![Item::bde_staff(); Self::NUM_ITEMS],
+            items,
             buttons: vec![button::State::new(); Self::NUM_ITEMS],
         }
     }
 
     fn get(&self, index: usize) -> Option<&Item> {
-        self.items.get(index)
+        let item = &self.items[index].item;
+
+        item.as_ref()
     }
 
     fn get_mut(&mut self, index: usize) -> Option<&mut Item> {
-        self.items.get_mut(index)
+        let item = &mut self.items[index].item;
+
+        item.as_mut()
     }
 
     fn view(&mut self, hovered_item: Option<usize>) -> Element<'_, Msg> {
@@ -194,6 +270,7 @@ impl Inventory {
         let items = &self.items;
         let tooltip = hovered_item
             .and_then(|item_index| items.get(item_index))
+            .and_then(|slot| slot.item.as_ref())
             .map(|item| item.view_tooltip(20, 10))
             .unwrap_or_else(|| Tree::new().into());
 
@@ -206,7 +283,7 @@ impl Inventory {
                     .iter_mut()
                     .zip(items.iter())
                     .enumerate()
-                    .map(|(index, (button, item))| {
+                    .map(|(index, (button, item_slot))| {
                         const ITEMS_PER_ROW: usize = 4;
                         // TODO: Center
                         const OFFSET_X: usize = 5;
@@ -216,7 +293,7 @@ impl Inventory {
                             + (index % ITEMS_PER_ROW) * (Item::WIDTH + 2);
                         let y = BASE_X as usize + (index / ITEMS_PER_ROW) * (Item::HEIGHT + 2);
 
-                        item.view(button, x as i32, y as i32, index)
+                        item_slot.view(button, x as i32, y as i32, index)
                     })
                     .collect::<Vec<Element<'_, Msg>>>(),
             )

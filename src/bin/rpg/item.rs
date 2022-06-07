@@ -1,10 +1,7 @@
 use crate::{rpg::currency::Currency, Msg};
 use runty8::{
     runtime::draw_context::colors,
-    ui::{
-        button::{self, Button},
-        DrawFn, Element,
-    },
+    ui::{DrawFn, Element},
 };
 use ItemType::*;
 
@@ -12,9 +9,9 @@ use super::modifier::{ImplicitModifier, Modifier};
 
 #[derive(Clone)]
 pub struct Item {
-    name: String,
-    sprite: usize,
-    item_type: ItemType,
+    pub name: String,
+    pub sprite: usize,
+    pub item_type: ItemType,
 }
 
 #[derive(Clone)]
@@ -51,43 +48,10 @@ impl Item {
         }
     }
 
-    pub fn view<'a>(
-        &'a self,
-        button: &'a mut button::State,
-        x: i32,
-        y: i32,
-        index: usize,
-    ) -> Element<'a, Msg> {
+    pub fn view(&self) -> Element<'_, Msg> {
         let sprite = self.sprite;
 
-        Button::new(
-            x,
-            y,
-            Self::WIDTH as i32,
-            Self::HEIGHT as i32,
-            None,
-            button,
-            DrawFn::new(move |draw| {
-                let w = Self::WIDTH as i32;
-                let h = Self::HEIGHT as i32;
-
-                // top
-                draw.line(1, 0, w - 2, 0, colors::LAVENDER);
-                // bottom
-                draw.line(1, h - 1, w - 2, h - 1, colors::LAVENDER);
-                // left
-                draw.line(0, 1, 0, h - 2, colors::LAVENDER);
-                // right
-                draw.line(w - 1, 1, w - 1, h - 2, colors::LAVENDER);
-
-                draw.rectfill(1, 1, w - 2, h - 2, colors::LIGHT_GREY);
-
-                draw.spr(sprite, 2, 2);
-            }),
-        )
-        .on_hover(Msg::HoveredItem(index))
-        .on_leave(Msg::UnHoveredItem(index))
-        .into()
+        DrawFn::new(move |draw| draw.spr(sprite, 2, 2)).into()
     }
 
     pub fn view_tooltip(&self, x: i32, y: i32) -> Element<'_, Msg> {
