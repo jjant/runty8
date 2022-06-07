@@ -34,3 +34,18 @@ impl fmt::Display for Modifier {
         }
     }
 }
+
+#[derive(Clone)]
+pub enum ImplicitModifier {
+    AttackDamage { min: i32, max: i32 },
+}
+
+impl fmt::Display for ImplicitModifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ImplicitModifier::AttackDamage { min, max } => {
+                write!(f, " {}-{} ATTACK DAMAGE", min, max)
+            }
+        }
+    }
+}

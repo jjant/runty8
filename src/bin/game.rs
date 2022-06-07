@@ -1,6 +1,6 @@
 mod rpg;
 use rpg::currency::Currency;
-use rpg::modifier::Modifier;
+use rpg::modifier::{ImplicitModifier, Modifier};
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
 use runty8::screen::Resources;
@@ -162,11 +162,11 @@ impl GameState {
         Some(())
     }
 }
-
 #[derive(Clone)]
 pub struct Item {
     name: String,
     sprite: usize,
+    implicits: Vec<ImplicitModifier>,
     mods: Vec<Modifier>,
 }
 
@@ -216,11 +216,13 @@ impl Item {
     fn view_tooltip(&self, x: i32, y: i32) -> Element<'static, Msg> {
         let name = self.name.clone();
         let sprite = self.sprite;
-        let modifiers: Vec<Modifier> = self.mods.clone();
+        let implicits = self.implicits.clone();
+        let modifiers = self.mods.clone();
 
         DrawFn::new(move |draw| {
-            let mod_height = 6 * modifiers.len();
-            let height = 20 + mod_height as i32;
+            let implicits_height = 6 * implicits.len() as i32;
+            let mod_height = 6 * modifiers.len() as i32;
+            let height = 20 + implicits_height + mod_height;
             let end_x = 127 - x;
             let end_y = y + height - 1;
 
@@ -228,9 +230,16 @@ impl Item {
             draw.rect(x + 1, y + 1, end_x - 1, end_y - 1, 7);
             draw.print(&name, x + 3, y + 3, 7);
 
-            for (index, modifier) in modifiers.iter().enumerate() {
+            for (index, modifier) in implicits.iter().enumerate() {
                 let x = x + 3;
                 let y = y + 3 + (index as i32 + 1) * 8;
+
+                draw.print(&modifier.to_string(), x, y, colors::ORANGE);
+            }
+
+            for (index, modifier) in modifiers.iter().enumerate() {
+                let x = x + 3;
+                let y = y + 3 + (index as i32 + 1) * 8 + implicits_height;
 
                 draw.print(&modifier.to_string(), x, y, colors::WHITE);
             }
@@ -254,6 +263,7 @@ impl Inventory {
                 Item {
                     name: "BDE STAFF".to_owned(),
                     sprite: 51,
+                    implicits: vec![ImplicitModifier::AttackDamage { min: 2, max: 5 }],
                     mods: vec![Modifier::Attack(32)]
                 };
                 Self::NUM_ITEMS
