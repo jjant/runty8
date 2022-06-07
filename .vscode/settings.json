@@ -5,6 +5,7 @@
     "fget",
     "fset",
     "Hitbox",
+    "implicits",
     "jbuffer"
   ]
 }

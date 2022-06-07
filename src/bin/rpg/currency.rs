@@ -1,8 +1,9 @@
 use crate::Item;
 use rand::Rng;
 
-use super::modifier::Modifier;
+use super::{item::Wearable, modifier::Modifier};
 
+#[derive(Clone)]
 pub enum Currency {
     Chaos,
     Blessed,
@@ -10,15 +11,17 @@ pub enum Currency {
 
 impl Currency {
     pub fn apply(&self, item: &mut Item) {
-        match self {
-            Currency::Chaos => chaos_orb(item),
-            Currency::Blessed => blessed_orb(item),
+        if let Some(wearable) = item.to_wearable_mut() {
+            match self {
+                Currency::Chaos => chaos_orb(wearable),
+                Currency::Blessed => blessed_orb(wearable),
+            }
         }
     }
 }
 
 // TODO: This can currently pick duplicate mods
-fn chaos_orb(item: &mut Item) {
+fn chaos_orb(item: &mut Wearable) {
     let mut rng = rand::thread_rng();
     let how_many_mods = rng.gen_range(1..=3);
 
@@ -34,7 +37,7 @@ fn chaos_orb(item: &mut Item) {
     item.mods = mods;
 }
 
-fn blessed_orb(item: &mut Item) {
+fn blessed_orb(item: &mut Wearable) {
     for implicit in item.implicits.iter_mut() {
         implicit.reroll()
     }

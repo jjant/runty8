@@ -1,10 +1,9 @@
 mod rpg;
 use rpg::currency::Currency;
-use rpg::modifier::{ImplicitModifier, Modifier};
+use rpg::item::Item;
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
 use runty8::screen::Resources;
-use runty8::ui::button::Button;
 use runty8::ui::cursor::{self, Cursor};
 use runty8::ui::{button, DrawFn, Element, Tree};
 use runty8::{Event, Key, KeyState, KeyboardEvent};
@@ -29,7 +28,7 @@ struct GameState {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Msg {
+pub enum Msg {
     Tick,
     ToggleInventory,
     KeyEvent { key_event: KeyboardEvent },
@@ -157,89 +156,6 @@ impl GameState {
     }
 }
 
-#[derive(Clone)]
-pub struct Item {
-    name: String,
-    sprite: usize,
-    implicits: Vec<ImplicitModifier>,
-    mods: Vec<Modifier>,
-}
-
-impl Item {
-    const HEIGHT: usize = 12;
-    const WIDTH: usize = 12;
-
-    fn view<'a>(
-        &'a self,
-        button: &'a mut button::State,
-        x: i32,
-        y: i32,
-        index: usize,
-    ) -> Element<'a, Msg> {
-        let sprite = self.sprite;
-
-        Button::new(
-            x,
-            y,
-            Self::WIDTH as i32,
-            Self::HEIGHT as i32,
-            None,
-            button,
-            DrawFn::new(move |draw| {
-                let w = Self::WIDTH as i32;
-                let h = Self::HEIGHT as i32;
-
-                // top
-                draw.line(1, 0, w - 2, 0, colors::LAVENDER);
-                // bottom
-                draw.line(1, h - 1, w - 2, h - 1, colors::LAVENDER);
-                // left
-                draw.line(0, 1, 0, h - 2, colors::LAVENDER);
-                // right
-                draw.line(w - 1, 1, w - 1, h - 2, colors::LAVENDER);
-
-                draw.rectfill(1, 1, w - 2, h - 2, colors::LIGHT_GREY);
-
-                draw.spr(sprite, 2, 2);
-            }),
-        )
-        .on_hover(HoveredItem(index))
-        .on_leave(UnHoveredItem(index))
-        .into()
-    }
-
-    fn view_tooltip(&self, x: i32, y: i32) -> Element<'_, Msg> {
-        DrawFn::new(move |draw| {
-            let implicits_height = 6 * self.implicits.len() as i32;
-            let mod_height = 6 * self.mods.len() as i32;
-            let height = 20 + implicits_height + mod_height;
-            let end_x = 127 - x;
-            let end_y = y + height - 1;
-
-            draw.rectfill(x, y, end_x, end_y, 13);
-            draw.rect(x + 1, y + 1, end_x - 1, end_y - 1, 7);
-            draw.print(&self.name, x + 3, y + 3, 7);
-
-            for (index, modifier) in self.implicits.iter().enumerate() {
-                let x = x + 3;
-                let y = y + 3 + (index as i32 + 1) * 8;
-
-                draw.print(&modifier.to_string(), x, y, colors::ORANGE);
-            }
-
-            for (index, modifier) in self.mods.iter().enumerate() {
-                let x = x + 3;
-                let y = y + 3 + (index as i32 + 1) * 8 + implicits_height;
-
-                draw.print(&modifier.to_string(), x, y, colors::WHITE);
-            }
-
-            draw.spr(self.sprite, end_x - 10, end_y - 10);
-        })
-        .into()
-    }
-}
-
 struct Inventory {
     items: Vec<Item>,
     buttons: Vec<button::State>,
@@ -249,15 +165,7 @@ impl Inventory {
     const NUM_ITEMS: usize = 16;
     fn new() -> Self {
         Self {
-            items: vec![
-                Item {
-                    name: "BDE STAFF".to_owned(),
-                    sprite: 51,
-                    implicits: vec![ImplicitModifier::AttackDamage { min: 2, max: 5 }],
-                    mods: vec![Modifier::Attack(32)]
-                };
-                Self::NUM_ITEMS
-            ],
+            items: vec![Item::bde_staff(); Self::NUM_ITEMS],
             buttons: vec![button::State::new(); Self::NUM_ITEMS],
         }
     }
