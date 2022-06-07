@@ -257,6 +257,7 @@ impl Inventory {
         }
     }
 
+    #[allow(dead_code)]
     fn get(&self, index: usize) -> Option<&Item> {
         let item = &self.items[index].item;
 

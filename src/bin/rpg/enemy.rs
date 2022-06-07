@@ -16,6 +16,7 @@ pub struct Enemy {
     hp: i32,
     max_hp: i32,
     sprite: usize,
+    flash_timer: i32,
 }
 
 impl Enemy {
@@ -30,19 +31,32 @@ impl Enemy {
             max_hp,
             hp: max_hp,
             sprite: 57,
+            flash_timer: 0,
         }
     }
 
     pub fn take_damage(&mut self, damage: i32) {
         self.hp = i32::max(self.hp - damage, 0);
+
+        self.flash_timer += damage * 15;
     }
 
     pub fn view(&self) -> Element<'_, Msg> {
         DrawFn::new(move |draw| {
-            draw.spr(self.sprite, self.x, self.y);
-            self.view_hp_bar(draw)
+            self.view_sprite(draw);
+            self.view_hp_bar(draw);
         })
         .into()
+    }
+
+    fn view_sprite(&self, draw: &mut DrawContext) {
+        if self.flash_timer > 0 && self.flash_timer % 2 == 0 {
+            draw.pal(3, 7);
+            draw.pal(1, 10);
+            draw.pal(6, 9);
+        }
+        draw.spr(self.sprite, self.x, self.y);
+        draw.reset_pal();
     }
 
     fn view_hp_bar(&self, draw: &mut DrawContext) {
@@ -67,6 +81,8 @@ impl Enemy {
 
         self.x += self.vx;
         self.y += self.vy;
+
+        self.flash_timer = i32::max(self.flash_timer - 1, 0);
     }
 }
 
