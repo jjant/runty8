@@ -1,5 +1,6 @@
 mod rpg;
 use rpg::currency::Currency;
+use rpg::enemy::Enemy;
 use rpg::item::{Item, ItemType};
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
@@ -15,6 +16,7 @@ fn main() {
 
 struct GameState {
     player: Player,
+    entities: Vec<Enemy>,
     frames: usize,
     inventory_open: bool,
     inventory: Inventory,
@@ -36,6 +38,7 @@ pub enum Msg {
     HoveredItem(usize),
     UnHoveredItem(usize),
     RerollItem,
+    HitEnemy(usize),
 }
 use Msg::*;
 
@@ -83,6 +86,7 @@ impl ImportantApp for GameState {
     fn init() -> Self {
         Self {
             player: Player::new(),
+            entities: vec![Enemy::new(20, 20)],
             frames: 0,
             inventory_open: false,
             inventory: Inventory::new(),
@@ -101,6 +105,8 @@ impl ImportantApp for GameState {
             Tick => {
                 self.frames += 1;
                 self.player.update(&self.keys);
+
+                self.entities.iter_mut().for_each(|entity| entity.update());
             }
             HoveredItem(index) => self.hovered_item = Some(index),
             UnHoveredItem(item) => {
@@ -111,6 +117,7 @@ impl ImportantApp for GameState {
             RerollItem => {
                 self.orb_hovered(Currency::Blessed);
             }
+            HitEnemy(index) => self.entities[index].take_damage(1),
         }
     }
 
@@ -120,6 +127,7 @@ impl ImportantApp for GameState {
                 draw.cls();
                 self.player.draw(draw, self.frames);
             }))
+            .push(view_entities(&self.entities))
             .push(if self.inventory_open {
                 self.inventory.view(self.hovered_item)
             } else {
@@ -132,6 +140,10 @@ impl ImportantApp for GameState {
 
     fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
         match *event {
+            Event::Keyboard(KeyboardEvent {
+                key: Key::D,
+                state: KeyState::Down,
+            }) => Some(HitEnemy(0)),
             Event::Keyboard(KeyboardEvent {
                 key: Key::C,
                 state: KeyState::Down,
@@ -155,6 +167,9 @@ impl GameState {
 
         Some(())
     }
+}
+fn view_entities(entities: &[Enemy]) -> Element<'_, Msg> {
+    Tree::with_children(entities.iter().map(|entity| entity.view()).collect()).into()
 }
 
 #[derive(Clone)]
@@ -718,32 +733,6 @@ fn animate(base: usize, count: usize, every_num_frames: usize, t: usize) -> usiz
 //             draw_context.print(dbg!(&attribute.to_string()), x, y, 7);
 //         }
 //         draw_context.spr(self.sprite as usize, sprite_x, sprite_y);
-//     }
-// }
-
-// struct Rect {
-//     x: i32,
-//     y: i32,
-//     width: i32,
-//     height: i32,
-// }
-
-// impl Rect {
-//     pub fn contains(&self, x: i32, y: i32) -> bool {
-//         let contains_x = x >= self.x && x < self.x + self.width;
-//         let contains_y = y >= self.y && y < self.y + self.height;
-
-//         contains_x && contains_y
-//     }
-
-//     pub fn fill(&self, draw_context: &mut DrawContext, color: Color) {
-//         draw_context.rectfill(
-//             self.x,
-//             self.y,
-//             self.x + self.width - 1,
-//             self.y + self.height - 1,
-//             color,
-//         )
 //     }
 // }
 
