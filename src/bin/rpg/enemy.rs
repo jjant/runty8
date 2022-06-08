@@ -20,8 +20,8 @@ pub struct Enemy {
 }
 
 impl Enemy {
-    pub fn new(x: i32, y: i32) -> Self {
-        let max_hp = 13;
+    pub fn new(x: i32, y: i32, sprite: usize) -> Self {
+        let max_hp = 3;
 
         Self {
             x,
@@ -30,9 +30,17 @@ impl Enemy {
             vy: 0,
             max_hp,
             hp: max_hp,
-            sprite: 57,
+            sprite,
             flash_timer: 0,
         }
+    }
+
+    pub fn mage(x: i32, y: i32) -> Self {
+        Self::new(x, y, 57)
+    }
+
+    pub fn snail(x: i32, y: i32) -> Self {
+        Self::new(x, y, 59)
     }
 
     pub fn take_damage(&mut self, damage: i32) {

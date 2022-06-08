@@ -86,7 +86,7 @@ impl ImportantApp for GameState {
     fn init() -> Self {
         Self {
             player: Player::new(),
-            entities: vec![Enemy::new(20, 20)],
+            entities: vec![Enemy::snail(20, 20), Enemy::mage(20, 80)],
             frames: 0,
             inventory_open: false,
             inventory: Inventory::new(),
