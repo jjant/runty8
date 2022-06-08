@@ -17,11 +17,13 @@ pub struct Enemy {
     max_hp: i32,
     sprite: usize,
     flash_timer: i32,
+    damage: i32,
+    damage_counter: f32,
 }
 
 impl Enemy {
     pub fn new(x: i32, y: i32, sprite: usize) -> Self {
-        let max_hp = 3;
+        let max_hp = 10;
 
         Self {
             x,
@@ -32,6 +34,8 @@ impl Enemy {
             hp: max_hp,
             sprite,
             flash_timer: 0,
+            damage: 0,
+            damage_counter: 0.0,
         }
     }
 
@@ -44,9 +48,14 @@ impl Enemy {
     }
 
     pub fn take_damage(&mut self, damage: i32) {
-        self.hp = i32::max(self.hp - damage, 0);
+        let new_hp = i32::max(self.hp - damage, 0);
+        let actual_damage = self.hp - new_hp;
 
-        self.flash_timer += damage * 15;
+        self.hp = new_hp;
+
+        self.flash_timer += actual_damage * 15;
+        self.damage += actual_damage;
+        self.damage_counter += actual_damage as f32;
     }
 
     pub fn view(&self) -> Element<'_, Msg> {
@@ -68,16 +77,36 @@ impl Enemy {
     }
 
     fn view_hp_bar(&self, draw: &mut DrawContext) {
+        const BASE_WIDTH: i32 = 30;
+        const BASE_HEIGHT: i32 = 6;
+        const BORDER_WIDTH: i32 = 1;
+
         let percentage_hp = self.hp as f32 / self.max_hp as f32;
 
-        let base_width = 8;
-        let filled_width = (percentage_hp * base_width as f32).round() as i32;
+        let filled_width = (percentage_hp * BASE_WIDTH as f32).round() as i32;
 
         let y = self.y + 9;
 
-        Rect::new(self.x, y, base_width + 2, 4).fill(draw, colors::LIGHT_GREY);
-        Rect::new(self.x, y, base_width + 2, 4).outline(draw, colors::WHITE);
-        Rect::new(self.x + 1, y + 1, filled_width, 2).fill(draw, colors::RED);
+        Rect::new(
+            self.x,
+            y,
+            BASE_WIDTH + 2 * BORDER_WIDTH,
+            BASE_HEIGHT + 2 * BORDER_WIDTH,
+        )
+        .fill(draw, colors::LIGHT_GREY);
+        Rect::new(
+            self.x,
+            y,
+            BASE_WIDTH + 2 * BORDER_WIDTH,
+            BASE_HEIGHT + 2 * BORDER_WIDTH,
+        )
+        .outline(draw, colors::WHITE);
+        Rect::new(self.x + 1, y + 1, filled_width, BASE_HEIGHT).fill(draw, colors::RED);
+
+        let percentage_damage = self.damage_counter / self.max_hp as f32;
+        let damage_width = (percentage_damage * BASE_WIDTH as f32).round() as i32;
+        Rect::new(self.x + 1 + filled_width, y + 1, damage_width, BASE_HEIGHT)
+            .fill(draw, colors::ORANGE);
     }
 
     pub fn update(&mut self) {
@@ -87,10 +116,24 @@ impl Enemy {
             self.vx = 1;
         }
 
-        self.x += self.vx;
-        self.y += self.vy;
+        // self.x += self.vx;
+        // self.y += self.vy;
+
+        self.handle_damage_animation();
+    }
+
+    fn handle_damage_animation(&mut self) {
+        let counter_duration = 20.0;
 
         self.flash_timer = i32::max(self.flash_timer - 1, 0);
+        self.damage_counter = f32::max(
+            self.damage_counter - self.damage as f32 / counter_duration,
+            0.0,
+        );
+
+        if self.damage_counter == 0.0 {
+            self.damage = 0;
+        }
     }
 }
 
