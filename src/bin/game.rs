@@ -43,6 +43,8 @@ pub enum Msg {
 }
 use Msg::*;
 
+use crate::rpg::rect::Rect;
+
 impl WhichOne for GameState {
     type Which = Right;
 }
@@ -450,6 +452,7 @@ struct Player {
 impl Player {
     const ATTACK_FRAME_TIME: i32 = 3;
     const ATTACK_TIME: i32 = 3 * Self::ATTACK_FRAME_TIME;
+    const LOCAL_ATTACK_HITBOX: Rect = Rect::new(4, 0, 8, 8);
 
     fn new() -> Self {
         Self {
@@ -489,11 +492,13 @@ impl Player {
 
         draw.spr(sprite, self.x, self.y);
 
+        let attack_hitbox = Self::LOCAL_ATTACK_HITBOX.translate(self.x, self.y);
         if self.attack_timer > 0 {
             let t = (Self::ATTACK_TIME - self.attack_timer) as usize;
             let attack_sprite = animate(16, 3, Self::ATTACK_FRAME_TIME as usize, t);
 
             draw.spr(attack_sprite, self.x + 4, self.y);
+            attack_hitbox.outline(draw, 7);
         }
     }
 
