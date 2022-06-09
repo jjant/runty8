@@ -105,7 +105,7 @@ impl ImportantApp for GameState {
             KeyEvent { key_event } => self.keys.update(key_event),
             Tick => {
                 self.frames += 1;
-                self.player.update(&self.keys);
+                self.player.update(&self.keys, &mut self.entities);
 
                 self.entities.iter_mut().for_each(|entity| entity.update());
             }
@@ -461,7 +461,7 @@ impl Player {
         }
     }
 
-    fn update(&mut self, keys: &Keys) {
+    fn update(&mut self, keys: &Keys, _: &mut [Enemy]) {
         if self.attack_timer > 0 {
             self.attack_timer -= 1;
         }

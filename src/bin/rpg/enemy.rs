@@ -1,12 +1,9 @@
 use runty8::{
-    runtime::{
-        draw_context::{colors, DrawContext},
-        sprite_sheet::Color,
-    },
+    runtime::draw_context::{colors, DrawContext},
     ui::{DrawFn, Element},
 };
 
-use crate::Msg;
+use crate::{rpg::rect::Rect, Msg};
 
 pub struct Enemy {
     x: i32,
@@ -99,8 +96,8 @@ impl Enemy {
         containing_rect.fill(draw, colors::LIGHT_GREY);
         containing_rect.outline(draw, colors::WHITE);
         let current_hp_rect = Rect::new(
-            containing_rect.x + 1,
-            containing_rect.y + 1,
+            containing_rect.left() + 1,
+            containing_rect.top() + 1,
             filled_width,
             BASE_HEIGHT,
         );
@@ -110,7 +107,7 @@ impl Enemy {
         let damage_width = (percentage_damage * BASE_WIDTH as f32).round() as i32;
         Rect::new(
             current_hp_rect.right() + 1,
-            containing_rect.y + 1,
+            containing_rect.top() + 1,
             damage_width,
             BASE_HEIGHT,
         )
@@ -142,64 +139,5 @@ impl Enemy {
         if self.damage_counter == 0.0 {
             self.damage = 0;
         }
-    }
-}
-
-pub struct Rect {
-    // x, y: position of the top left corner
-    x: i32,
-    y: i32,
-    w: i32,
-    h: i32,
-}
-
-impl Rect {
-    pub fn new(x: i32, y: i32, w: i32, h: i32) -> Self {
-        Self { x, y, w, h }
-    }
-
-    pub fn centered(x: i32, y: i32, w: i32, h: i32) -> Self {
-        Self {
-            x: x - w / 2,
-            y: y - h / 2,
-            w,
-            h,
-        }
-    }
-
-    // Right-most pixel (contained in the rect)
-    pub fn right(&self) -> i32 {
-        self.x + self.w - 1
-    }
-
-    pub fn outline(&self, draw_context: &mut DrawContext, color: Color) {
-        if self.is_empty() {
-            return;
-        }
-        draw_context.rect(
-            self.x,
-            self.y,
-            self.x + self.w - 1,
-            self.y + self.h - 1,
-            color,
-        )
-    }
-
-    pub fn fill(&self, draw_context: &mut DrawContext, color: Color) {
-        if self.is_empty() {
-            return;
-        }
-
-        draw_context.rectfill(
-            self.x,
-            self.y,
-            self.x + self.w - 1,
-            self.y + self.h - 1,
-            color,
-        )
-    }
-
-    fn is_empty(&self) -> bool {
-        self.w <= 0 || self.h <= 0
     }
 }
