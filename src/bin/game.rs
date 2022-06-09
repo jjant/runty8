@@ -324,13 +324,6 @@ impl Inventory {
     }
 }
 
-// enum Action {
-//     HighlightItem(usize),
-//     SelectedItem(usize),
-//     MovedSelectedItem { new_index: usize },
-//     AppliedOrb { orb_index: usize, item_index: usize },
-// }
-
 // use Action::*;
 
 // impl ElmApp for GameState {
@@ -390,57 +383,6 @@ impl Inventory {
 //         }
 //     }
 
-//     fn draw(&mut self, draw_context: &mut DrawContext) -> Vec<Action> {
-//         let mut actions = vec![];
-//         draw_context.palt(Some(0));
-//         draw_context.cls();
-//         self.player.draw(draw_context);
-
-//         if self.inventory_open {
-//             actions.append(&mut self.inventory.draw(
-//                 self,
-//                 draw_context,
-//                 HighlightItem,
-//                 SelectedItem,
-//             ));
-//         }
-
-//         if let Some(item) = self
-//             .highlighted_item
-//             .and_then(|index| self.inventory.items[index].item.as_ref())
-//         {
-//             item.draw_tooltip(draw_context)
-//         }
-
-//         self.draw_cursor(draw_context);
-
-//         actions
-//     }
-// }
-
-// impl GameState {
-//     fn draw_cursor(&self, draw_context: &mut DrawContext) {
-//         draw_context.spr(56, self.mouse_x, self.mouse_y);
-
-//         let mut draw_selected_item = || {
-//             let index = self.selected_item?;
-//             let item = self.inventory.items[index].item.as_ref()?;
-
-//             draw_context.spr(item.sprite as usize, self.mouse_x, self.mouse_y);
-
-//             Some(())
-//         };
-
-//         draw_selected_item();
-//     }
-
-//     fn selected_item(&self) -> Option<(usize, &Item)> {
-//         let index = self.selected_item?;
-//         let item = self.inventory.items[index].item.as_ref()?;
-
-//         Some((index, item))
-//     }
-// }
 struct Player {
     x: i32,
     y: i32,
@@ -749,32 +691,6 @@ fn animate(base: usize, count: usize, every_num_frames: usize, t: usize) -> usiz
 //             None
 //         }
 //     }
-
-//     fn draw_tooltip(&self, draw_context: &mut DrawContext) {
-//         let x = 64;
-//         let y = 30;
-//         let w = 30;
-//         let h = 20;
-
-//         let text_x = 40;
-//         let text_y = 16;
-//         let sprite_x = 64;
-//         let sprite_y = 38;
-
-//         draw_context.rect(x - w, y - h, x + w, y + h, 4);
-//         draw_context.rectfill(x + 1 - w, y + 1 - h, x - 1 + w, y - 1 + h, 7);
-//         draw_context.rectfill(x + 2 - w, y + 2 - h, x - 2 + w, y - 2 + h, 5);
-//         draw_context.print(self.name, text_x, text_y, 7);
-//         draw_context.print(self.description, text_x, text_y + 8, 7);
-
-//         for (index, attribute) in self.attributes.iter().enumerate() {
-//             let x = text_x;
-//             let y = text_y + 8 + (index + 1) as i32 * 8;
-//             draw_context.print(dbg!(&attribute.to_string()), x, y, 7);
-//         }
-//         draw_context.spr(self.sprite as usize, sprite_x, sprite_y);
-//     }
-// }
 
 fn clamp(val: i32, a: i32, b: i32) -> i32 {
     a.max(b.min(val))
