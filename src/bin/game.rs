@@ -8,7 +8,7 @@ use runty8::screen::Resources;
 use runty8::ui::button::Button;
 use runty8::ui::cursor::{self, Cursor};
 use runty8::ui::{button, DrawFn, Element, Tree};
-use runty8::{Event, Key, KeyState, KeyboardEvent};
+use runty8::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
 
 fn main() {
     runty8::run_app::<GameState>("src/bin/game".to_owned());
@@ -140,10 +140,7 @@ impl ImportantApp for GameState {
 
     fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
         match *event {
-            Event::Keyboard(KeyboardEvent {
-                key: Key::D,
-                state: KeyState::Down,
-            }) => Some(HitEnemy(0)),
+            Event::Mouse(MouseEvent::Down(MouseButton::Left)) => Some(HitEnemy(0)),
             Event::Keyboard(KeyboardEvent {
                 key: Key::C,
                 state: KeyState::Down,

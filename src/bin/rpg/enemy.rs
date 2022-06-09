@@ -12,6 +12,7 @@ pub struct Enemy {
     x: i32,
     y: i32,
     vx: i32,
+    speed_x: i32,
     vy: i32,
     hp: i32,
     max_hp: i32,
@@ -24,11 +25,13 @@ pub struct Enemy {
 impl Enemy {
     pub fn new(x: i32, y: i32, sprite: usize) -> Self {
         let max_hp = 10;
+        let speed_x = 1;
 
         Self {
             x,
             y,
-            vx: 1,
+            vx: speed_x,
+            speed_x,
             vy: 0,
             max_hp,
             hp: max_hp,
@@ -78,46 +81,51 @@ impl Enemy {
 
     fn view_hp_bar(&self, draw: &mut DrawContext) {
         const BASE_WIDTH: i32 = 30;
-        const BASE_HEIGHT: i32 = 6;
+        const BASE_HEIGHT: i32 = 4;
         const BORDER_WIDTH: i32 = 1;
 
         let percentage_hp = self.hp as f32 / self.max_hp as f32;
 
         let filled_width = (percentage_hp * BASE_WIDTH as f32).round() as i32;
 
-        let y = self.y + 9;
+        let y = self.y - 6;
 
-        Rect::new(
-            self.x,
+        let containing_rect = Rect::centered(
+            self.x + 4,
             y,
             BASE_WIDTH + 2 * BORDER_WIDTH,
             BASE_HEIGHT + 2 * BORDER_WIDTH,
-        )
-        .fill(draw, colors::LIGHT_GREY);
-        Rect::new(
-            self.x,
-            y,
-            BASE_WIDTH + 2 * BORDER_WIDTH,
-            BASE_HEIGHT + 2 * BORDER_WIDTH,
-        )
-        .outline(draw, colors::WHITE);
-        Rect::new(self.x + 1, y + 1, filled_width, BASE_HEIGHT).fill(draw, colors::RED);
+        );
+        containing_rect.fill(draw, colors::LIGHT_GREY);
+        containing_rect.outline(draw, colors::WHITE);
+        let current_hp_rect = Rect::new(
+            containing_rect.x + 1,
+            containing_rect.y + 1,
+            filled_width,
+            BASE_HEIGHT,
+        );
+        current_hp_rect.fill(draw, colors::RED);
 
         let percentage_damage = self.damage_counter / self.max_hp as f32;
         let damage_width = (percentage_damage * BASE_WIDTH as f32).round() as i32;
-        Rect::new(self.x + 1 + filled_width, y + 1, damage_width, BASE_HEIGHT)
-            .fill(draw, colors::ORANGE);
+        Rect::new(
+            current_hp_rect.right() + 1,
+            containing_rect.y + 1,
+            damage_width,
+            BASE_HEIGHT,
+        )
+        .fill(draw, colors::ORANGE);
     }
 
     pub fn update(&mut self) {
         if self.x > 121 {
-            self.vx = -1;
+            self.vx = -self.speed_x;
         } else if self.x < 0 {
-            self.vx = 1;
+            self.vx = self.speed_x;
         }
 
-        // self.x += self.vx;
-        // self.y += self.vy;
+        self.x += self.vx;
+        self.y += self.vy;
 
         self.handle_damage_animation();
     }
@@ -138,6 +146,7 @@ impl Enemy {
 }
 
 pub struct Rect {
+    // x, y: position of the top left corner
     x: i32,
     y: i32,
     w: i32,
@@ -147,6 +156,20 @@ pub struct Rect {
 impl Rect {
     pub fn new(x: i32, y: i32, w: i32, h: i32) -> Self {
         Self { x, y, w, h }
+    }
+
+    pub fn centered(x: i32, y: i32, w: i32, h: i32) -> Self {
+        Self {
+            x: x - w / 2,
+            y: y - h / 2,
+            w,
+            h,
+        }
+    }
+
+    // Right-most pixel (contained in the rect)
+    pub fn right(&self) -> i32 {
+        self.x + self.w - 1
     }
 
     pub fn outline(&self, draw_context: &mut DrawContext, color: Color) {
