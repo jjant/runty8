@@ -17,6 +17,7 @@ pub struct Enemy {
     flash_timer: i32,
     damage: i32,
     damage_counter: f32,
+    hitbox: Rect,
 }
 
 impl Enemy {
@@ -36,6 +37,7 @@ impl Enemy {
             flash_timer: 0,
             damage: 0,
             damage_counter: 0.0,
+            hitbox: Rect::new(0, 0, 10, 10),
         }
     }
 
@@ -74,6 +76,7 @@ impl Enemy {
         }
         draw.spr(self.sprite, self.x, self.y);
         draw.reset_pal();
+        self.hitbox.translate(self.x, self.y).outline(draw, 8);
     }
 
     fn view_hp_bar(&self, draw: &mut DrawContext) {

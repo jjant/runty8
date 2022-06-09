@@ -492,13 +492,12 @@ impl Player {
 
         draw.spr(sprite, self.x, self.y);
 
-        let attack_hitbox = Self::LOCAL_ATTACK_HITBOX.translate(self.x, self.y);
         if self.attack_timer > 0 {
             let t = (Self::ATTACK_TIME - self.attack_timer) as usize;
             let attack_sprite = animate(16, 3, Self::ATTACK_FRAME_TIME as usize, t);
 
             draw.spr(attack_sprite, self.x + 4, self.y);
-            attack_hitbox.outline(draw, 7);
+            self.attack_hitbox().outline(draw, 7);
         }
     }
 
@@ -508,6 +507,11 @@ impl Player {
         }
 
         self.attack_timer = Self::ATTACK_TIME;
+    }
+
+    // World-space hitbox
+    fn attack_hitbox(&self) -> Rect {
+        Self::LOCAL_ATTACK_HITBOX.translate(self.x, self.y)
     }
 }
 
