@@ -8,8 +8,8 @@ use crate::{rpg::rect::Rect, Msg};
 pub struct Enemy {
     x: i32,
     y: i32,
-    vx: i32,
-    speed_x: i32,
+    pub vx: i32,
+    pub speed_x: i32,
     vy: i32,
     hp: i32,
     max_hp: i32,
@@ -60,6 +60,10 @@ impl Enemy {
         self.damage_counter += actual_damage as f32;
     }
 
+    pub fn hitbox(&self) -> Rect {
+        self.hitbox.translate(self.x, self.y)
+    }
+
     pub fn view(&self) -> Element<'_, Msg> {
         DrawFn::new(move |draw| {
             self.view_sprite(draw);
@@ -76,7 +80,7 @@ impl Enemy {
         }
         draw.spr(self.sprite, self.x, self.y);
         draw.reset_pal();
-        self.hitbox.translate(self.x, self.y).outline(draw, 8);
+        self.hitbox().outline(draw, 8);
     }
 
     fn view_hp_bar(&self, draw: &mut DrawContext) {

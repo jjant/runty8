@@ -87,9 +87,17 @@ impl ImportantApp for GameState {
     type Msg = Msg;
 
     fn init() -> Self {
+        let mut entities = vec![
+            Enemy::snail(20, 20),
+            Enemy::mage(20, 80),
+            Enemy::mage(20, 100),
+        ];
+
+        entities[0].vx = 0;
+
         Self {
             player: Player::new(),
-            entities: vec![Enemy::snail(20, 20), Enemy::mage(20, 80)],
+            entities,
             frames: 0,
             inventory_open: false,
             inventory: Inventory::new(),
@@ -389,6 +397,7 @@ struct Player {
     vx: i32,
     vy: i32,
     attack_timer: i32,
+    attack_damage: i32,
 }
 
 impl Player {
@@ -403,12 +412,19 @@ impl Player {
             vx: 0,
             vy: 0,
             attack_timer: 0,
+            attack_damage: 2,
         }
     }
 
-    fn update(&mut self, keys: &Keys, _: &mut [Enemy]) {
+    fn update(&mut self, keys: &Keys, enemies: &mut [Enemy]) {
         if self.attack_timer > 0 {
             self.attack_timer -= 1;
+
+            for enemy in enemies.iter_mut() {
+                if enemy.hitbox().intersects(self.attack_hitbox()) {
+                    enemy.take_damage(self.attack_damage)
+                }
+            }
         }
 
         self.vx = keys.right as i32 - keys.left as i32;
