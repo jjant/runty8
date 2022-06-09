@@ -39,6 +39,7 @@ pub enum Msg {
     UnHoveredItem(usize),
     RerollItem,
     HitEnemy(usize),
+    Attack,
 }
 use Msg::*;
 
@@ -118,6 +119,7 @@ impl ImportantApp for GameState {
                 self.orb_hovered(Currency::Blessed);
             }
             HitEnemy(index) => self.entities[index].take_damage(1),
+            Attack => self.player.attack(),
         }
     }
 
@@ -149,6 +151,10 @@ impl ImportantApp for GameState {
                 key: Key::X,
                 state: KeyState::Down,
             }) => Some(RerollItem),
+            Event::Keyboard(KeyboardEvent {
+                key: Key::J,
+                state: KeyState::Down,
+            }) => Some(Attack),
             Event::Keyboard(key_event) => Some(KeyEvent { key_event }),
             Event::Mouse(_) => None,
             Event::Tick { .. } => Some(Tick),
@@ -438,19 +444,28 @@ struct Player {
     y: i32,
     vx: i32,
     vy: i32,
+    attack_timer: i32,
 }
 
 impl Player {
+    const ATTACK_FRAME_TIME: i32 = 3;
+    const ATTACK_TIME: i32 = 3 * Self::ATTACK_FRAME_TIME;
+
     fn new() -> Self {
         Self {
             x: 64,
             y: 64,
             vx: 0,
             vy: 0,
+            attack_timer: 0,
         }
     }
 
     fn update(&mut self, keys: &Keys) {
+        if self.attack_timer > 0 {
+            self.attack_timer -= 1;
+        }
+
         self.vx = keys.right as i32 - keys.left as i32;
         self.vy = keys.down as i32 - keys.up as i32;
 
@@ -460,16 +475,34 @@ impl Player {
         self.y = clamp(self.y, 0, 120);
     }
 
-    fn draw(&self, draw_context: &mut DrawContext, frames: usize) {
+    fn draw(&self, draw: &mut DrawContext, frames: usize) {
         const BASE_SPR: usize = 1;
         const NUM_SPR: usize = 2;
-        let sprite = if self.vx != 0 {
+
+        let sprite = if self.attack_timer > 0 {
+            4
+        } else if self.vx != 0 {
             animate(BASE_SPR, NUM_SPR, 5, frames)
         } else {
             BASE_SPR
         };
 
-        draw_context.spr(sprite, self.x, self.y);
+        draw.spr(sprite, self.x, self.y);
+
+        if self.attack_timer > 0 {
+            let t = (Self::ATTACK_TIME - self.attack_timer) as usize;
+            let attack_sprite = animate(16, 3, Self::ATTACK_FRAME_TIME as usize, t);
+
+            draw.spr(attack_sprite, self.x + 4, self.y);
+        }
+    }
+
+    fn attack(&mut self) {
+        if self.attack_timer > 0 {
+            return;
+        }
+
+        self.attack_timer = Self::ATTACK_TIME;
     }
 }
 
