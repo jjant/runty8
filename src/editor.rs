@@ -56,6 +56,7 @@ pub enum Msg {
     ShiftSprite(ShiftDirection),
     MapSpriteHovered(usize),
     SwitchMapMode,
+    ClickedMapTile { x: usize, y: usize },
 }
 
 impl WhichOne for Editor {
@@ -149,6 +150,9 @@ impl ImportantApp for Editor {
             }
             Msg::SwitchMapMode => {
                 self.show_sprites_in_map = !self.show_sprites_in_map;
+            }
+            &Msg::ClickedMapTile { x, y } => {
+                resources.map.mset(x, y, self.selected_sprite as u8);
             }
         }
     }
@@ -289,7 +293,10 @@ fn map_view<'a, 'b>(
                     y as i32,
                     8,
                     8,
-                    None,
+                    Some(Msg::ClickedMapTile {
+                        x: col_index,
+                        y: row_index,
+                    }),
                     state,
                     DrawFn::new(move |draw| {
                         draw.palt(None);
@@ -300,6 +307,7 @@ fn map_view<'a, 'b>(
                         }
                     }),
                 )
+                .event_on_press()
                 .on_hover(Msg::MapSpriteHovered(col_index + row_index * 16))
                 .into()
             })
