@@ -18,6 +18,8 @@ pub struct Enemy {
     damage: i32,
     damage_counter: f32,
     hitbox: Rect,
+    // https://gamedev.stackexchange.com/questions/40607/need-efficient-way-to-keep-enemy-from-getting-hit-multiple-times-by-same-source
+    previous_frame_colliding: bool,
 }
 
 impl Enemy {
@@ -38,6 +40,7 @@ impl Enemy {
             damage: 0,
             damage_counter: 0.0,
             hitbox: Rect::new(0, 0, 10, 10),
+            previous_frame_colliding: false,
         }
     }
 
@@ -47,6 +50,14 @@ impl Enemy {
 
     pub fn snail(x: i32, y: i32) -> Self {
         Self::new(x, y, 59)
+    }
+
+    pub fn handle_incoming_attack(&mut self, damage: i32, colliding: bool) {
+        if colliding && !self.previous_frame_colliding {
+            //trigger hit with otherObject
+            self.take_damage(damage);
+        }
+        self.previous_frame_colliding = colliding;
     }
 
     pub fn take_damage(&mut self, damage: i32) {

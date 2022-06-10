@@ -417,14 +417,17 @@ impl Player {
     }
 
     fn update(&mut self, keys: &Keys, enemies: &mut [Enemy]) {
+        for enemy in enemies.iter_mut() {
+            let colliding = self
+                .attack_hitbox()
+                .map(|hitbox| enemy.hitbox().intersects(hitbox))
+                .unwrap_or(false);
+
+            enemy.handle_incoming_attack(self.attack_damage, colliding);
+        }
+
         if self.attack_timer > 0 {
             self.attack_timer -= 1;
-
-            for enemy in enemies.iter_mut() {
-                if enemy.hitbox().intersects(self.attack_hitbox()) {
-                    enemy.take_damage(self.attack_damage)
-                }
-            }
         }
 
         self.vx = keys.right as i32 - keys.left as i32;
@@ -455,7 +458,9 @@ impl Player {
             let attack_sprite = animate(16, 3, Self::ATTACK_FRAME_TIME as usize, t);
 
             draw.spr(attack_sprite, self.x + 4, self.y);
-            self.attack_hitbox().outline(draw, 7);
+            if let Some(hitbox) = self.attack_hitbox() {
+                hitbox.outline(draw, 7)
+            }
         }
     }
 
@@ -468,8 +473,12 @@ impl Player {
     }
 
     // World-space hitbox
-    fn attack_hitbox(&self) -> Rect {
-        Self::LOCAL_ATTACK_HITBOX.translate(self.x, self.y)
+    fn attack_hitbox(&self) -> Option<Rect> {
+        if self.attack_timer > 0 {
+            Some(Self::LOCAL_ATTACK_HITBOX.translate(self.x, self.y))
+        } else {
+            None
+        }
     }
 }
 
