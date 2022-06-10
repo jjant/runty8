@@ -53,6 +53,7 @@ impl Enemy {
     }
 
     pub fn handle_incoming_attack(&mut self, damage: i32, colliding: bool) {
+        // This will need to be revisited many things can damage the same entity at once.
         if colliding && !self.previous_frame_colliding {
             //trigger hit with otherObject
             self.take_damage(damage);
