@@ -190,17 +190,6 @@ impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
     }
 
     fn draw(&self, draw: &mut DrawContext) {
-        let color = if self.state.pressed { 5 } else { 9 };
-
-        // TODO: Handle properly
-        draw.rect(
-            self.x,
-            self.y,
-            self.x + self.width - 1,
-            self.y + self.height - 1,
-            color,
-        );
-
         draw.append_camera(-self.x, -self.y);
         self.content.as_widget().draw(draw);
         draw.append_camera(self.x, self.y);
