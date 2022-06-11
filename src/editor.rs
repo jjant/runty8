@@ -330,39 +330,35 @@ fn map_view<'a, 'b>(
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::SpriteEditor;
 
-    Button::new(
-        110,
-        0,
-        8,
-        8,
-        Some(Msg::SpriteTabClicked),
-        state,
-        DrawFn::new(move |draw| {
-            let color = if selected { 2 } else { 15 };
-
-            draw.pal(15, color);
-            draw.spr(63, 0, 0);
-            draw.pal(15, 15);
-        }),
-    )
-    .into()
+    editor_button(state, 63, 110, 0, Msg::SpriteTabClicked, selected)
 }
 
 fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::MapEditor;
 
+    editor_button(state, 62, 118, 0, Msg::MapButtonClicked, selected)
+}
+
+fn editor_button(
+    state: &mut button::State,
+    sprite: usize,
+    x: i32,
+    y: i32,
+    msg: Msg,
+    selected: bool,
+) -> Element<'_, Msg> {
     Button::new(
-        118,
-        0,
+        x,
+        y,
         8,
         8,
-        Some(Msg::MapButtonClicked),
+        Some(msg),
         state,
         DrawFn::new(move |draw| {
-            let color = if selected { 2 } else { 15 };
+            let color = if selected { 15 } else { 2 };
 
             draw.pal(15, color);
-            draw.spr(62, 0, 0);
+            draw.spr(sprite, 0, 0);
             draw.pal(15, 15);
         }),
     )
