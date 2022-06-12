@@ -20,9 +20,12 @@ pub struct Enemy {
     hitbox: Rect,
     // https://gamedev.stackexchange.com/questions/40607/need-efficient-way-to-keep-enemy-from-getting-hit-multiple-times-by-same-source
     previous_frame_colliding: bool,
+    death_timer: Option<i32>,
 }
 
 impl Enemy {
+    const DEATH_DURATION: i32 = 30;
+
     pub fn new(x: i32, y: i32, sprite: usize) -> Self {
         let max_hp = 10;
         let speed_x = 1;
@@ -41,6 +44,7 @@ impl Enemy {
             damage_counter: 0.0,
             hitbox: Rect::new(0, 0, 10, 10),
             previous_frame_colliding: false,
+            death_timer: None,
         }
     }
 
@@ -70,6 +74,10 @@ impl Enemy {
         self.flash_timer += actual_damage * 15;
         self.damage += actual_damage;
         self.damage_counter += actual_damage as f32;
+
+        if self.hp <= 0 {
+            self.death_timer = Some(Self::DEATH_DURATION);
+        }
     }
 
     pub fn hitbox(&self) -> Rect {
@@ -85,7 +93,12 @@ impl Enemy {
     }
 
     fn view_sprite(&self, draw: &mut DrawContext) {
-        if self.flash_timer > 0 && self.flash_timer % 2 == 0 {
+        if let Some(death_timer) = self.death_timer {
+            if death_timer > 0 && death_timer % 2 == 0 {
+                draw.pal(12, 8);
+                draw.pal(13, 7);
+            }
+        } else if self.flash_timer > 0 && self.flash_timer % 2 == 0 {
             draw.pal(3, 7);
             draw.pal(1, 10);
             draw.pal(6, 9);
@@ -133,7 +146,7 @@ impl Enemy {
         .fill(draw, colors::ORANGE);
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> ShouldDestroy {
         if self.x > 121 {
             self.vx = -self.speed_x;
         } else if self.x < 0 {
@@ -144,6 +157,7 @@ impl Enemy {
         self.y += self.vy;
 
         self.handle_damage_animation();
+        self.handle_death()
     }
 
     fn handle_damage_animation(&mut self) {
@@ -159,4 +173,21 @@ impl Enemy {
             self.damage = 0;
         }
     }
+
+    fn handle_death(&mut self) -> ShouldDestroy {
+        if let Some(death_timer) = &mut self.death_timer {
+            if *death_timer <= 0 {
+                return ShouldDestroy::Yes;
+            }
+
+            *death_timer -= 1;
+        }
+        ShouldDestroy::No
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum ShouldDestroy {
+    No,
+    Yes,
 }

@@ -1,6 +1,7 @@
+#![feature(drain_filter)]
 mod rpg;
 use rpg::currency::Currency;
-use rpg::enemy::Enemy;
+use rpg::enemy::{Enemy, ShouldDestroy};
 use rpg::item::{Item, ItemType};
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
@@ -117,7 +118,12 @@ impl ImportantApp for GameState {
                 self.frames += 1;
                 self.player.update(&self.keys, &mut self.entities);
 
-                self.entities.iter_mut().for_each(|entity| entity.update());
+                self.entities.drain_filter(|entity| {
+                    let should_destroy = entity.update();
+
+                    should_destroy == ShouldDestroy::Yes
+                });
+                // self.entities.iter_mut().for_each(|entity| entity.update());
             }
             HoveredItem(index) => self.hovered_item = Some(index),
             UnHoveredItem(item) => {
