@@ -89,8 +89,8 @@ impl ImportantApp for GameState {
 
     fn init() -> Self {
         let mut entities = vec![
-            Enemy::snail(20, 20),
-            Enemy::mage(20, 80),
+            Enemy::snail(70, 70),
+            // Enemy::mage(20, 80),
             Enemy::mage(20, 100),
         ];
 

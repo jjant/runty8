@@ -24,7 +24,36 @@ pub struct Enemy {
 }
 
 impl Enemy {
-    const DEATH_DURATION: i32 = 30;
+    const DEATH_FRAMES: &'static [AnimationFrame<u8>] = &[
+        AnimationFrame {
+            value: 59,
+            duration: 3,
+        },
+        AnimationFrame {
+            value: 60,
+            duration: 3,
+        },
+        AnimationFrame {
+            value: 61,
+            duration: 3,
+        },
+        AnimationFrame {
+            value: 62,
+            duration: 3,
+        },
+        AnimationFrame {
+            value: 63,
+            duration: 3,
+        },
+        AnimationFrame {
+            value: 47,
+            duration: 3,
+        },
+        AnimationFrame {
+            value: 46,
+            duration: 3,
+        },
+    ];
 
     pub fn new(x: i32, y: i32, sprite: usize) -> Self {
         let max_hp = 10;
@@ -76,7 +105,7 @@ impl Enemy {
         self.damage_counter += actual_damage as f32;
 
         if self.hp <= 0 {
-            self.death_timer = Some(Self::DEATH_DURATION);
+            self.death_timer = Some(Self::death_duration());
         }
     }
 
@@ -94,10 +123,10 @@ impl Enemy {
 
     fn view_sprite(&self, draw: &mut DrawContext) {
         if let Some(death_timer) = self.death_timer {
-            if death_timer > 0 && death_timer % 2 == 0 {
-                draw.pal(12, 8);
-                draw.pal(13, 7);
-            }
+            // if death_timer > 0 && death_timer % 2 == 0 {
+            //     draw.pal(12, 8);
+            //     draw.pal(13, 7);
+            // }
         } else if self.flash_timer > 0 && self.flash_timer % 2 == 0 {
             draw.pal(3, 7);
             draw.pal(1, 10);
@@ -181,8 +210,41 @@ impl Enemy {
             }
 
             *death_timer -= 1;
+
+            let frame = Self::death_duration() - *death_timer;
+            self.sprite = Self::death_sprite(frame);
         }
         ShouldDestroy::No
+    }
+
+    fn death_sprite(frame: i32) -> usize {
+        *AnimationFrame::get(Self::DEATH_FRAMES, frame) as usize
+    }
+    fn death_duration() -> i32 {
+        AnimationFrame::duration(Self::DEATH_FRAMES)
+    }
+}
+
+struct AnimationFrame<T> {
+    duration: i32,
+    value: T,
+}
+impl<T> AnimationFrame<T> {
+    fn get(frames: &[AnimationFrame<T>], frame: i32) -> &T {
+        let mut to_go = frame;
+
+        for animation_frame in frames {
+            to_go -= animation_frame.duration;
+            if to_go <= 0 {
+                return &animation_frame.value;
+            }
+        }
+
+        &frames.last().unwrap().value
+    }
+
+    fn duration(frames: &[AnimationFrame<T>]) -> i32 {
+        frames.iter().map(|frame| frame.duration).sum()
     }
 }
 
