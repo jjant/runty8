@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use crate::{rpg::currency::Currency, Msg};
 use runty8::{
     runtime::draw_context::colors,
@@ -6,28 +8,58 @@ use runty8::{
 use ItemType::*;
 
 use super::{
-    entity::{EntityT, ShouldDestroy},
+    entity::{EntityT, ShouldDestroy, UpdateAction},
     modifier::{ImplicitModifier, Modifier},
 };
+
+pub struct DroppedItem {
+    pub item: Item,
+    pub x: i32,
+    pub y: i32,
+    // Items "hover" in the ground
+    start_y: i32,
+    frame: i32,
+}
+
+impl DroppedItem {
+    pub fn new(item: Item, x: i32, y: i32) -> Self {
+        Self {
+            item,
+            x,
+            y,
+            start_y: y,
+            frame: 0,
+        }
+    }
+}
+
+impl EntityT for DroppedItem {
+    fn update(&mut self) -> UpdateAction {
+        const R: f32 = 3.0;
+        const FREQ: f32 = 2.0;
+
+        self.y = self.start_y + ((self.frame as f32 / (FREQ * 2.0 * PI)).sin() * R) as i32;
+        self.frame += 1;
+
+        UpdateAction {
+            should_destroy: ShouldDestroy::No,
+            entities: vec![],
+        }
+    }
+
+    fn view(&self) -> Element<'_, Msg> {
+        DrawFn::new(move |draw| {
+            draw.spr(self.item.sprite, self.x, self.y);
+        })
+        .into()
+    }
+}
 
 #[derive(Clone)]
 pub struct Item {
     pub name: String,
     pub sprite: usize,
     pub item_type: ItemType,
-}
-
-impl EntityT for Item {
-    fn update(&mut self) -> ShouldDestroy {
-        ShouldDestroy::No
-    }
-
-    fn view(&self) -> Element<'_, Msg> {
-        DrawFn::new(|draw| {
-            draw.spr(self.sprite, 64, 64);
-        })
-        .into()
-    }
 }
 
 #[derive(Clone)]
@@ -46,15 +78,28 @@ impl Item {
     pub const HEIGHT: usize = 12;
     pub const WIDTH: usize = 12;
 
-    pub fn bde_staff() -> Self {
+    pub fn weapon(
+        name: String,
+        sprite: usize,
+        min_damage: i32,
+        max_damage: i32,
+        mods: Vec<Modifier>,
+    ) -> Self {
         Self {
-            name: "BDE STAFF".to_owned(),
-            sprite: 51,
+            name,
+            sprite,
             item_type: Wearable(Wearable {
-                implicits: vec![ImplicitModifier::AttackDamage { min: 2, max: 5 }],
-                mods: vec![Modifier::Attack(32)],
+                implicits: vec![ImplicitModifier::AttackDamage {
+                    min: min_damage,
+                    max: max_damage,
+                }],
+                mods,
             }),
         }
+    }
+
+    pub fn bde_staff() -> Self {
+        Self::weapon("BDE STAFF".to_owned(), 51, 2, 5, vec![Modifier::Attack(32)])
     }
 
     pub fn to_wearable_mut(&mut self) -> Option<&mut Wearable> {

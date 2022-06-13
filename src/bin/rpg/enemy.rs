@@ -1,3 +1,5 @@
+use rand::{thread_rng, Rng};
+
 use runty8::{
     runtime::draw_context::{colors, DrawContext},
     ui::{DrawFn, Element},
@@ -5,7 +7,10 @@ use runty8::{
 
 use crate::{rpg::rect::Rect, Msg};
 
-use super::entity::{EntityT, ShouldDestroy};
+use super::{
+    entity::{Entity, EntityT, ShouldDestroy, UpdateAction},
+    item::{DroppedItem, Item},
+};
 
 pub struct Enemy {
     x: i32,
@@ -26,7 +31,7 @@ pub struct Enemy {
 }
 
 impl EntityT for Enemy {
-    fn update(&mut self) -> ShouldDestroy {
+    fn update(&mut self) -> UpdateAction {
         if self.x > 121 {
             self.vx = -self.speed_x;
         } else if self.x < 0 {
@@ -144,11 +149,8 @@ impl Enemy {
     }
 
     fn view_sprite(&self, draw: &mut DrawContext) {
-        if let Some(death_timer) = self.death_timer {
-            // if death_timer > 0 && death_timer % 2 == 0 {
-            //     draw.pal(12, 8);
-            //     draw.pal(13, 7);
-            // }
+        if self.death_timer.is_some() {
+            // Don't animate damage flash if dying
         } else if self.flash_timer > 0 && self.flash_timer % 2 == 0 {
             draw.pal(3, 7);
             draw.pal(1, 10);
@@ -211,10 +213,14 @@ impl Enemy {
         }
     }
 
-    fn handle_death(&mut self) -> ShouldDestroy {
+    fn handle_death(&mut self) -> UpdateAction {
         if let Some(death_timer) = &mut self.death_timer {
             if *death_timer <= 0 {
-                return ShouldDestroy::Yes;
+                let item_drop = self.compute_drop();
+                return UpdateAction {
+                    should_destroy: ShouldDestroy::Yes,
+                    entities: item_drop.into_iter().map(Entity::from).collect(),
+                };
             }
 
             *death_timer -= 1;
@@ -222,7 +228,11 @@ impl Enemy {
             let frame = Self::death_duration() - *death_timer;
             self.sprite = Self::death_sprite(frame);
         }
-        ShouldDestroy::No
+
+        UpdateAction {
+            should_destroy: ShouldDestroy::No,
+            entities: vec![],
+        }
     }
 
     fn death_sprite(frame: i32) -> usize {
@@ -230,6 +240,24 @@ impl Enemy {
     }
     fn death_duration() -> i32 {
         AnimationFrame::duration(Self::DEATH_FRAMES)
+    }
+
+    // Simulate an item drop based on enemy "level"
+    fn compute_drop(&self) -> Option<DroppedItem> {
+        let should_drop = thread_rng().gen();
+
+        if dbg!(should_drop) {
+            let min_damage = i32::max(self.max_hp - thread_rng().gen_range(1..=3), 0);
+            let max_damage = self.max_hp + thread_rng().gen_range(1..=3);
+
+            let item = Item::weapon("BDE STAFF+".to_owned(), 51, min_damage, max_damage, vec![]);
+
+            let dropped_item = DroppedItem::new(item, self.x, self.y);
+
+            Some(dropped_item)
+        } else {
+            None
+        }
     }
 }
 

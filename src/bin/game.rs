@@ -93,7 +93,7 @@ impl ImportantApp for GameState {
 
         let entities = vec![
             Entity::from(snail),
-            // Enemy::mage(20, 80),
+            Entity::from(Enemy::mage(20, 80)),
             Entity::from(Enemy::mage(20, 100)),
         ];
 
@@ -126,11 +126,15 @@ impl ImportantApp for GameState {
                 });
                 self.player.update(&self.keys, enemies);
 
-                self.entities.drain_filter(|entity| {
-                    let should_destroy = entity.update();
+                let mut new_entities = vec![];
+                self.entities.retain_mut(|entity| {
+                    let mut update_action = entity.update();
 
-                    should_destroy == ShouldDestroy::Yes
+                    new_entities.append(&mut update_action.entities);
+
+                    update_action.should_destroy == ShouldDestroy::No
                 });
+                self.entities.append(&mut new_entities)
                 // self.entities.iter_mut().for_each(|entity| entity.update());
             }
             HoveredItem(index) => self.hovered_item = Some(index),
