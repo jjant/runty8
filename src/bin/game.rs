@@ -1,7 +1,8 @@
 #![feature(drain_filter)]
 mod rpg;
 use rpg::currency::Currency;
-use rpg::enemy::{Enemy, ShouldDestroy};
+use rpg::enemy::Enemy;
+use rpg::entity::{Entity, EntityT, ShouldDestroy};
 use rpg::item::{Item, ItemType};
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
@@ -9,7 +10,7 @@ use runty8::screen::Resources;
 use runty8::ui::button::Button;
 use runty8::ui::cursor::{self, Cursor};
 use runty8::ui::{button, DrawFn, Element, Tree};
-use runty8::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
+use runty8::{Event, Key, KeyState, KeyboardEvent};
 
 fn main() {
     runty8::run_app::<GameState>("src/bin/game".to_owned());
@@ -17,7 +18,7 @@ fn main() {
 
 struct GameState {
     player: Player,
-    entities: Vec<Enemy>,
+    entities: Vec<Entity>,
     frames: usize,
     inventory_open: bool,
     inventory: Inventory,
@@ -39,7 +40,6 @@ pub enum Msg {
     HoveredItem(usize),
     UnHoveredItem(usize),
     RerollItem,
-    HitEnemy(usize),
     Attack,
 }
 use Msg::*;
@@ -88,13 +88,14 @@ impl ImportantApp for GameState {
     type Msg = Msg;
 
     fn init() -> Self {
-        let mut entities = vec![
-            Enemy::snail(70, 70),
-            // Enemy::mage(20, 80),
-            Enemy::mage(20, 100),
-        ];
+        let mut snail = Enemy::snail(70, 70);
+        snail.vx = 0;
 
-        entities[0].vx = 0;
+        let entities = vec![
+            Entity::from(snail),
+            // Enemy::mage(20, 80),
+            Entity::from(Enemy::mage(20, 100)),
+        ];
 
         Self {
             player: Player::new(),
@@ -116,7 +117,14 @@ impl ImportantApp for GameState {
             KeyEvent { key_event } => self.keys.update(key_event),
             Tick => {
                 self.frames += 1;
-                self.player.update(&self.keys, &mut self.entities);
+                let enemies = self.entities.iter_mut().filter_map(|entity| {
+                    if let Entity::Enemy(enemy) = entity {
+                        Some(enemy)
+                    } else {
+                        None
+                    }
+                });
+                self.player.update(&self.keys, enemies);
 
                 self.entities.drain_filter(|entity| {
                     let should_destroy = entity.update();
@@ -134,7 +142,6 @@ impl ImportantApp for GameState {
             RerollItem => {
                 self.orb_hovered(Currency::Blessed);
             }
-            HitEnemy(index) => self.entities[index].take_damage(1),
             Attack => self.player.attack(),
         }
     }
@@ -158,7 +165,6 @@ impl ImportantApp for GameState {
 
     fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
         match *event {
-            Event::Mouse(MouseEvent::Down(MouseButton::Left)) => Some(HitEnemy(0)),
             Event::Keyboard(KeyboardEvent {
                 key: Key::C,
                 state: KeyState::Down,
@@ -187,7 +193,7 @@ impl GameState {
         Some(())
     }
 }
-fn view_entities(entities: &[Enemy]) -> Element<'_, Msg> {
+fn view_entities(entities: &[Entity]) -> Element<'_, Msg> {
     Tree::with_children(entities.iter().map(|entity| entity.view()).collect()).into()
 }
 
@@ -422,8 +428,8 @@ impl Player {
         }
     }
 
-    fn update(&mut self, keys: &Keys, enemies: &mut [Enemy]) {
-        for enemy in enemies.iter_mut() {
+    fn update<'a>(&mut self, keys: &Keys, enemies: impl Iterator<Item = &'a mut Enemy>) {
+        for enemy in enemies {
             let colliding = self
                 .attack_hitbox()
                 .map(|hitbox| enemy.hitbox().intersects(hitbox))

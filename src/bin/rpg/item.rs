@@ -5,13 +5,29 @@ use runty8::{
 };
 use ItemType::*;
 
-use super::modifier::{ImplicitModifier, Modifier};
+use super::{
+    entity::{EntityT, ShouldDestroy},
+    modifier::{ImplicitModifier, Modifier},
+};
 
 #[derive(Clone)]
 pub struct Item {
     pub name: String,
     pub sprite: usize,
     pub item_type: ItemType,
+}
+
+impl EntityT for Item {
+    fn update(&mut self) -> ShouldDestroy {
+        ShouldDestroy::No
+    }
+
+    fn view(&self) -> Element<'_, Msg> {
+        DrawFn::new(|draw| {
+            draw.spr(self.sprite, 64, 64);
+        })
+        .into()
+    }
 }
 
 #[derive(Clone)]

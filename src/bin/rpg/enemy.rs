@@ -5,6 +5,8 @@ use runty8::{
 
 use crate::{rpg::rect::Rect, Msg};
 
+use super::entity::{EntityT, ShouldDestroy};
+
 pub struct Enemy {
     x: i32,
     y: i32,
@@ -21,6 +23,30 @@ pub struct Enemy {
     // https://gamedev.stackexchange.com/questions/40607/need-efficient-way-to-keep-enemy-from-getting-hit-multiple-times-by-same-source
     previous_frame_colliding: bool,
     death_timer: Option<i32>,
+}
+
+impl EntityT for Enemy {
+    fn update(&mut self) -> ShouldDestroy {
+        if self.x > 121 {
+            self.vx = -self.speed_x;
+        } else if self.x < 0 {
+            self.vx = self.speed_x;
+        }
+
+        self.x += self.vx;
+        self.y += self.vy;
+
+        self.handle_damage_animation();
+        self.handle_death()
+    }
+
+    fn view(&self) -> Element<'_, Msg> {
+        DrawFn::new(move |draw| {
+            self.view_sprite(draw);
+            self.view_hp_bar(draw);
+        })
+        .into()
+    }
 }
 
 impl Enemy {
@@ -94,7 +120,11 @@ impl Enemy {
         self.previous_frame_colliding = colliding;
     }
 
-    pub fn take_damage(&mut self, damage: i32) {
+    fn take_damage(&mut self, damage: i32) {
+        if self.hp <= 0 {
+            return;
+        }
+
         let new_hp = i32::max(self.hp - damage, 0);
         let actual_damage = self.hp - new_hp;
 
@@ -111,14 +141,6 @@ impl Enemy {
 
     pub fn hitbox(&self) -> Rect {
         self.hitbox.translate(self.x, self.y)
-    }
-
-    pub fn view(&self) -> Element<'_, Msg> {
-        DrawFn::new(move |draw| {
-            self.view_sprite(draw);
-            self.view_hp_bar(draw);
-        })
-        .into()
     }
 
     fn view_sprite(&self, draw: &mut DrawContext) {
@@ -173,20 +195,6 @@ impl Enemy {
             BASE_HEIGHT,
         )
         .fill(draw, colors::ORANGE);
-    }
-
-    pub fn update(&mut self) -> ShouldDestroy {
-        if self.x > 121 {
-            self.vx = -self.speed_x;
-        } else if self.x < 0 {
-            self.vx = self.speed_x;
-        }
-
-        self.x += self.vx;
-        self.y += self.vy;
-
-        self.handle_damage_animation();
-        self.handle_death()
     }
 
     fn handle_damage_animation(&mut self) {
@@ -246,10 +254,4 @@ impl<T> AnimationFrame<T> {
     fn duration(frames: &[AnimationFrame<T>]) -> i32 {
         frames.iter().map(|frame| frame.duration).sum()
     }
-}
-
-#[derive(PartialEq, Debug)]
-pub enum ShouldDestroy {
-    No,
-    Yes,
 }
