@@ -10,12 +10,14 @@ use ItemType::*;
 use super::{
     entity::{EntityT, ShouldDestroy, UpdateAction},
     modifier::{ImplicitModifier, Modifier},
+    rect::Rect,
 };
 
 pub struct DroppedItem {
     pub item: Item,
     pub x: i32,
     pub y: i32,
+    hitbox: Rect,
     // Items "hover" in the ground
     start_y: i32,
     frame: i32,
@@ -29,7 +31,12 @@ impl DroppedItem {
             y,
             start_y: y,
             frame: 0,
+            hitbox: Rect::centered(4, 4, 4, 4),
         }
+    }
+
+    pub fn hitbox(&self) -> Rect {
+        self.hitbox.translate(self.x, self.y)
     }
 }
 
@@ -50,6 +57,7 @@ impl EntityT for DroppedItem {
     fn view(&self) -> Element<'_, Msg> {
         DrawFn::new(move |draw| {
             draw.spr(self.item.sprite, self.x, self.y);
+            self.hitbox().outline(draw, colors::WHITE);
         })
         .into()
     }

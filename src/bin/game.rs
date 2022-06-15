@@ -3,7 +3,7 @@ mod rpg;
 use rpg::currency::Currency;
 use rpg::enemy::Enemy;
 use rpg::entity::{Entity, EntityT, ShouldDestroy};
-use rpg::item::{Item, ItemType};
+use rpg::item::{DroppedItem, Item, ItemType};
 use runty8::app::{ImportantApp, Right, WhichOne};
 use runty8::runtime::draw_context::{colors, DrawContext};
 use runty8::screen::Resources;
@@ -92,9 +92,10 @@ impl ImportantApp for GameState {
         snail.vx = 0;
 
         let entities = vec![
-            Entity::from(snail),
-            Entity::from(Enemy::mage(20, 80)),
-            Entity::from(Enemy::mage(20, 100)),
+            // Entity::from(snail),
+            // Entity::from(Enemy::mage(20, 80)),
+            // Entity::from(Enemy::mage(20, 100)),
+            Entity::from(DroppedItem::new(Item::bde_staff(), 80, 60)),
         ];
 
         Self {
