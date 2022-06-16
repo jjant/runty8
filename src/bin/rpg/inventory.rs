@@ -7,7 +7,7 @@ use crate::Msg;
 
 use super::{
     currency::Currency,
-    item::{Item, ItemType},
+    item::{DroppedItem, Item, ItemType},
 };
 
 #[derive(Clone)]
@@ -66,10 +66,20 @@ impl ItemSlot {
         .on_leave(Msg::UnHoveredItem(index))
         .into()
     }
+
+    fn fill(&mut self, item: Item) -> Option<Item> {
+        match self.item {
+            Some(_) => Some(item),
+            None => {
+                self.item = Some(item);
+                None
+            }
+        }
+    }
 }
 
 pub struct Inventory {
-    items: Vec<ItemSlot>,
+    items: Box<[ItemSlot]>,
     buttons: Vec<button::State>,
 }
 
@@ -91,7 +101,7 @@ impl Inventory {
         });
 
         Self {
-            items,
+            items: items.into_boxed_slice(),
             buttons: vec![button::State::new(); Self::NUM_ITEMS],
         }
     }
@@ -155,5 +165,30 @@ impl Inventory {
             .push(weapon_slot)
             .push(tooltip)
             .into()
+    }
+
+    pub fn push(&mut self, mut item: Item) -> Option<Item> {
+        for slot in self.items.iter_mut() {
+            match slot.fill(item) {
+                None => return None,
+                Some(new_item) => {
+                    item = new_item;
+                }
+            }
+        }
+
+        Some(item)
+    }
+
+    pub fn push_dropped_item(&mut self, dropped_item: &mut DroppedItem) {
+        if let Some(item) = dropped_item.destroy() {
+            match self.push(item) {
+                None => {}
+                Some(item) => {
+                    // Ugly hack
+                    dropped_item.undestroy(item)
+                }
+            }
+        }
     }
 }

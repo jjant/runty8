@@ -15,7 +15,7 @@ use super::{
 
 #[derive(Debug)]
 pub struct DroppedItem {
-    pub item: Item,
+    pub item: Option<Item>, // None means that it will get destroyed
     pub x: i32,
     pub y: i32,
     hitbox: Rect,
@@ -27,7 +27,7 @@ pub struct DroppedItem {
 impl DroppedItem {
     pub fn new(item: Item, x: i32, y: i32) -> Self {
         Self {
-            item,
+            item: Some(item),
             x,
             y,
             start_y: y,
@@ -38,6 +38,14 @@ impl DroppedItem {
 
     pub fn hitbox(&self) -> Rect {
         self.hitbox.translate(self.x, self.y)
+    }
+
+    pub fn destroy(&mut self) -> Option<Item> {
+        self.item.take()
+    }
+
+    pub fn undestroy(&mut self, item: Item) {
+        self.item = Some(item)
     }
 }
 
@@ -50,14 +58,20 @@ impl EntityT for DroppedItem {
         self.frame += 1;
 
         UpdateAction {
-            should_destroy: ShouldDestroy::No,
+            should_destroy: if self.item.is_none() {
+                ShouldDestroy::Yes
+            } else {
+                ShouldDestroy::No
+            },
             entities: vec![],
         }
     }
 
     fn view(&self) -> Element<'_, Msg> {
+        let sprite = self.item.as_ref().map(|item| item.sprite).unwrap_or(0);
+
         DrawFn::new(move |draw| {
-            draw.spr(self.item.sprite, self.x, self.y);
+            draw.spr(sprite, self.x, self.y);
             self.hitbox().outline(draw, colors::WHITE);
         })
         .into()

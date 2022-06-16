@@ -1,5 +1,6 @@
 #![feature(drain_filter)]
 mod rpg;
+use rand::{thread_rng, Rng};
 use rpg::currency::Currency;
 use rpg::enemy::Enemy;
 use rpg::entity::{Entity, EntityT, ShouldDestroy};
@@ -118,7 +119,17 @@ impl ImportantApp for GameState {
             Tick => {
                 self.frames += 1;
 
-                self.player.update(&self.keys, self.entities.iter_mut());
+                if self.frames % 15 == 0 {
+                    let item = DroppedItem::new(
+                        Item::bde_staff(),
+                        thread_rng().gen_range(0..128),
+                        thread_rng().gen_range(0..128),
+                    );
+                    self.entities.push(Entity::from(item))
+                }
+
+                self.player
+                    .update(&self.keys, &mut self.inventory, self.entities.iter_mut());
 
                 let mut new_entities = vec![];
                 self.entities.retain_mut(|entity| {

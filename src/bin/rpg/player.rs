@@ -2,7 +2,7 @@ use runty8::runtime::draw_context::{colors, DrawContext};
 
 use crate::{rpg::animate, Keys};
 
-use super::{clamp, entity::Entity, rect::Rect};
+use super::{clamp, entity::Entity, inventory::Inventory, rect::Rect};
 
 pub struct Player {
     x: i32,
@@ -31,8 +31,13 @@ impl Player {
         }
     }
 
-    pub fn update<'a>(&mut self, keys: &Keys, entities: impl Iterator<Item = &'a mut Entity>) {
-        self.update_entities(entities);
+    pub fn update<'a>(
+        &mut self,
+        keys: &Keys,
+        inventory: &mut Inventory,
+        entities: impl Iterator<Item = &'a mut Entity>,
+    ) {
+        self.update_entities(inventory, entities);
 
         if self.attack_timer > 0 {
             self.attack_timer -= 1;
@@ -82,7 +87,11 @@ impl Player {
         self.attack_timer = Self::ATTACK_TIME;
     }
 
-    pub fn update_entities<'a>(&self, entities: impl Iterator<Item = &'a mut Entity>) {
+    pub fn update_entities<'a>(
+        &self,
+        inventory: &mut Inventory,
+        entities: impl Iterator<Item = &'a mut Entity>,
+    ) {
         for entity in entities {
             match entity {
                 Entity::Enemy(enemy) => {
@@ -95,10 +104,12 @@ impl Player {
                 }
                 Entity::DroppedItem(dropped_item) => {
                     let colliding = dropped_item.hitbox().intersects(self.hitbox());
-
-                    if colliding {
-                        println!("Colliding with {:?}", dropped_item);
+                    if !colliding {
+                        continue;
                     }
+                    println!("Colliding with {:?}", dropped_item);
+
+                    inventory.push_dropped_item(dropped_item);
                 }
             }
         }
