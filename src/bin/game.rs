@@ -118,14 +118,8 @@ impl ImportantApp for GameState {
             KeyEvent { key_event } => self.keys.update(key_event),
             Tick => {
                 self.frames += 1;
-                let enemies = self.entities.iter_mut().filter_map(|entity| {
-                    if let Entity::Enemy(enemy) = entity {
-                        Some(enemy)
-                    } else {
-                        None
-                    }
-                });
-                self.player.update(&self.keys, enemies);
+
+                self.player.update(&self.keys, self.entities.iter_mut());
 
                 let mut new_entities = vec![];
                 self.entities.retain_mut(|entity| {

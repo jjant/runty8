@@ -2,7 +2,7 @@ use runty8::runtime::draw_context::{colors, DrawContext};
 
 use crate::{rpg::animate, Keys};
 
-use super::{clamp, enemy::Enemy, rect::Rect};
+use super::{clamp, entity::Entity, rect::Rect};
 
 pub struct Player {
     x: i32,
@@ -31,15 +31,8 @@ impl Player {
         }
     }
 
-    pub fn update<'a>(&mut self, keys: &Keys, enemies: impl Iterator<Item = &'a mut Enemy>) {
-        for enemy in enemies {
-            let colliding = self
-                .attack_hitbox()
-                .map(|hitbox| enemy.hitbox().intersects(hitbox))
-                .unwrap_or(false);
-
-            enemy.handle_incoming_attack(self.attack_damage, colliding);
-        }
+    pub fn update<'a>(&mut self, keys: &Keys, entities: impl Iterator<Item = &'a mut Entity>) {
+        self.update_entities(entities);
 
         if self.attack_timer > 0 {
             self.attack_timer -= 1;
@@ -87,6 +80,28 @@ impl Player {
         }
 
         self.attack_timer = Self::ATTACK_TIME;
+    }
+
+    pub fn update_entities<'a>(&self, entities: impl Iterator<Item = &'a mut Entity>) {
+        for entity in entities {
+            match entity {
+                Entity::Enemy(enemy) => {
+                    let colliding = self
+                        .attack_hitbox()
+                        .map(|hitbox| enemy.hitbox().intersects(hitbox))
+                        .unwrap_or(false);
+
+                    enemy.handle_incoming_attack(self.attack_damage, colliding);
+                }
+                Entity::DroppedItem(dropped_item) => {
+                    let colliding = dropped_item.hitbox().intersects(self.hitbox());
+
+                    if colliding {
+                        println!("Colliding with {:?}", dropped_item);
+                    }
+                }
+            }
+        }
     }
 
     // World-space hitbox

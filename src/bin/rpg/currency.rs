@@ -3,7 +3,7 @@ use rand::Rng;
 
 use super::{item::Wearable, modifier::Modifier};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Currency {
     Chaos,
     Blessed,

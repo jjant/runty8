@@ -13,6 +13,7 @@ use super::{
     rect::Rect,
 };
 
+#[derive(Debug)]
 pub struct DroppedItem {
     pub item: Item,
     pub x: i32,
@@ -63,20 +64,20 @@ impl EntityT for DroppedItem {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Item {
     pub name: String,
     pub sprite: usize,
     pub item_type: ItemType,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Wearable {
     pub implicits: Vec<ImplicitModifier>,
     pub mods: Vec<Modifier>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ItemType {
     Wearable(Wearable),
     Currency(Currency),

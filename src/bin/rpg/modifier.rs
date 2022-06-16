@@ -35,7 +35,7 @@ impl fmt::Display for Modifier {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ImplicitModifier {
     AttackDamage { min: i32, max: i32 },
 }
