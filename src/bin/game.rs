@@ -4,8 +4,9 @@ use rpg::currency::Currency;
 use rpg::enemy::Enemy;
 use rpg::entity::{Entity, EntityT, ShouldDestroy};
 use rpg::item::{DroppedItem, Item, ItemType};
+use rpg::player::Player;
 use runty8::app::{ImportantApp, Right, WhichOne};
-use runty8::runtime::draw_context::{colors, DrawContext};
+use runty8::runtime::draw_context::colors;
 use runty8::screen::Resources;
 use runty8::ui::button::Button;
 use runty8::ui::cursor::{self, Cursor};
@@ -44,18 +45,17 @@ pub enum Msg {
 }
 use Msg::*;
 
-use crate::rpg::rect::Rect;
-
 impl WhichOne for GameState {
     type Which = Right;
 }
 
-struct Keys {
+pub struct Keys {
     left: bool,
     right: bool,
     up: bool,
     down: bool,
 }
+
 impl Keys {
     fn new() -> Self {
         Self {
@@ -408,101 +408,6 @@ impl Inventory {
 //         }
 //     }
 
-struct Player {
-    x: i32,
-    y: i32,
-    vx: i32,
-    vy: i32,
-    attack_timer: i32,
-    attack_damage: i32,
-}
-
-impl Player {
-    const ATTACK_FRAME_TIME: i32 = 3;
-    const ATTACK_TIME: i32 = 3 * Self::ATTACK_FRAME_TIME;
-    const LOCAL_ATTACK_HITBOX: Rect = Rect::new(4, 0, 8, 8);
-
-    fn new() -> Self {
-        Self {
-            x: 64,
-            y: 64,
-            vx: 0,
-            vy: 0,
-            attack_timer: 0,
-            attack_damage: 2,
-        }
-    }
-
-    fn update<'a>(&mut self, keys: &Keys, enemies: impl Iterator<Item = &'a mut Enemy>) {
-        for enemy in enemies {
-            let colliding = self
-                .attack_hitbox()
-                .map(|hitbox| enemy.hitbox().intersects(hitbox))
-                .unwrap_or(false);
-
-            enemy.handle_incoming_attack(self.attack_damage, colliding);
-        }
-
-        if self.attack_timer > 0 {
-            self.attack_timer -= 1;
-        }
-
-        self.vx = keys.right as i32 - keys.left as i32;
-        self.vy = keys.down as i32 - keys.up as i32;
-
-        self.x += self.vx;
-        self.x = clamp(self.x, 0, 120);
-        self.y += self.vy;
-        self.y = clamp(self.y, 0, 120);
-    }
-
-    fn draw(&self, draw: &mut DrawContext, frames: usize) {
-        const BASE_SPR: usize = 1;
-        const NUM_SPR: usize = 2;
-
-        let sprite = if self.attack_timer > 0 {
-            4
-        } else if self.vx != 0 {
-            animate(BASE_SPR, NUM_SPR, 5, frames)
-        } else {
-            BASE_SPR
-        };
-
-        draw.spr(sprite, self.x, self.y);
-
-        if self.attack_timer > 0 {
-            let t = (Self::ATTACK_TIME - self.attack_timer) as usize;
-            let attack_sprite = animate(16, 3, Self::ATTACK_FRAME_TIME as usize, t);
-
-            draw.spr(attack_sprite, self.x + 4, self.y);
-            if let Some(hitbox) = self.attack_hitbox() {
-                hitbox.outline(draw, 7)
-            }
-        }
-    }
-
-    fn attack(&mut self) {
-        if self.attack_timer > 0 {
-            return;
-        }
-
-        self.attack_timer = Self::ATTACK_TIME;
-    }
-
-    // World-space hitbox
-    fn attack_hitbox(&self) -> Option<Rect> {
-        if self.attack_timer > 0 {
-            Some(Self::LOCAL_ATTACK_HITBOX.translate(self.x, self.y))
-        } else {
-            None
-        }
-    }
-}
-
-fn animate(base: usize, count: usize, every_num_frames: usize, t: usize) -> usize {
-    base + (t / every_num_frames) % count
-}
-
 // struct Inventory {
 //     items: Box<[ItemSlot]>,
 // }
@@ -733,7 +638,3 @@ fn animate(base: usize, count: usize, every_num_frames: usize, t: usize) -> usiz
 //             None
 //         }
 //     }
-
-fn clamp(val: i32, a: i32, b: i32) -> i32 {
-    a.max(b.min(val))
-}
