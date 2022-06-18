@@ -1,5 +1,7 @@
+mod notification;
 pub mod serialize;
 use crate::app::{ImportantApp, Right, WhichOne};
+use crate::editor::notification::Notification;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite};
 use crate::screen::Resources;
@@ -33,6 +35,7 @@ pub struct Editor {
     map_buttons: Vec<button::State>,
     hovered_map_button: usize,
     show_sprites_in_map: bool,
+    notification: notification::State,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -93,6 +96,7 @@ impl ImportantApp for Editor {
             map_buttons: vec![button::State::new(); 144],
             hovered_map_button: 0,
             show_sprites_in_map: false,
+            notification: notification::State::new(),
         }
     }
 
@@ -205,6 +209,7 @@ impl ImportantApp for Editor {
             ))
             .push(bottom_bar(&self.bottom_bar_text))
             .push(Cursor::new(&mut self.cursor))
+            .push(Notification::new(&mut self.notification))
             .into()
     }
 
