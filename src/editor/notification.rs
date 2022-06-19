@@ -22,9 +22,9 @@ enum EnterState {
 impl EnterState {
     fn duration(&self) -> i32 {
         match self {
-            Entering => 5,
+            Entering => 8,
             Displaying => 90,
-            Leaving => 5,
+            Leaving => 8,
             Left => 0,
         }
     }
