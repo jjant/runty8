@@ -164,6 +164,23 @@ impl Sprite {
     pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut Color> + '_ {
         self.sprite.iter_mut()
     }
+
+    pub fn flip_horizontally(&mut self) {
+        for row in self.sprite.chunks_mut(Self::WIDTH) {
+            row.reverse()
+        }
+    }
+
+    pub fn flip_vertically(&mut self) {
+        for x in 0..(Self::WIDTH as isize) {
+            for y in 0..((Self::HEIGHT / 2) as isize) {
+                self.sprite.swap(
+                    Self::index(x, y).unwrap(),
+                    Self::index(x, Self::HEIGHT as isize - 1 - y).unwrap(),
+                );
+            }
+        }
+    }
 }
 
 #[cfg(test)]

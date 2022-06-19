@@ -99,6 +99,18 @@ impl Editor {
             }
         }
     }
+
+    fn flip_sprite_horizontally(&mut self, sprite_sheet: &mut SpriteSheet) {
+        let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
+
+        sprite.flip_horizontally()
+    }
+
+    fn flip_sprite_vertically(&mut self, sprite_sheet: &mut SpriteSheet) {
+        let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
+
+        sprite.flip_vertically()
+    }
 }
 
 #[derive(Debug)]
@@ -198,6 +210,14 @@ impl ImportantApp for Editor {
                 self.handle_key_combos(event, resources);
 
                 match event {
+                    KeyboardEvent {
+                        key: Key::F,
+                        state: KeyState::Down,
+                    } => self.flip_sprite_horizontally(&mut resources.sprite_sheet),
+                    KeyboardEvent {
+                        key: Key::V,
+                        state: KeyState::Down,
+                    } => self.flip_sprite_vertically(&mut resources.sprite_sheet),
                     KeyboardEvent {
                         key: Key::X,
                         state: KeyState::Down,
