@@ -82,34 +82,27 @@ impl Editor {
     }
 
     fn handle_key_combos(&mut self, key_event: KeyboardEvent, resources: &mut Resources) {
+        let mut handled = false;
+
         for key_combo in self.key_combos.iter_mut() {
             match key_event.state {
                 KeyState::Up => key_combo.key_up(key_event.key),
                 KeyState::Down => {
                     if let Some(action) = key_combo.key_down(key_event.key) {
-                        handle_key_combo(
-                            action,
-                            self.selected_sprite,
-                            &mut self.notification,
-                            &mut self.clipboard,
-                            resources,
-                        );
+                        if !handled {
+                            handled = true;
+                            handle_key_combo(
+                                action,
+                                self.selected_sprite,
+                                &mut self.notification,
+                                &mut self.clipboard,
+                                resources,
+                            );
+                        }
                     }
                 }
             }
         }
-    }
-
-    fn flip_sprite_horizontally(&mut self, sprite_sheet: &mut SpriteSheet) {
-        let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
-
-        sprite.flip_horizontally()
-    }
-
-    fn flip_sprite_vertically(&mut self, sprite_sheet: &mut SpriteSheet) {
-        let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
-
-        sprite.flip_vertically()
     }
 }
 
@@ -152,6 +145,16 @@ fn handle_key_combo(
 
             clipboard.paste_into(sprite);
         }
+        KeyComboAction::FlipVertically => {
+            let sprite = resources.sprite_sheet.get_sprite_mut(selected_sprite);
+
+            sprite.flip_vertically()
+        }
+        KeyComboAction::FlipHorizontally => {
+            let sprite = resources.sprite_sheet.get_sprite_mut(selected_sprite);
+
+            sprite.flip_horizontally()
+        }
     }
 }
 
@@ -159,6 +162,8 @@ fn handle_key_combo(
 enum KeyComboAction {
     Copy,
     Paste,
+    FlipVertically,
+    FlipHorizontally,
 }
 
 impl WhichOne for Editor {
@@ -199,6 +204,8 @@ impl ImportantApp for Editor {
             key_combos: vec![
                 KeyCombo::copy(KeyComboAction::Copy),
                 KeyCombo::paste(KeyComboAction::Paste),
+                KeyCombo::new(KeyComboAction::FlipVertically, Key::V, &[]),
+                KeyCombo::new(KeyComboAction::FlipHorizontally, Key::F, &[]),
             ],
             clipboard: Clipboard::new(),
         }
@@ -210,14 +217,6 @@ impl ImportantApp for Editor {
                 self.handle_key_combos(event, resources);
 
                 match event {
-                    KeyboardEvent {
-                        key: Key::F,
-                        state: KeyState::Down,
-                    } => self.flip_sprite_horizontally(&mut resources.sprite_sheet),
-                    KeyboardEvent {
-                        key: Key::V,
-                        state: KeyState::Down,
-                    } => self.flip_sprite_vertically(&mut resources.sprite_sheet),
                     KeyboardEvent {
                         key: Key::X,
                         state: KeyState::Down,
