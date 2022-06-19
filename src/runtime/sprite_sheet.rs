@@ -108,6 +108,12 @@ impl Sprite {
         unsafe { &*(sprite as *const [u8] as *const Self) }
     }
 
+    pub fn to_owned(&self) -> Vec<Color> {
+        let sprite = &self.sprite;
+
+        sprite.to_vec()
+    }
+
     fn new_mut(sprite: &mut [u8]) -> &mut Self {
         unsafe { &mut *(sprite as *mut [u8] as *mut Self) }
     }
@@ -153,6 +159,10 @@ impl Sprite {
 
     pub(crate) fn iter(&self) -> impl Iterator<Item = Color> + '_ {
         self.sprite.iter().copied()
+    }
+
+    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut Color> + '_ {
+        self.sprite.iter_mut()
     }
 }
 

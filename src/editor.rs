@@ -39,7 +39,8 @@ pub struct Editor {
     hovered_map_button: usize,
     show_sprites_in_map: bool,
     notification: notification::State,
-    key_combos: Vec<KeyCombo>,
+    key_combos: Vec<KeyCombo<KeyComboAction>>,
+    clipboard: Clipboard,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -80,19 +81,72 @@ impl Editor {
         shift_direction.shift(sprite);
     }
 
-    fn handle_key_combos(&mut self, key_event: KeyboardEvent) {
+    fn handle_key_combos(&mut self, key_event: KeyboardEvent, resources: &mut Resources) {
         for key_combo in self.key_combos.iter_mut() {
-            dbg!(&key_combo);
             match key_event.state {
                 KeyState::Up => key_combo.key_up(key_event.key),
                 KeyState::Down => {
-                    key_combo.key_down(key_event.key, || {
-                        self.notification.alert("COPIED".to_owned())
-                    });
+                    if let Some(action) = key_combo.key_down(key_event.key) {
+                        handle_key_combo(
+                            action,
+                            self.selected_sprite,
+                            &mut self.notification,
+                            &mut self.clipboard,
+                            resources,
+                        );
+                    }
                 }
             }
         }
     }
+}
+
+#[derive(Debug)]
+struct Clipboard {
+    data: Vec<Color>,
+}
+impl Clipboard {
+    fn new() -> Self {
+        Self { data: vec![0; 64] }
+    }
+
+    fn copy_sprite(&mut self, sprite: &Sprite) {
+        self.data = sprite.to_owned();
+    }
+
+    fn paste_into(&self, sprite: &mut Sprite) {
+        for (sprite_pixel, clipboard_pixel) in sprite.iter_mut().zip(self.data.iter().copied()) {
+            *sprite_pixel = clipboard_pixel;
+        }
+    }
+}
+
+fn handle_key_combo(
+    key_combo: KeyComboAction,
+    selected_sprite: usize,
+    notification: &mut notification::State,
+    clipboard: &mut Clipboard,
+    resources: &mut Resources,
+) {
+    match key_combo {
+        KeyComboAction::Copy => {
+            let sprite = resources.sprite_sheet.get_sprite(selected_sprite);
+            notification.alert("COPIED 1 X 1 SPRITES".to_owned());
+            clipboard.copy_sprite(sprite);
+        }
+        KeyComboAction::Paste => {
+            let sprite = resources.sprite_sheet.get_sprite_mut(selected_sprite);
+            notification.alert("PASTED 1 X 1 SPRITES".to_owned());
+
+            clipboard.paste_into(sprite);
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum KeyComboAction {
+    Copy,
+    Paste,
 }
 
 impl WhichOne for Editor {
@@ -130,16 +184,20 @@ impl ImportantApp for Editor {
             hovered_map_button: 0,
             show_sprites_in_map: false,
             notification: notification::State::new(),
-            key_combos: vec![KeyCombo::copy()],
+            key_combos: vec![
+                KeyCombo::copy(KeyComboAction::Copy),
+                KeyCombo::paste(KeyComboAction::Paste),
+            ],
+            clipboard: Clipboard::new(),
         }
     }
 
     fn update(&mut self, msg: &Msg, resources: &mut Resources) {
         match msg {
             &Msg::KeyboardEvent(event) => {
-                self.handle_key_combos(event);
+                self.handle_key_combos(event, resources);
 
-                match dbg!(event) {
+                match event {
                     KeyboardEvent {
                         key: Key::X,
                         state: KeyState::Down,
