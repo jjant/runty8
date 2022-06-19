@@ -36,7 +36,7 @@ pub enum MouseEvent {
     Up(MouseButton),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub enum Key {
     A,
     B,
@@ -64,6 +64,7 @@ pub enum Key {
     X,
     Y,
     Z,
+    Control,
 }
 
 impl Key {
@@ -95,6 +96,7 @@ impl Key {
             VirtualKeyCode::X => Some(Self::X),
             VirtualKeyCode::Y => Some(Self::Y),
             VirtualKeyCode::Z => Some(Self::Z),
+            VirtualKeyCode::LControl => Some(Self::Control),
             // VirtualKeyCode::Escape => todo!(),
             _ => None,
         }

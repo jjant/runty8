@@ -1,9 +1,10 @@
+mod key_combo;
 mod notification;
 pub mod serialize;
 use crate::app::{ImportantApp, Right, WhichOne};
 use crate::editor::notification::Notification;
 use crate::runtime::map::Map;
-use crate::runtime::sprite_sheet::{Color, Sprite};
+use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
 use crate::screen::Resources;
 use crate::ui::button::{self, Button};
 use crate::ui::{
@@ -14,6 +15,8 @@ use crate::ui::{DrawFn, Element, Tree};
 use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;
+
+use self::key_combo::KeyCombo;
 
 #[derive(Debug)]
 pub struct Editor {
@@ -36,6 +39,7 @@ pub struct Editor {
     hovered_map_button: usize,
     show_sprites_in_map: bool,
     notification: notification::State,
+    key_combos: Vec<KeyCombo>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -55,11 +59,40 @@ pub enum Msg {
     FlagToggled(usize),
     SpriteEdited { x: usize, y: usize }, // TODO: Improve
     ToolSelected(usize),
-    SerializeRequested,
-    ShiftSprite(ShiftDirection),
     MapSpriteHovered(usize),
-    SwitchMapMode,
     ClickedMapTile { x: usize, y: usize },
+    KeyboardEvent(KeyboardEvent),
+}
+
+impl Editor {
+    fn serialize(&self, resources: &Resources) {
+        serialize(&resources.assets_path, &resources.sprite_flags);
+        serialize(&resources.assets_path, &resources.sprite_sheet);
+        serialize(&resources.assets_path, &resources.map);
+    }
+
+    fn switch_map_mode(&mut self) {
+        self.show_sprites_in_map = !self.show_sprites_in_map;
+    }
+
+    fn shift_sprite(&mut self, shift_direction: ShiftDirection, sprite_sheet: &mut SpriteSheet) {
+        let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
+        shift_direction.shift(sprite);
+    }
+
+    fn handle_key_combos(&mut self, key_event: KeyboardEvent) {
+        for key_combo in self.key_combos.iter_mut() {
+            dbg!(&key_combo);
+            match key_event.state {
+                KeyState::Up => key_combo.key_up(key_event.key),
+                KeyState::Down => {
+                    key_combo.key_down(key_event.key, || {
+                        self.notification.alert("COPIED".to_owned())
+                    });
+                }
+            }
+        }
+    }
 }
 
 impl WhichOne for Editor {
@@ -97,11 +130,35 @@ impl ImportantApp for Editor {
             hovered_map_button: 0,
             show_sprites_in_map: false,
             notification: notification::State::new(),
+            key_combos: vec![KeyCombo::copy()],
         }
     }
 
     fn update(&mut self, msg: &Msg, resources: &mut Resources) {
         match msg {
+            &Msg::KeyboardEvent(event) => {
+                self.handle_key_combos(event);
+
+                match dbg!(event) {
+                    KeyboardEvent {
+                        key: Key::X,
+                        state: KeyState::Down,
+                    } => self.serialize(resources),
+                    KeyboardEvent {
+                        key: Key::C,
+                        state: KeyState::Down,
+                    } => self.switch_map_mode(),
+                    KeyboardEvent {
+                        key,
+                        state: KeyState::Down,
+                    } => {
+                        if let Some(shift_direction) = ShiftDirection::from_key(&key) {
+                            self.shift_sprite(shift_direction, &mut resources.sprite_sheet)
+                        }
+                    }
+                    _ => {}
+                }
+            }
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
                 println!("Sprite button clicked");
@@ -140,20 +197,9 @@ impl ImportantApp for Editor {
             &Msg::ColorHovered(color) => {
                 self.bottom_bar_text = format!("COLOUR {}", color);
             }
-            Msg::SerializeRequested => {
-                serialize(&resources.assets_path, &resources.sprite_flags);
-                serialize(&resources.assets_path, &resources.sprite_sheet);
-                serialize(&resources.assets_path, &resources.map);
-            }
-            Msg::ShiftSprite(shift_direction) => {
-                let sprite = resources.sprite_sheet.get_sprite_mut(self.selected_sprite);
-                shift_direction.shift(sprite);
-            }
+
             &Msg::MapSpriteHovered(sprite) => {
                 self.hovered_map_button = sprite;
-            }
-            Msg::SwitchMapMode => {
-                self.show_sprites_in_map = !self.show_sprites_in_map;
             }
             &Msg::ClickedMapTile { x, y } => {
                 resources.map.mset(x, y, self.selected_sprite as u8);
@@ -216,19 +262,7 @@ impl ImportantApp for Editor {
     fn subscriptions(&self, event: &Event) -> Option<Msg> {
         match event {
             Event::Mouse(_) => None,
-            Event::Keyboard(KeyboardEvent {
-                key: Key::X,
-                state: KeyState::Down,
-            }) => Some(Msg::SerializeRequested),
-            Event::Keyboard(KeyboardEvent {
-                key: Key::C,
-                state: KeyState::Down,
-            }) => Some(Msg::SwitchMapMode),
-            Event::Keyboard(KeyboardEvent {
-                key,
-                state: KeyState::Down,
-            }) => ShiftDirection::from_key(key).map(Msg::ShiftSprite),
-            Event::Keyboard(_) => None,
+            Event::Keyboard(event @ KeyboardEvent { .. }) => Some(Msg::KeyboardEvent(*event)),
             Event::Tick { .. } => None,
         }
     }
