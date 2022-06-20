@@ -2422,7 +2422,7 @@ fn signi(i: i32) -> i32 {
 }
 
 fn sign(f: f32) -> f32 {
-    match f.total_cmp(&0.0) {
+    match f.partial_cmp(&0.0).unwrap() {
         std::cmp::Ordering::Less => -1.0,
         std::cmp::Ordering::Equal => 0.0,
         std::cmp::Ordering::Greater => 1.0,
