@@ -1,6 +1,7 @@
 mod key_combo;
 mod notification;
 pub mod serialize;
+mod undo_redo;
 use crate::app::{ImportantApp, Right, WhichOne};
 use crate::editor::notification::Notification;
 use crate::runtime::map::Map;
@@ -17,6 +18,7 @@ use itertools::Itertools;
 use serialize::serialize;
 
 use self::key_combo::KeyCombo;
+use self::undo_redo::{Command, Commands};
 
 #[derive(Debug)]
 pub struct Editor {
@@ -41,6 +43,7 @@ pub struct Editor {
     notification: notification::State,
     key_combos: Vec<KeyCombo<KeyComboAction>>,
     clipboard: Clipboard,
+    commands: Commands,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -97,6 +100,7 @@ impl Editor {
                                 &mut self.notification,
                                 &mut self.clipboard,
                                 resources,
+                                &mut self.commands,
                             );
                         }
                     }
@@ -132,6 +136,7 @@ fn handle_key_combo(
     notification: &mut notification::State,
     clipboard: &mut Clipboard,
     resources: &mut Resources,
+    commands: &mut Commands,
 ) {
     match key_combo {
         KeyComboAction::Copy => {
@@ -155,6 +160,12 @@ fn handle_key_combo(
 
             sprite.flip_horizontally()
         }
+        KeyComboAction::Undo => {
+            commands.undo(notification, &mut resources.sprite_sheet);
+        }
+        KeyComboAction::Redo => {
+            commands.redo(notification, &mut resources.sprite_sheet);
+        }
     }
 }
 
@@ -164,6 +175,8 @@ enum KeyComboAction {
     Paste,
     FlipVertically,
     FlipHorizontally,
+    Undo,
+    Redo,
 }
 
 impl WhichOne for Editor {
@@ -204,10 +217,13 @@ impl ImportantApp for Editor {
             key_combos: vec![
                 KeyCombo::copy(KeyComboAction::Copy),
                 KeyCombo::paste(KeyComboAction::Paste),
+                KeyCombo::new(KeyComboAction::Undo, Key::Z, &[Key::Control]),
+                KeyCombo::new(KeyComboAction::Redo, Key::Y, &[Key::Control]),
                 KeyCombo::new(KeyComboAction::FlipVertically, Key::V, &[]),
                 KeyCombo::new(KeyComboAction::FlipHorizontally, Key::F, &[]),
             ],
             clipboard: Clipboard::new(),
+            commands: Commands::new(),
         }
     }
 
@@ -265,8 +281,18 @@ impl ImportantApp for Editor {
             }
             &Msg::SpriteEdited { x, y } => {
                 let sprite = resources.sprite_sheet.get_sprite_mut(self.selected_sprite);
+                let x = x as isize;
+                let y = y as isize;
+                let previous_color = sprite.pget(x, y);
 
-                sprite.pset(x as isize, y as isize, self.selected_color);
+                self.commands.push(Command::pixel_changed(
+                    self.selected_sprite,
+                    x,
+                    y,
+                    previous_color,
+                    self.selected_color,
+                ));
+                sprite.pset(x, y, self.selected_color);
             }
             &Msg::ToolSelected(selected_tool) => {
                 self.selected_tool = selected_tool;

@@ -75,6 +75,11 @@ impl State {
             }
         }
     }
+
+    #[cfg(test)]
+    pub fn content(&self) -> &str {
+        &self.content
+    }
 }
 
 pub struct Notification<'a, Msg> {
