@@ -1,4 +1,3 @@
-#![feature(drain_filter)]
 use std::f32::consts::{FRAC_1_SQRT_2, PI};
 use std::path::Path;
 
@@ -215,7 +214,7 @@ impl App for GameState {
         self.particles.iter_mut().for_each(Particle::update);
 
         // Update and remove dead dead_particles
-        self.dead_particles.drain_filter(DeadParticle::update);
+        self.dead_particles.retain_mut(DeadParticle::update);
 
         // self.begin_game(state);
         // start game
@@ -467,8 +466,8 @@ impl DeadParticle {
         self.y += self.spd.y;
         self.t -= 1;
 
-        // Remove if
-        self.t <= 0
+        // Keep if
+        self.t > 0
     }
 }
 
