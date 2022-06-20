@@ -212,15 +212,38 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         }
     }
 
+    // Taken from Pemsa, a C++ implementation of pico8.
+    // This looks similar to Bresenham's circle drawing algorithm.
+    //
+    // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
     pub fn circfill(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
-        for x in (cx - radius)..=(cx + radius) {
-            for y in (cy - radius)..=(cy + radius) {
-                let dist_squared = (x - cx).pow(2) + (y - cy).pow(2);
+        fn plot(this: &mut DrawContext, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
+            this.line(cx - x, cy + y, cx + x, cy + y, c);
 
-                if dist_squared <= radius.pow(2) {
-                    self.pset(x, y, color);
-                }
+            if y != 0 {
+                this.line(cx - x, cy - y, cx + x, cy - y, c);
             }
+        }
+
+        let mut x = radius;
+        let mut y = 0;
+        let mut error = 1 - radius;
+
+        while y <= x {
+            plot(self, cx, cy, x, y, color);
+
+            if error < 0 {
+                error += 2 * y + 3;
+            } else {
+                if x != y {
+                    plot(self, cx, cy, y, x, color);
+                }
+
+                x -= 1;
+                error += 2 * (y - x) + 3;
+            }
+
+            y += 1;
         }
     }
 
