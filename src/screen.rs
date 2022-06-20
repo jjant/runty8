@@ -45,7 +45,7 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
         display.gl_window().window().set_cursor_visible(false);
     }
     let scale_factor = display.gl_window().window().scale_factor();
-    let logical_size = display
+    let mut logical_size = display
         .gl_window()
         .window()
         .inner_size()
@@ -62,7 +62,7 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
         let event: Option<Event> = handle_event(
             &glutin_event,
             scale_factor,
-            logical_size,
+            &mut logical_size,
             control_flow,
             &mut internal_state,
             &mut keys,
@@ -98,7 +98,7 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
 fn handle_event(
     event: &event::Event<()>,
     hidpi_factor: f64,
-    window_size: LogicalSize<f64>,
+    window_size: &mut LogicalSize<f64>,
     control_flow: &mut ControlFlow,
     state: &mut InternalState,
     keys: &mut Keys,
@@ -110,7 +110,14 @@ fn handle_event(
 
                 None
             }
-            // TODO: Handle resize events.
+            // TODO: Force aspect ratio on resize.
+            &glutin::event::WindowEvent::Resized(new_size) => {
+                let new_size: LogicalSize<f64> = new_size.to_logical(hidpi_factor);
+
+                *window_size = new_size;
+
+                None
+            }
             glutin::event::WindowEvent::CursorMoved { position, .. } => {
                 let logical_mouse: LogicalPosition<f64> = position.to_logical(hidpi_factor);
 
