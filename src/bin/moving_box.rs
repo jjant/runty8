@@ -1,6 +1,6 @@
+use runty8::app::{App, Left, WhichOne};
 use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
-use runty8::App;
 
 fn main() {
     runty8::run_app::<ExampleApp>("".to_owned());
@@ -12,6 +12,10 @@ pub struct ExampleApp {
     xa: i32,
     ya: i32,
     yc: i32,
+}
+
+impl WhichOne for ExampleApp {
+    type Which = Left;
 }
 
 impl App for ExampleApp {

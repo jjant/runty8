@@ -1,7 +1,7 @@
 use rand::Rng;
+use runty8::app::{App, Left, WhichOne};
 use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
-use runty8::App;
 
 fn main() {
     runty8::run_app::<Confetti>("".to_owned());
@@ -11,6 +11,10 @@ struct Confetti {
     particles: Vec<Particle>,
     mouse_x: i32,
     mouse_y: i32,
+}
+
+impl WhichOne for Confetti {
+    type Which = Left;
 }
 
 impl App for Confetti {

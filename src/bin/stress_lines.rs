@@ -1,9 +1,9 @@
 use runty8::{
+    app::{App, Left, WhichOne},
     runtime::{
         draw_context::DrawContext,
         state::{Button, State},
     },
-    App,
 };
 
 fn main() {
@@ -62,6 +62,10 @@ impl MouseState {
             } => (current_x, current_y),
         }
     }
+}
+
+impl WhichOne for StressLines {
+    type Which = Left;
 }
 
 impl App for StressLines {
