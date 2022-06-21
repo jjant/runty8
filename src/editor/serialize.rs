@@ -4,11 +4,10 @@ use crate::runtime::draw_context::COLORS;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use std::fmt::Display;
-use std::io::Write;
-use std::{fs::File, path::Path};
 
 pub fn serialize_named<T: Serialize>(assets_path: &str, file_name: &str, serializable: &T) {
     let file_path = format!("{assets_path}/{}", file_name);
+
     crate::write_and_log(&file_path, &serializable.serialize());
 }
 
@@ -46,17 +45,22 @@ impl Display for Color {
         f.write_fmt(format_args!("{} {} {}", self.r, self.g, self.b))
     }
 }
-pub struct Ppm {
+
+const SPRITE_PAGES: usize = 4;
+const ROWS_PER_PAGE: usize = 4;
+
+/// Utility to create PPM images.
+/// Useful for debugging our data structures (sprite sheet, map)
+/// in regular image viewers.
+pub(crate) struct Ppm {
     height: usize,
     width: usize,
     data: Vec<Color>,
 }
 
-const SPRITE_PAGES: usize = 4;
-const ROWS_PER_PAGE: usize = 4;
-
 impl Ppm {
-    pub fn from_map(map: &Map, sprite_sheet: &SpriteSheet) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn from_map(map: &Map, sprite_sheet: &SpriteSheet) -> Self {
         let width = 1024;
         let height = 4 * 16 * 8;
         let mut data = vec![Color { r: 0, g: 0, b: 0 }; width * height];
@@ -86,7 +90,8 @@ impl Ppm {
         }
     }
 
-    pub fn from_sprite_sheet(sprite_sheet: &SpriteSheet) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn from_sprite_sheet(sprite_sheet: &SpriteSheet) -> Self {
         let sprite_sheet = &sprite_sheet.sprite_sheet;
         let width = SpriteSheet::SPRITES_PER_ROW as usize * SPRITE_WIDTH;
         let height = SPRITE_PAGES * ROWS_PER_PAGE * SPRITE_WIDTH;
@@ -122,20 +127,6 @@ impl Ppm {
             data,
         }
     }
-
-    // Raw PPM format (P6)
-    pub fn write_file(&self, filename: &str) -> std::io::Result<()> {
-        let path = Path::new(filename);
-        let mut file = File::create(&path)?;
-        let header = format!("P6 {} {} 255\n", self.width, self.height);
-        file.write_all(header.as_bytes())?;
-
-        let len = std::mem::size_of_val(&self.data as &[Color]);
-        let slice = unsafe { std::slice::from_raw_parts(self.data.as_ptr().cast(), len) };
-        // file.write_all(&self.data)?;
-        file.write_all(slice)?;
-        Ok(())
-    }
 }
 
 impl Serialize for Ppm {
@@ -143,7 +134,7 @@ impl Serialize for Ppm {
         "sprite_sheet.ppm".to_owned()
     }
 
-    // Plain PPM format (P3)
+    /// Plain PPM format (P3)
     fn serialize(&self) -> String {
         let header = format!("P3\n{} {}\n255", self.width, self.height);
         let body = self
@@ -152,15 +143,6 @@ impl Serialize for Ppm {
             .copied()
             .map(|component| format!(" {} ", component))
             .join("");
-        // let body = self
-        //     .data
-        //     .iter()
-        //     .copied()
-        //     .chunks(self.width)
-        //     .into_iter()
-        //     // .map(|component| component.to_string())
-        //     .map(|chunk| chunk.map(|c| c.to_string()).join(" "))
-        //     .join("\n");
 
         format!("{header}\n{body}")
     }
