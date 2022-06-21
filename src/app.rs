@@ -42,7 +42,7 @@ trait RightTrait: WhichOne<Which = Right> {}
 // LeftTrait or RightTrait
 ///////////////////////////////////////////////////////////////////////////////
 
-// Not intended for direct use
+/// Not intended for direct use.
 pub trait AppCompat {
     type Msg: Copy + Debug;
     fn init(state: &State) -> Self;
@@ -85,6 +85,7 @@ where
     }
 }
 
+/// Implementation detail of AppCompat
 pub trait IsEitherHelper<Which>: WhichOne {
     type MsgHelper: Copy + Debug;
     fn init_helper(state: &State) -> Self;
