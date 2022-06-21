@@ -1,14 +1,16 @@
 #![doc = include_str!("../README.md")]
 #![allow(clippy::new_without_default)]
+// #![deny(missing_docs)]
 pub mod app;
+pub mod runtime;
+pub mod ui;
+pub use screen::Resources;
+
 mod draw;
 mod editor;
 mod font;
 mod graphics;
-pub mod runtime;
 mod screen;
-pub use screen::Resources;
-pub mod ui;
 use crate::editor::serialize::Serialize;
 use app::AppCompat;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
@@ -21,6 +23,7 @@ use runtime::{
 };
 use std::fmt::Debug;
 
+/// Mouse buttons
 #[derive(Clone, Copy, Debug)]
 pub enum MouseButton {
     // TODO: Handle other mouse buttons? idk
@@ -29,15 +32,24 @@ pub enum MouseButton {
     Middle,
 }
 
+/// Mouse-related events
 #[derive(Clone, Copy, Debug)]
 pub enum MouseEvent {
-    // Current position of the mouse
-    // NOT delta
-    Move { x: i32, y: i32 },
+    /// Mouse move event.
+    // Contains the current position of the mouse.
+    Move {
+        ///
+        x: i32,
+        ///
+        y: i32,
+    },
+    /// Mouse button pressed
     Down(MouseButton),
+    /// Mouse button released
     Up(MouseButton),
 }
 
+/// Keyboard keys
 #[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub enum Key {
     A,
@@ -104,6 +116,7 @@ impl Key {
         }
     }
 }
+
 #[derive(Clone, Copy, Debug)]
 pub struct KeyboardEvent {
     pub key: Key,
@@ -183,6 +196,8 @@ fn create_directory(path: &str) {
     };
 }
 
+/// Run a Pico8 application
+// TODO: add example
 pub fn run_app<T: AppCompat + 'static>(assets_path: String) {
     create_directory(&assets_path);
 
