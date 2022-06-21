@@ -1,7 +1,8 @@
+#![doc = include_str!("../README.md")]
 #![allow(clippy::new_without_default)]
 pub mod app;
 mod draw;
-pub mod editor;
+mod editor;
 mod font;
 mod graphics;
 pub mod runtime;

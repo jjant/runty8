@@ -1,6 +1,8 @@
+# Runty8
+
 A Pico8 clone in rust
 
-# Running
+## Running
 
 Plain editor
 
@@ -13,3 +15,5 @@ Celeste
 ```bash
 cargo run --bin celeste
 ```
+
+## License
