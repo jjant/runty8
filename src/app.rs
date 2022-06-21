@@ -14,7 +14,7 @@ pub trait App: WhichOne<Which = Left> {
     fn draw(&mut self, draw_context: &mut DrawContext);
 }
 
-pub trait ImportantApp: WhichOne<Which = Right> {
+pub trait ElmApp: WhichOne<Which = Right> {
     type Msg: Copy + Debug;
     fn init() -> Self;
     fn update(&mut self, msg: &Self::Msg, resources: &mut Resources);
@@ -154,12 +154,12 @@ where
 
 impl<T> IsEitherHelper<Right> for T
 where
-    T: Sized + ImportantApp,
+    T: Sized + ElmApp,
 {
-    type MsgHelper = <T as ImportantApp>::Msg;
+    type MsgHelper = <T as ElmApp>::Msg;
 
     fn init_helper(_: &State) -> Self {
-        <T as ImportantApp>::init()
+        <T as ElmApp>::init()
     }
 
     fn update_helper(
@@ -168,7 +168,7 @@ where
         resources: &mut Resources,
         _: &InternalState,
     ) {
-        <T as ImportantApp>::update(self, msg, resources)
+        <T as ElmApp>::update(self, msg, resources)
     }
 
     fn view_helper(
@@ -177,10 +177,10 @@ where
         _: &mut InternalState,
         _: &mut DrawData,
     ) -> Element<'_, Self::MsgHelper> {
-        <T as ImportantApp>::view(self, resources)
+        <T as ElmApp>::view(self, resources)
     }
 
     fn subscriptions_helper(&self, event: &Event) -> Option<Self::MsgHelper> {
-        <Self as ImportantApp>::subscriptions(self, event)
+        <Self as ElmApp>::subscriptions(self, event)
     }
 }

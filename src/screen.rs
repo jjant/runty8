@@ -1,4 +1,4 @@
-use crate::app::{AppCompat, ImportantApp};
+use crate::app::{AppCompat, ElmApp};
 use crate::editor::Editor;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::{DrawContext, DrawData};
@@ -35,7 +35,7 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
     };
     let state = State::new(&internal_state, &mut resources);
     let mut app = T::init(&state);
-    let mut editor = <Editor as ImportantApp>::init();
+    let mut editor = <Editor as ElmApp>::init();
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));

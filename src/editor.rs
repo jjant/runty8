@@ -2,7 +2,7 @@ mod key_combo;
 mod notification;
 pub mod serialize;
 mod undo_redo;
-use crate::app::{ImportantApp, Right, WhichOne};
+use crate::app::{ElmApp, Right, WhichOne};
 use crate::editor::notification::Notification;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
@@ -183,7 +183,7 @@ impl WhichOne for Editor {
     type Which = Right;
 }
 
-impl ImportantApp for Editor {
+impl ElmApp for Editor {
     type Msg = Msg;
 
     fn init() -> Self {

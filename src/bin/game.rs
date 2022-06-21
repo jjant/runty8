@@ -6,7 +6,7 @@ use rpg::entity::{Entity, EntityT, ShouldDestroy};
 use rpg::inventory::Inventory;
 use rpg::item::{DroppedItem, Item};
 use rpg::player::Player;
-use runty8::app::{ImportantApp, Right, WhichOne};
+use runty8::app::{ElmApp, Right, WhichOne};
 use runty8::ui::cursor::{self, Cursor};
 use runty8::ui::{DrawFn, Element, Tree};
 use runty8::Resources;
@@ -83,7 +83,7 @@ impl Keys {
         }
     }
 }
-impl ImportantApp for GameState {
+impl ElmApp for GameState {
     type Msg = Msg;
 
     fn init() -> Self {
