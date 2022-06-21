@@ -260,7 +260,7 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         self.line(x1, y0, x1, y1, color);
     }
 
-    /// https://pico-8.fandom.com/wiki/Map
+    /// <https://pico-8.fandom.com/wiki/Map>
     #[allow(clippy::too_many_arguments)]
     pub fn map(
         &mut self,

@@ -3,7 +3,7 @@ pub mod app;
 mod draw;
 pub mod editor;
 mod font;
-pub mod graphics;
+mod graphics;
 pub mod runtime;
 pub mod screen;
 pub mod ui;
@@ -194,7 +194,7 @@ pub fn run_app<T: AppCompat + 'static>(assets_path: String) {
 }
 
 /* UTILS */
-pub fn write_and_log(file_name: &str, contents: &str) {
+pub(crate) fn write_and_log(file_name: &str, contents: &str) {
     print!("Writing {file_name}... ");
     std::fs::write(&file_name, contents).unwrap();
     println!("success.")
