@@ -1,10 +1,7 @@
 pub mod button;
 pub mod cursor;
 pub mod text;
-use crate::{
-    runtime::{cmd::Cmd, draw_context::DrawContext},
-    Event,
-};
+use crate::{runtime::draw_context::DrawContext, Event};
 use std::{fmt::Debug, marker::PhantomData};
 
 pub struct DispatchEvent<'a, Msg> {
@@ -136,25 +133,4 @@ impl<'a, Msg: Copy + Debug + 'a, T: Widget<Msg = Msg> + 'a> From<T> for Element<
     fn from(val: T) -> Self {
         Element::new(val)
     }
-}
-
-pub trait ElmApp2
-where
-    Self: Sized,
-{
-    type Msg: Copy + Debug;
-    type Flags;
-
-    fn init(flags: Self::Flags) -> (Self, Cmd<Self::Msg>);
-
-    fn update(&mut self, msg: &Self::Msg) -> Cmd<Self::Msg>;
-
-    fn view(&mut self) -> Element<'_, Self::Msg>;
-
-    fn subscriptions(&self) -> Sub<Self::Msg>;
-}
-
-pub enum Sub<Msg> {
-    OnAnimationFrame(fn(f32) -> Msg),
-    NoSub,
 }

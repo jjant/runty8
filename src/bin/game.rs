@@ -7,9 +7,9 @@ use rpg::inventory::Inventory;
 use rpg::item::{DroppedItem, Item};
 use rpg::player::Player;
 use runty8::app::{ImportantApp, Right, WhichOne};
-use runty8::screen::Resources;
 use runty8::ui::cursor::{self, Cursor};
 use runty8::ui::{DrawFn, Element, Tree};
+use runty8::Resources;
 use runty8::{Event, Key, KeyState, KeyboardEvent};
 
 fn main() {

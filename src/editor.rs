@@ -21,7 +21,7 @@ use self::key_combo::KeyCombo;
 use self::undo_redo::{Command, Commands};
 
 #[derive(Debug)]
-pub struct Editor {
+pub(crate) struct Editor {
     cursor: cursor::State,
     tab: Tab,
     selected_color: u8,
@@ -53,7 +53,7 @@ enum Tab {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Msg {
+pub(crate) enum Msg {
     SpriteTabClicked,
     MapButtonClicked,
     ColorSelected(usize),
@@ -839,7 +839,7 @@ fn canvas_view<'a, 'b>(
     Tree::with_children(elements).push(highlight).into()
 }
 
-pub static MOUSE_SPRITE: &[Color] = &[
+pub(crate) static MOUSE_SPRITE: &[Color] = &[
     0, 0, 0, 0, 0, 0, 0, 0, //
     0, 0, 0, 1, 0, 0, 0, 0, //
     0, 0, 1, 7, 1, 0, 0, 0, //
@@ -862,7 +862,7 @@ pub static MOUSE_SPRITE: &[Color] = &[
 // ];
 
 #[derive(Clone, Copy, Debug)]
-pub enum ShiftDirection {
+enum ShiftDirection {
     Up,
     Down,
     Left,
