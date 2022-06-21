@@ -1,4 +1,3 @@
-#![feature(drain_filter)]
 mod rpg;
 use rand::{thread_rng, Rng};
 use rpg::currency::Currency;
