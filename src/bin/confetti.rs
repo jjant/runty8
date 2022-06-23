@@ -4,7 +4,7 @@ use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
 
 fn main() {
-    runty8::run_app::<Confetti>("".to_owned());
+    runty8::run_app::<Confetti>("".to_owned()).unwrap();
 }
 
 struct Confetti {

@@ -190,16 +190,28 @@ fn create_sprite_sheet(assets_path: &str) -> SpriteSheet {
     }
 }
 
-fn create_directory(path: &str) {
+fn create_directory(path: &str) -> std::io::Result<()> {
     if let Err(e) = std::fs::create_dir(path) {
-        println!("Couldn't create directory {}, error: {:?}", path, e);
-    };
+        match e.kind() {
+            std::io::ErrorKind::AlreadyExists => {
+                // This directory already existing is not really an error.
+                Ok(())
+            }
+            _ => {
+                eprintln!("Couldn't create assets directory: `{path}`.");
+
+                Err(e)
+            }
+        }
+    } else {
+        Ok(())
+    }
 }
 
 /// Run a Pico8 application
 // TODO: add example
-pub fn run_app<T: AppCompat + 'static>(assets_path: String) {
-    create_directory(&assets_path);
+pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<()> {
+    create_directory(&assets_path)?;
 
     let map: Map = create_map(&assets_path);
     let sprite_flags: Flags = create_sprite_flags(&assets_path);
@@ -208,6 +220,8 @@ pub fn run_app<T: AppCompat + 'static>(assets_path: String) {
     let draw_data = DrawData::new();
 
     crate::screen::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
+
+    Ok(())
 }
 
 /* UTILS */

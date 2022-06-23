@@ -18,7 +18,7 @@ fn assets_path() -> String {
 }
 
 fn main() {
-    runty8::run_app::<GameState>(assets_path())
+    runty8::run_app::<GameState>(assets_path()).unwrap();
 }
 
 struct GameState {

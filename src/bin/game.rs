@@ -13,7 +13,7 @@ use runty8::Resources;
 use runty8::{Event, Key, KeyState, KeyboardEvent};
 
 fn main() {
-    runty8::run_app::<GameState>("src/bin/game".to_owned());
+    runty8::run_app::<GameState>("src/bin/game".to_owned()).unwrap();
 }
 
 struct GameState {

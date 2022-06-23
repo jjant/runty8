@@ -12,7 +12,7 @@ fn assets_path() -> String {
 }
 
 fn main() {
-    runty8::run_app::<EmptyApp>(assets_path());
+    runty8::run_app::<EmptyApp>(assets_path()).unwrap()
 }
 
 struct EmptyApp;

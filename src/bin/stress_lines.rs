@@ -7,7 +7,7 @@ use runty8::{
 };
 
 fn main() {
-    runty8::run_app::<StressLines>("".to_owned());
+    runty8::run_app::<StressLines>("".to_owned()).unwrap();
 }
 struct StressLines {
     mouse: MouseState,
