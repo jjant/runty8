@@ -2,8 +2,9 @@
 
 A Pico8 clone in rust
 
-## Missing features
+## Things to do
 
+- [ ] Editor currently gets its assets (ui icons, etc) like a regular pico8 game, which means it renders the wrong UI when running a proper game
 - [ ] Finish porting the pico8 API (missing functions like `peek`, `poke`, `circ`, etc)
 - [ ] Sound effects (both playing sounds in games, and the whole sound editor thing)
 - [ ] Building/packaging your game as a single file.
