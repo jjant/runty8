@@ -69,12 +69,6 @@ pub(crate) enum Msg {
 }
 
 impl Editor {
-    fn serialize(&self, resources: &Resources) {
-        serialize(&resources.assets_path, &resources.sprite_flags);
-        serialize(&resources.assets_path, &resources.sprite_sheet);
-        serialize(&resources.assets_path, &resources.map);
-    }
-
     fn switch_map_mode(&mut self) {
         self.show_sprites_in_map = !self.show_sprites_in_map;
     }
@@ -166,7 +160,17 @@ fn handle_key_combo(
         KeyComboAction::Redo => {
             commands.redo(notification, &mut resources.sprite_sheet);
         }
+        KeyComboAction::Save => {
+            save(notification, resources);
+        }
     }
+}
+
+fn save(notification: &mut notification::State, resources: &Resources) {
+    notification.alert("SAVED".to_owned());
+    serialize(&resources.assets_path, &resources.sprite_flags);
+    serialize(&resources.assets_path, &resources.sprite_sheet);
+    serialize(&resources.assets_path, &resources.map);
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -177,6 +181,7 @@ enum KeyComboAction {
     FlipHorizontally,
     Undo,
     Redo,
+    Save,
 }
 
 impl WhichOne for Editor {
@@ -219,6 +224,7 @@ impl ElmApp for Editor {
                 KeyCombo::paste(KeyComboAction::Paste),
                 KeyCombo::new(KeyComboAction::Undo, Key::Z, &[Key::Control]),
                 KeyCombo::new(KeyComboAction::Redo, Key::Y, &[Key::Control]),
+                KeyCombo::new(KeyComboAction::Save, Key::S, &[Key::Control]),
                 KeyCombo::new(KeyComboAction::FlipVertically, Key::V, &[]),
                 KeyCombo::new(KeyComboAction::FlipHorizontally, Key::F, &[]),
             ],
@@ -233,10 +239,6 @@ impl ElmApp for Editor {
                 self.handle_key_combos(event, resources);
 
                 match event {
-                    KeyboardEvent {
-                        key: Key::X,
-                        state: KeyState::Down,
-                    } => self.serialize(resources),
                     KeyboardEvent {
                         key: Key::C,
                         state: KeyState::Down,
