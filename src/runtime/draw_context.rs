@@ -203,7 +203,11 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
     }
 
     pub fn cls(&mut self) {
-        self.data.buffer = BLACK_BUFFER;
+        self.cls_color(colors::BLACK);
+    }
+
+    pub fn cls_color(&mut self, color: Color) {
+        self.rectfill(0, 0, 127, 127, color);
     }
 
     pub fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
