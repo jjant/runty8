@@ -21,7 +21,7 @@ use runtime::{
     sprite_sheet::{Color, Sprite, SpriteSheet},
     state::State,
 };
-use std::fmt::Debug;
+use std::{f32::consts::PI, fmt::Debug};
 
 /// Mouse buttons
 #[derive(Clone, Copy, Debug)]
@@ -229,4 +229,37 @@ pub(crate) fn write_and_log(file_name: &str, contents: &str) {
     print!("Writing {file_name}... ");
     std::fs::write(&file_name, contents).unwrap();
     println!("success.")
+}
+
+/*Pico8 math functions */
+/// https://pico-8.fandom.com/wiki/Sin
+pub fn sin(f: f32) -> f32 {
+    (-f * 2.0 * PI).sin()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sin;
+
+    macro_rules! assert_delta {
+        ($x:expr, $y:expr, $d:expr) => {
+            if !($x - $y < $d && $y - $x < $d) {
+                panic!();
+            }
+        };
+    }
+
+    #[allow(clippy::approx_constant)]
+    #[test]
+    fn sin_works() {
+        assert_delta!(sin(0.0), 0.0, 0.00001);
+        assert_delta!(sin(0.125), -0.70710677, 0.00001);
+        assert_delta!(sin(0.25), -1.0, 0.00001);
+        assert_delta!(sin(0.375), -0.70710677, 0.00001);
+        assert_delta!(sin(0.5), 0.0, 0.00001);
+        assert_delta!(sin(0.625), 0.70710677, 0.00001);
+        assert_delta!(sin(0.75), 1.0, 0.00001);
+        assert_delta!(sin(0.875), 0.70710677, 0.00001);
+        assert_delta!(sin(1.0), 0.0, 0.00001);
+    }
 }
