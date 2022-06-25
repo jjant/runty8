@@ -220,8 +220,8 @@ impl ElmApp for Editor {
             show_sprites_in_map: false,
             notification: notification::State::new(),
             key_combos: vec![
-                KeyCombo::copy(KeyComboAction::Copy),
-                KeyCombo::paste(KeyComboAction::Paste),
+                KeyCombo::new(KeyComboAction::Copy, Key::C, &[Key::Control]),
+                KeyCombo::new(KeyComboAction::Paste, Key::V, &[Key::Control]),
                 KeyCombo::new(KeyComboAction::Undo, Key::Z, &[Key::Control]),
                 KeyCombo::new(KeyComboAction::Redo, Key::Y, &[Key::Control]),
                 KeyCombo::new(KeyComboAction::Save, Key::S, &[Key::Control]),

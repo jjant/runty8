@@ -20,14 +20,6 @@ impl<Id: Copy> KeyCombo<Id> {
         }
     }
 
-    pub fn copy(id: Id) -> Self {
-        KeyCombo::new(id, Key::C, &[Key::Control])
-    }
-
-    pub fn paste(id: Id) -> Self {
-        KeyCombo::new(id, Key::V, &[Key::Control])
-    }
-
     pub fn key_down(&mut self, key: Key) -> Option<Id> {
         if key == self.action_key && self.modifiers_pressed() {
             return Some(self.id);
