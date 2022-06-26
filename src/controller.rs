@@ -49,11 +49,11 @@ impl<Game: App> AppCompat for Controller<Game> {
     ) {
         match msg {
             Msg::Editor(editor_msg) => {
-                let out_msg = <Editor as ElmApp>::update(&mut self.editor, editor_msg, resources);
+                <Editor as ElmApp>::update(&mut self.editor, editor_msg, resources);
             }
-            Msg::App(app_msg) => {
-                let mut state = State::new(internal_state, resources);
-                let out_msg = self.app.update(&state);
+            Msg::App(_) => {
+                let state = State::new(internal_state, resources);
+                self.app.update(&state);
             }
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event, &State::new(internal_state, resources));
@@ -64,13 +64,11 @@ impl<Game: App> AppCompat for Controller<Game> {
     fn view(
         &mut self,
         resources: &mut Resources,
-        internal_state: &mut InternalState,
-        draw_data: &mut DrawData,
+        _: &mut InternalState,
+        _: &mut DrawData,
     ) -> Element<'_, Self::Msg> {
         match self.scene {
-            Scene::Editor => {
-                <Editor as ElmApp>::view(&mut self.editor, &resources).map(Msg::Editor)
-            }
+            Scene::Editor => <Editor as ElmApp>::view(&mut self.editor, resources).map(Msg::Editor),
             Scene::App => DrawFn::new(|draw| {
                 self.app.draw(draw);
             })
@@ -78,12 +76,27 @@ impl<Game: App> AppCompat for Controller<Game> {
         }
     }
 
-    fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
-        match event {
-            Event::Mouse(_) => todo!(),
+    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg> {
+        let sub_msgs: Vec<Self::Msg> = match self.scene {
+            Scene::Editor => <Editor as ElmApp>::subscriptions(&self.editor, event)
+                .into_iter()
+                .map(Msg::Editor)
+                .collect(),
+
+            Scene::App => <Game as AppCompat>::subscriptions(&self.app, event)
+                .into_iter()
+                .map(Msg::App)
+                .collect(),
+        };
+
+        let own_msgs = match event {
+            Event::Mouse(_) => None,
             Event::Keyboard(event) => Some(Msg::KeyboardEvent(*event)),
-            Event::Tick { .. } => todo!(),
+            Event::Tick { .. } => None,
         }
+        .into_iter();
+
+        sub_msgs.into_iter().chain(own_msgs).collect()
     }
 }
 

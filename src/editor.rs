@@ -351,12 +351,14 @@ impl ElmApp for Editor {
             .into()
     }
 
-    fn subscriptions(&self, event: &Event) -> Option<Msg> {
+    fn subscriptions(&self, event: &Event) -> Vec<Msg> {
         match event {
             Event::Mouse(_) => None,
-            Event::Keyboard(event @ KeyboardEvent { .. }) => Some(Msg::KeyboardEvent(*event)),
+            Event::Keyboard(event) => Some(Msg::KeyboardEvent(*event)),
             Event::Tick { .. } => None,
         }
+        .into_iter()
+        .collect()
     }
 }
 

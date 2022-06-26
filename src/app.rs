@@ -19,7 +19,7 @@ pub trait ElmApp: WhichOne<Which = Right> {
     fn init() -> Self;
     fn update(&mut self, msg: &Self::Msg, resources: &mut Resources);
     fn view(&mut self, resources: &Resources) -> Element<'_, Self::Msg>;
-    fn subscriptions(&self, event: &Event) -> Option<Self::Msg>;
+    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -53,7 +53,7 @@ pub trait AppCompat {
         state: &mut InternalState,
         draw_data: &mut DrawData,
     ) -> Element<'_, Self::Msg>;
-    fn subscriptions(&self, event: &Event) -> Option<Self::Msg>;
+    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg>;
 }
 
 impl<T> AppCompat for T
@@ -80,7 +80,7 @@ where
         )
     }
 
-    fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
+    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg> {
         <Self as IsEitherHelper<<T as WhichOne>::Which>>::subscriptions_helper(self, event)
     }
 }
@@ -101,7 +101,7 @@ pub trait IsEitherHelper<Which>: WhichOne {
         state: &mut InternalState,
         draw_data: &mut DrawData,
     ) -> Element<'_, Self::MsgHelper>;
-    fn subscriptions_helper(&self, event: &Event) -> Option<Self::MsgHelper>;
+    fn subscriptions_helper(&self, event: &Event) -> Vec<Self::MsgHelper>;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -143,12 +143,14 @@ where
         Tree::new().into()
     }
 
-    fn subscriptions_helper(&self, event: &Event) -> Option<Self::MsgHelper> {
+    fn subscriptions_helper(&self, event: &Event) -> Vec<Self::MsgHelper> {
         match event {
             Event::Tick { .. } => Some(Pico8AppMsg::Tick),
             Event::Mouse(_) => None,
             Event::Keyboard(_) => None,
         }
+        .into_iter()
+        .collect()
     }
 }
 
@@ -180,7 +182,7 @@ where
         <T as ElmApp>::view(self, resources)
     }
 
-    fn subscriptions_helper(&self, event: &Event) -> Option<Self::MsgHelper> {
+    fn subscriptions_helper(&self, event: &Event) -> Vec<Self::MsgHelper> {
         <Self as ElmApp>::subscriptions(self, event)
     }
 }

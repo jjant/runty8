@@ -272,8 +272,8 @@ fn refresh_app(
     view.as_widget_mut().draw(&mut draw_context);
     drop(view);
 
-    if let Some(sub_msg) = event.and_then(|e| app.subscriptions(&e)) {
-        msg_queue.push(sub_msg);
+    for subscription_msg in event.into_iter().flat_map(|e| app.subscriptions(&e)) {
+        msg_queue.push(subscription_msg);
     }
     for msg in msg_queue.into_iter() {
         app.update(&msg, resources, internal_state);

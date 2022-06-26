@@ -79,7 +79,19 @@ impl<'a, Msg: Copy + Debug + 'a, BigMsg: Copy + Debug + 'a> Widget for Map<'a, M
         cursor_position: (i32, i32),
         dispatch_event: &mut DispatchEvent<Self::Msg>,
     ) {
-        todo!()
+        // TODO: Find a better way of doing this, we're now allocating a new vec
+        // For every component that uses map, this is the problem we wanted to avoid
+        // by introducing DispatchEvent
+        let mut queue_small = vec![];
+        let mut dispatch_event_small = DispatchEvent::new(&mut queue_small);
+
+        self.element
+            .as_widget_mut()
+            .on_event(event, cursor_position, &mut dispatch_event_small);
+
+        for small_msg in queue_small {
+            dispatch_event.call((self.f)(small_msg));
+        }
     }
 
     fn draw(&mut self, draw: &mut DrawContext) {
