@@ -1,16 +1,12 @@
 use crate::{
     app::{self, App, AppCompat, ElmApp},
-    editor::{
-        self,
-        key_combo::{KeyCombo, KeyCombos},
-        Editor,
-    },
+    editor::{self, key_combo::KeyCombos, Editor},
     runtime::{
         draw_context::DrawData,
         state::{InternalState, Scene, State},
     },
     ui::{DrawFn, Element},
-    Event, Key, KeyState, KeyboardEvent, Resources,
+    Event, Key, KeyboardEvent, Resources,
 };
 
 #[derive(Debug)]
@@ -41,11 +37,7 @@ impl<Game: App> AppCompat for Controller<Game> {
             scene: Scene::Editor,
             editor: <Editor as ElmApp>::init(),
             app: App::init(state),
-            key_combos: KeyCombos::new().push(KeyCombo::new(
-                KeyComboAction::RestartGame,
-                Key::R,
-                &[Key::Control],
-            )),
+            key_combos: KeyCombos::new().push(KeyComboAction::RestartGame, Key::R, &[Key::Control]),
         }
     }
 
