@@ -1,4 +1,4 @@
-use crate::app::App;
+use crate::app::AppCompat;
 use crate::controller::Controller;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::DrawData;
@@ -18,7 +18,7 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 
-pub(crate) fn run_app<Game: App + 'static>(
+pub(crate) fn run_app<Game: AppCompat + 'static>(
     assets_path: String,
     map: Map,
     sprite_flags: Flags,

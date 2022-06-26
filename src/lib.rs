@@ -13,7 +13,7 @@ mod graphics;
 mod run;
 // mod screen;
 use crate::editor::serialize::Serialize;
-use app::App;
+use app::AppCompat;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 use runtime::{
     draw_context::DrawData,
@@ -221,7 +221,7 @@ fn create_directory(path: &str) -> std::io::Result<()> {
 
 /// Run a Pico8 application
 // TODO: add example
-pub fn run_app<T: App + 'static>(assets_path: String) -> std::io::Result<()> {
+pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<()> {
     create_directory(&assets_path)?;
 
     let map: Map = create_map(&assets_path);
@@ -230,7 +230,6 @@ pub fn run_app<T: App + 'static>(assets_path: String) -> std::io::Result<()> {
 
     let draw_data = DrawData::new();
 
-    // crate::screen::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
     crate::run::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
 
     Ok(())

@@ -171,7 +171,7 @@ impl ElmApp for GameState {
             .into()
     }
 
-    fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
+    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg> {
         match *event {
             Event::Keyboard(KeyboardEvent {
                 key: Key::C,
@@ -189,6 +189,8 @@ impl ElmApp for GameState {
             Event::Mouse(_) => None,
             Event::Tick { .. } => Some(Tick),
         }
+        .into_iter()
+        .collect()
     }
 }
 
