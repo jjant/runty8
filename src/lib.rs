@@ -4,16 +4,16 @@
 pub mod app;
 pub mod runtime;
 pub mod ui;
-pub use screen::Resources;
 
 mod controller;
 mod draw;
 mod editor;
 mod font;
 mod graphics;
-mod screen;
+mod run;
+// mod screen;
 use crate::editor::serialize::Serialize;
-use app::AppCompat;
+use app::App;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 use runtime::{
     draw_context::DrawData,
@@ -44,6 +44,7 @@ pub enum MouseEvent {
         ///
         y: i32,
     },
+    // TODO: Refactor these two below to factor out the MouseButton
     /// Mouse button pressed
     Down(MouseButton),
     /// Mouse button released
@@ -80,6 +81,11 @@ pub enum Key {
     Y,
     Z,
     Control,
+    LeftArrow,
+    RightArrow,
+    UpArrow,
+    DownArrow,
+    Escape,
 }
 
 impl Key {
@@ -112,7 +118,11 @@ impl Key {
             VirtualKeyCode::Y => Some(Self::Y),
             VirtualKeyCode::Z => Some(Self::Z),
             VirtualKeyCode::LControl => Some(Self::Control),
-            // VirtualKeyCode::Escape => todo!(),
+            VirtualKeyCode::Left => Some(Self::LeftArrow),
+            VirtualKeyCode::Right => Some(Self::RightArrow),
+            VirtualKeyCode::Up => Some(Self::UpArrow),
+            VirtualKeyCode::Down => Some(Self::DownArrow),
+            VirtualKeyCode::Escape => Some(Self::Escape),
             _ => None,
         }
     }
@@ -211,7 +221,7 @@ fn create_directory(path: &str) -> std::io::Result<()> {
 
 /// Run a Pico8 application
 // TODO: add example
-pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<()> {
+pub fn run_app<T: App + 'static>(assets_path: String) -> std::io::Result<()> {
     create_directory(&assets_path)?;
 
     let map: Map = create_map(&assets_path);
@@ -220,9 +230,17 @@ pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<(
 
     let draw_data = DrawData::new();
 
-    crate::screen::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
+    // crate::screen::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
+    crate::run::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
 
     Ok(())
+}
+
+pub struct Resources {
+    pub assets_path: String,
+    pub sprite_sheet: SpriteSheet,
+    pub sprite_flags: Flags,
+    pub map: Map,
 }
 
 /* UTILS */

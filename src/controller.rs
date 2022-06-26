@@ -1,32 +1,37 @@
+use crate::runtime::input::Keys;
 use crate::{
     app::{self, App, AppCompat, ElmApp},
     editor::{self, key_combo::KeyCombos, Editor},
     runtime::{
         draw_context::DrawData,
-        state::{InternalState, Scene, State},
+        state::{InternalState, State},
     },
     ui::{DrawFn, Element},
-    Event, Key, KeyboardEvent, Resources,
+    Event, Key, KeyboardEvent, MouseButton, MouseEvent, Resources,
 };
 
 #[derive(Debug)]
-struct Controller<Game> {
+pub(crate) struct Controller<Game> {
     scene: Scene,
     editor: Editor,
     app: Game,
     key_combos: KeyCombos<KeyComboAction>,
+    keys: Keys,
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Msg {
+pub(crate) enum Msg {
     Editor(editor::Msg),
     App(app::Pico8AppMsg),
     KeyboardEvent(KeyboardEvent),
+    MouseEvent(MouseEvent),
+    Tick,
 }
 
 #[derive(Copy, Clone, Debug)]
 enum KeyComboAction {
     RestartGame,
+    SwitchScene,
 }
 
 impl<Game: App> AppCompat for Controller<Game> {
@@ -37,7 +42,10 @@ impl<Game: App> AppCompat for Controller<Game> {
             scene: Scene::Editor,
             editor: <Editor as ElmApp>::init(),
             app: App::init(state),
-            key_combos: KeyCombos::new().push(KeyComboAction::RestartGame, Key::R, &[Key::Control]),
+            key_combos: KeyCombos::new()
+                .push(KeyComboAction::RestartGame, Key::R, &[Key::Control])
+                .push(KeyComboAction::SwitchScene, Key::Escape, &[]),
+            keys: Keys::new(),
         }
     }
 
@@ -55,8 +63,27 @@ impl<Game: App> AppCompat for Controller<Game> {
                 let state = State::new(internal_state, resources);
                 self.app.update(&state);
             }
+            &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
+                // internal_state.on_mouse_move(x, y);
+            }
+            &Msg::MouseEvent(event) => {
+                let left_pressed = match event {
+                    MouseEvent::Down(MouseButton::Left) => Some(true),
+                    MouseEvent::Up(MouseButton::Left) => Some(false),
+                    _ => None,
+                };
+
+                if let Some(left_pressed) = left_pressed {
+                    self.keys.mouse = Some(left_pressed);
+                }
+            }
+
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event, &State::new(internal_state, resources));
+                self.keys.on_event(event);
+            }
+            &Msg::Tick => {
+                // internal_state.update_keys(&self.keys);
             }
         }
     }
@@ -92,7 +119,7 @@ impl<Game: App> AppCompat for Controller<Game> {
         let own_msgs = match event {
             Event::Mouse(_) => None,
             Event::Keyboard(event) => Some(Msg::KeyboardEvent(*event)),
-            Event::Tick { .. } => None,
+            Event::Tick { .. } => Some(Msg::Tick),
         }
         .into_iter();
 
@@ -107,6 +134,26 @@ impl<Game: App> Controller<Game> {
                 self.app = App::init(state);
                 self.scene = Scene::App;
             }
+            KeyComboAction::SwitchScene => self.scene.flip(),
         });
+    }
+}
+
+#[derive(Debug)]
+pub enum Scene {
+    Editor,
+    App,
+}
+
+impl Scene {
+    fn initial() -> Self {
+        Scene::Editor
+    }
+
+    pub fn flip(&mut self) {
+        *self = match self {
+            Scene::Editor => Scene::App,
+            Scene::App => Scene::Editor,
+        }
     }
 }

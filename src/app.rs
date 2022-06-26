@@ -2,9 +2,9 @@ use crate::runtime::{
     draw_context::{DrawContext, DrawData},
     state::{InternalState, State},
 };
-use crate::screen::Resources;
 use crate::ui::{Element, Tree};
 use crate::Event;
+use crate::Resources;
 use std::fmt::Debug;
 
 /// A regular pico8 app

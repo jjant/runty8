@@ -6,13 +6,13 @@ use crate::app::{ElmApp, Right, WhichOne};
 use crate::editor::notification::Notification;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
-use crate::screen::Resources;
 use crate::ui::button::{self, Button};
 use crate::ui::{
     cursor::{self, Cursor},
     text::Text,
 };
 use crate::ui::{DrawFn, Element, Tree};
+use crate::Resources;
 use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;

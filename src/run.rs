@@ -1,17 +1,17 @@
-use crate::app::{AppCompat, ElmApp};
-use crate::editor::Editor;
+use crate::app::{App, AppCompat};
+use crate::controller::Controller;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::{DrawContext, DrawData};
 use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
-use crate::runtime::state::{InternalState, Scene};
+use crate::runtime::state::InternalState;
 use crate::ui::DispatchEvent;
-use crate::{Event, KeyState, MouseButton, MouseEvent};
+use crate::{Event, KeyState, MouseButton, MouseEvent, Resources};
 use crate::{Key, KeyboardEvent, State};
 use glium::backend::Facade;
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
-use glium::glutin::event::{self, ElementState, KeyboardInput, VirtualKeyCode};
+use glium::glutin::event::{self, ElementState, KeyboardInput};
 use glium::glutin::event_loop::ControlFlow;
 use glium::index::NoIndices;
 use glium::texture::{RawImage2d, SrgbTexture2d};
@@ -19,7 +19,7 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Program, Surface};
 use glium::{uniform, Frame};
 
-pub(crate) fn run_app<T: AppCompat + 'static>(
+pub(crate) fn run_app<Game: App + 'static>(
     assets_path: String,
     map: Map,
     sprite_flags: Flags,
@@ -34,9 +34,8 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
         map,
     };
     let state = State::new(&internal_state, &mut resources);
-    let mut app = T::init(&state);
-    let mut editor = <Editor as ElmApp>::init();
 
+    let mut controller = Controller::<Game>::init(&state);
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
     let cb = glutin::ContextBuilder::new();
@@ -56,29 +55,12 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
     let program =
         glium::Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
 
-    let mut keys = Keys::new();
-
     event_loop.run(move |glutin_event, _, control_flow| {
-        let event: Option<Event> = handle_event(
-            &glutin_event,
-            scale_factor,
-            &mut logical_size,
-            control_flow,
-            &mut internal_state,
-            &mut keys,
-        );
-
-        if let Some(Event::Tick { .. }) = event {
-            internal_state.update_keys(&keys);
-
-            if internal_state.escape.btnp() {
-                internal_state.scene.flip();
-            }
-        }
+        let event: Option<Event> =
+            translate_event(&glutin_event, scale_factor, &mut logical_size, control_flow);
 
         update_app(
-            &mut app,
-            &mut editor,
+            &mut controller,
             &mut internal_state,
             &mut resources,
             &mut draw_data,
@@ -95,13 +77,12 @@ pub(crate) fn run_app<T: AppCompat + 'static>(
     });
 }
 
-fn handle_event(
-    event: &event::Event<()>,
+/// Translates a glutin::event::Event into a runty8 Event.
+fn translate_event(
+    event: &glutin::event::Event<()>,
     hidpi_factor: f64,
     window_size: &mut LogicalSize<f64>,
     control_flow: &mut ControlFlow,
-    state: &mut InternalState,
-    keys: &mut Keys,
 ) -> Option<Event> {
     match event {
         event::Event::WindowEvent { event, .. } => match event {
@@ -121,12 +102,9 @@ fn handle_event(
             glutin::event::WindowEvent::CursorMoved { position, .. } => {
                 let logical_mouse: LogicalPosition<f64> = position.to_logical(hidpi_factor);
 
-                state.mouse_x = (logical_mouse.x / window_size.width * 128.).floor() as i32;
-                state.mouse_y = (logical_mouse.y / window_size.height * 128.).floor() as i32;
-
                 Some(Event::Mouse(MouseEvent::Move {
-                    x: state.mouse_x,
-                    y: state.mouse_y,
+                    x: (logical_mouse.x / window_size.width * 128.).floor() as i32,
+                    y: (logical_mouse.y / window_size.height * 128.).floor() as i32,
                 }))
             }
             glutin::event::WindowEvent::MouseInput {
@@ -134,8 +112,6 @@ fn handle_event(
                 state: input_state,
                 ..
             } => {
-                keys.mouse = Some(input_state == &ElementState::Pressed);
-
                 let mouse_event = match input_state {
                     ElementState::Pressed => MouseEvent::Down(MouseButton::Left),
                     ElementState::Released => MouseEvent::Up(MouseButton::Left),
@@ -144,7 +120,7 @@ fn handle_event(
                 Some(Event::Mouse(mouse_event))
             }
             glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                handle_key(input, keys).map(Event::Keyboard)
+                handle_keyboard_event(input).map(Event::Keyboard)
             }
             _ => None,
         },
@@ -175,22 +151,8 @@ fn handle_event(
     }
 }
 
-fn handle_key(input: &KeyboardInput, keys: &mut Keys) -> Option<KeyboardEvent> {
+fn handle_keyboard_event(input: &KeyboardInput) -> Option<KeyboardEvent> {
     let key = input.virtual_keycode?;
-
-    let mut other = None;
-    let key_ref = match key {
-        VirtualKeyCode::X => &mut keys.x,
-        VirtualKeyCode::C => &mut keys.c,
-        VirtualKeyCode::Left => &mut keys.left,
-        VirtualKeyCode::Up => &mut keys.up,
-        VirtualKeyCode::Right => &mut keys.right,
-        VirtualKeyCode::Down => &mut keys.down,
-        VirtualKeyCode::Escape => &mut keys.escape,
-        _ => &mut other,
-    };
-    *key_ref = Some(input.state == ElementState::Pressed);
-
     let runty8_key = Key::from_virtual_keycode(key)?;
     let state = KeyState::from_state(input.state);
 
@@ -200,51 +162,14 @@ fn handle_key(input: &KeyboardInput, keys: &mut Keys) -> Option<KeyboardEvent> {
     })
 }
 
-pub(crate) struct Keys {
-    pub(crate) left: Option<bool>,
-    pub(crate) right: Option<bool>,
-    pub(crate) up: Option<bool>,
-    pub(crate) down: Option<bool>,
-    pub(crate) x: Option<bool>,
-    pub(crate) c: Option<bool>,
-    pub(crate) escape: Option<bool>,
-    pub(crate) mouse: Option<bool>,
-}
-
-impl Keys {
-    pub(crate) fn new() -> Self {
-        Self {
-            left: None,
-            right: None,
-            up: None,
-            down: None,
-            x: None,
-            c: None,
-            escape: None,
-            mouse: None,
-        }
-    }
-}
-
-pub struct Resources {
-    pub assets_path: String,
-    pub sprite_sheet: SpriteSheet,
-    pub sprite_flags: Flags,
-    pub map: Map,
-}
-
-fn update_app<'a>(
-    app: &'a mut (impl AppCompat + 'static),
-    editor: &'a mut Editor,
+fn update_app<'a, Game: App>(
+    controller: &'a mut Controller<Game>,
     internal_state: &'a mut InternalState,
     resources: &'a mut Resources,
     draw_data: &'a mut DrawData,
     event: Option<Event>,
 ) {
-    match internal_state.scene {
-        Scene::App => refresh_app(app, resources, internal_state, draw_data, event),
-        Scene::Editor => refresh_app(editor, resources, internal_state, draw_data, event),
-    }
+    refresh_app(controller, resources, internal_state, draw_data, event);
 }
 
 fn refresh_app(
