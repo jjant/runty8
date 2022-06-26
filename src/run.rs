@@ -11,11 +11,11 @@ use crate::{Key, KeyboardEvent, State};
 use glium::backend::Facade;
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
 use glium::glutin::event::{self, ElementState, KeyboardInput};
-use glium::glutin::event_loop::ControlFlow;
+use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::index::NoIndices;
 use glium::texture::{RawImage2d, SrgbTexture2d};
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
-use glium::{glutin, Program, Surface};
+use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 
 pub(crate) fn run_app<Game: App + 'static>(
@@ -35,12 +35,7 @@ pub(crate) fn run_app<Game: App + 'static>(
 
     let mut controller = Controller::<Game>::init(&State::new(&internal_state, &mut resources));
     let event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
-    let cb = glutin::ContextBuilder::new();
-    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
-    {
-        display.gl_window().window().set_cursor_visible(false);
-    }
+    let display = make_display(&event_loop);
     let scale_factor = display.gl_window().window().scale_factor();
     let mut logical_size = display
         .gl_window()
@@ -48,10 +43,7 @@ pub(crate) fn run_app<Game: App + 'static>(
         .inner_size()
         .to_logical(scale_factor);
 
-    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-
-    let program =
-        glium::Program::from_source(&display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+    let (indices, program) = make_gl_program(&display);
 
     event_loop.run(move |glutin_event, _, control_flow| {
         let event: Option<Event> =
@@ -186,4 +178,23 @@ fn do_draw(
         )
         .unwrap();
     target.finish().unwrap();
+}
+
+fn make_display(event_loop: &EventLoop<()>) -> Display {
+    let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
+    let cb = glutin::ContextBuilder::new();
+    let display = glium::Display::new(wb, cb, event_loop).unwrap();
+    {
+        display.gl_window().window().set_cursor_visible(false);
+    }
+
+    display
+}
+
+fn make_gl_program(display: &impl Facade) -> (NoIndices, Program) {
+    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
+    let program =
+        glium::Program::from_source(display, VERTEX_SHADER, FRAGMENT_SHADER, None).unwrap();
+
+    (indices, program)
 }
