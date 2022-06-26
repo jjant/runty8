@@ -269,7 +269,7 @@ fn refresh_app(
 
     let mut state = State::new(internal_state, resources);
     let mut draw_context = DrawContext::new(&mut state, draw_data);
-    view.as_widget().draw(&mut draw_context);
+    view.as_widget_mut().draw(&mut draw_context);
     drop(view);
 
     if let Some(sub_msg) = event.and_then(|e| app.subscriptions(&e)) {

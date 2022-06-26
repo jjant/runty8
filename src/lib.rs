@@ -6,6 +6,7 @@ pub mod runtime;
 pub mod ui;
 pub use screen::Resources;
 
+mod controller;
 mod draw;
 mod editor;
 mod font;

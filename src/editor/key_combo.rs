@@ -1,6 +1,42 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::{Key, KeyState};
+use crate::{Key, KeyState, KeyboardEvent};
+
+#[derive(Debug)]
+pub struct KeyCombos<Id> {
+    key_combos: Vec<KeyCombo<Id>>,
+}
+
+impl<Id> KeyCombos<Id> {
+    pub fn new() -> Self {
+        Self { key_combos: vec![] }
+    }
+
+    pub fn push(mut self, key_combo: KeyCombo<Id>) -> Self {
+        self.key_combos.push(key_combo);
+
+        self
+    }
+}
+
+impl<Id: Copy> KeyCombos<Id> {
+    pub fn on_event(&mut self, key_event: KeyboardEvent, mut on_combo: impl FnMut(Id)) {
+        let mut handled = false;
+        for key_combo in self.key_combos.iter_mut() {
+            match key_event.state {
+                KeyState::Up => key_combo.key_up(key_event.key),
+                KeyState::Down => {
+                    if let Some(action_id) = key_combo.key_down(key_event.key) {
+                        if !handled {
+                            handled = true;
+                            on_combo(action_id)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct KeyCombo<Id> {

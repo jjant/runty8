@@ -109,7 +109,7 @@ impl<'a, Msg: Copy + Debug> Widget for Notification<'a, Msg> {
         }
     }
 
-    fn draw(&self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut DrawContext) {
         let x = 1;
         let base_y = 122;
         let offset_y_max = 8;

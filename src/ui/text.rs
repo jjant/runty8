@@ -35,7 +35,7 @@ impl<'a, Msg: Copy + Debug> Widget for Text<'a, Msg> {
     ) {
     }
 
-    fn draw(&self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut DrawContext) {
         draw.print(self.text, self.x, self.y, self.color);
     }
 }

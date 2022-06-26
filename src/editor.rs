@@ -1,4 +1,4 @@
-mod key_combo;
+pub mod key_combo;
 mod notification;
 pub mod serialize;
 mod undo_redo;
