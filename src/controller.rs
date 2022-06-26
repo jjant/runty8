@@ -1,23 +1,13 @@
+use crate::runtime::draw_context::{DrawContext, DrawData};
 use crate::runtime::input::Keys;
+use crate::ui::DispatchEvent;
 use crate::{
     app::{self, App, AppCompat, ElmApp},
     editor::{self, key_combo::KeyCombos, Editor},
-    runtime::{
-        draw_context::DrawData,
-        state::{InternalState, State},
-    },
+    runtime::state::{InternalState, State},
     ui::{DrawFn, Element},
     Event, Key, KeyboardEvent, MouseButton, MouseEvent, Resources,
 };
-
-#[derive(Debug)]
-pub(crate) struct Controller<Game> {
-    scene: Scene,
-    editor: Editor,
-    app: Game,
-    key_combos: KeyCombos<KeyComboAction>,
-    keys: Keys,
-}
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg {
@@ -34,12 +24,19 @@ enum KeyComboAction {
     SwitchScene,
 }
 
-impl<Game: App> AppCompat for Controller<Game> {
-    type Msg = Msg;
+#[derive(Debug)]
+pub(crate) struct Controller<Game> {
+    scene: Scene,
+    editor: Editor,
+    app: Game,
+    key_combos: KeyCombos<KeyComboAction>,
+    keys: Keys,
+}
 
-    fn init(state: &State) -> Self {
+impl<Game: App> Controller<Game> {
+    pub fn init(state: &State) -> Self {
         Self {
-            scene: Scene::Editor,
+            scene: Scene::initial(),
             editor: <Editor as ElmApp>::init(),
             app: App::init(state),
             key_combos: KeyCombos::new()
@@ -49,11 +46,11 @@ impl<Game: App> AppCompat for Controller<Game> {
         }
     }
 
-    fn update(
+    pub fn update(
         &mut self,
-        msg: &Self::Msg,
+        msg: &Msg,
+        internal_state: &mut InternalState,
         resources: &mut Resources,
-        internal_state: &InternalState,
     ) {
         match msg {
             Msg::Editor(editor_msg) => {
@@ -64,7 +61,7 @@ impl<Game: App> AppCompat for Controller<Game> {
                 self.app.update(&state);
             }
             &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
-                // internal_state.on_mouse_move(x, y);
+                internal_state.on_mouse_move(x, y);
             }
             &Msg::MouseEvent(event) => {
                 let left_pressed = match event {
@@ -79,21 +76,16 @@ impl<Game: App> AppCompat for Controller<Game> {
             }
 
             &Msg::KeyboardEvent(event) => {
-                self.handle_key_combos(event, &State::new(internal_state, resources));
+                self.handle_key_combos(event, internal_state, resources);
                 self.keys.on_event(event);
             }
             &Msg::Tick => {
-                // internal_state.update_keys(&self.keys);
+                internal_state.update_keys(&self.keys);
             }
         }
     }
 
-    fn view(
-        &mut self,
-        resources: &mut Resources,
-        _: &mut InternalState,
-        _: &mut DrawData,
-    ) -> Element<'_, Self::Msg> {
+    pub fn view(&mut self, resources: &mut Resources) -> Element<'_, Msg> {
         match self.scene {
             Scene::Editor => <Editor as ElmApp>::view(&mut self.editor, resources).map(Msg::Editor),
             Scene::App => DrawFn::new(|draw| {
@@ -103,8 +95,8 @@ impl<Game: App> AppCompat for Controller<Game> {
         }
     }
 
-    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg> {
-        let sub_msgs: Vec<Self::Msg> = match self.scene {
+    pub fn subscriptions(&self, event: &Event) -> Vec<Msg> {
+        let sub_msgs: Vec<Msg> = match self.scene {
             Scene::Editor => <Editor as ElmApp>::subscriptions(&self.editor, event)
                 .into_iter()
                 .map(Msg::Editor)
@@ -117,8 +109,8 @@ impl<Game: App> AppCompat for Controller<Game> {
         };
 
         let own_msgs = match event {
-            Event::Mouse(_) => None,
-            Event::Keyboard(event) => Some(Msg::KeyboardEvent(*event)),
+            Event::Mouse(mouse_event) => Some(Msg::MouseEvent(*mouse_event)),
+            Event::Keyboard(keyboard_event) => Some(Msg::KeyboardEvent(*keyboard_event)),
             Event::Tick { .. } => Some(Msg::Tick),
         }
         .into_iter();
@@ -128,14 +120,52 @@ impl<Game: App> AppCompat for Controller<Game> {
 }
 
 impl<Game: App> Controller<Game> {
-    fn handle_key_combos(&mut self, key_event: KeyboardEvent, state: &State) {
+    fn handle_key_combos(
+        &mut self,
+        key_event: KeyboardEvent,
+        internal_state: &InternalState,
+        resources: &mut Resources,
+    ) {
+        let state = State::new(internal_state, resources);
         self.key_combos.on_event(key_event, |action| match action {
             KeyComboAction::RestartGame => {
-                self.app = App::init(state);
+                self.app = App::init(&state);
                 self.scene = Scene::App;
             }
             KeyComboAction::SwitchScene => self.scene.flip(),
         });
+    }
+
+    /// Thing that actually calls update/orchestrates stuff
+    pub(crate) fn step<'a>(
+        &mut self,
+        internal_state: &'a mut InternalState,
+        resources: &'a mut Resources,
+        draw_data: &'a mut DrawData,
+        event: Option<Event>,
+    ) {
+        let cursor_position = (internal_state.mouse_x, internal_state.mouse_y);
+        let mut view = self.view(resources);
+
+        let mut msg_queue = vec![];
+        let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
+
+        if let Some(event) = event {
+            view.as_widget_mut()
+                .on_event(event, cursor_position, dispatch_event);
+        }
+
+        let mut state = State::new(internal_state, resources);
+        let mut draw_context = DrawContext::new(&mut state, draw_data);
+        view.as_widget_mut().draw(&mut draw_context);
+        drop(view);
+
+        for subscription_msg in event.into_iter().flat_map(|e| self.subscriptions(&e)) {
+            msg_queue.push(subscription_msg);
+        }
+        for msg in msg_queue.into_iter() {
+            self.update(&msg, internal_state, resources);
+        }
     }
 }
 

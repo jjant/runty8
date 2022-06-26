@@ -8,7 +8,6 @@ pub(crate) struct Keys {
     pub(crate) down: Option<bool>,
     pub(crate) x: Option<bool>,
     pub(crate) c: Option<bool>,
-    pub(crate) escape: Option<bool>,
     pub(crate) mouse: Option<bool>,
 }
 
@@ -21,7 +20,6 @@ impl Keys {
             down: None,
             x: None,
             c: None,
-            escape: None,
             mouse: None,
         }
     }
@@ -35,7 +33,6 @@ impl Keys {
             Key::UpArrow => &mut self.up,
             Key::RightArrow => &mut self.right,
             Key::DownArrow => &mut self.down,
-            Key::Escape => &mut self.escape,
             _ => &mut other,
         };
         *key_ref = Some(event.state == KeyState::Down);

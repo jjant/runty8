@@ -1,12 +1,11 @@
-use crate::app::{App, AppCompat};
+use crate::app::App;
 use crate::controller::Controller;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::runtime::draw_context::{DrawContext, DrawData};
+use crate::runtime::draw_context::DrawData;
 use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::runtime::state::InternalState;
-use crate::ui::DispatchEvent;
 use crate::{Event, KeyState, MouseButton, MouseEvent, Resources};
 use crate::{Key, KeyboardEvent, State};
 use glium::backend::Facade;
@@ -33,9 +32,8 @@ pub(crate) fn run_app<Game: App + 'static>(
         sprite_sheet,
         map,
     };
-    let state = State::new(&internal_state, &mut resources);
 
-    let mut controller = Controller::<Game>::init(&state);
+    let mut controller = Controller::<Game>::init(&State::new(&internal_state, &mut resources));
     let event_loop = glutin::event_loop::EventLoop::new();
     let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
     let cb = glutin::ContextBuilder::new();
@@ -59,13 +57,7 @@ pub(crate) fn run_app<Game: App + 'static>(
         let event: Option<Event> =
             translate_event(&glutin_event, scale_factor, &mut logical_size, control_flow);
 
-        update_app(
-            &mut controller,
-            &mut internal_state,
-            &mut resources,
-            &mut draw_data,
-            event,
-        );
+        controller.step(&mut internal_state, &mut resources, &mut draw_data, event);
 
         do_draw(
             &display,
@@ -160,49 +152,6 @@ fn handle_keyboard_event(input: &KeyboardInput) -> Option<KeyboardEvent> {
         key: runty8_key,
         state,
     })
-}
-
-fn update_app<'a, Game: App>(
-    controller: &'a mut Controller<Game>,
-    internal_state: &'a mut InternalState,
-    resources: &'a mut Resources,
-    draw_data: &'a mut DrawData,
-    event: Option<Event>,
-) {
-    refresh_app(controller, resources, internal_state, draw_data, event);
-}
-
-fn refresh_app(
-    app: &mut impl AppCompat,
-    resources: &mut Resources,
-    internal_state: &mut InternalState,
-    draw_data: &mut DrawData,
-    event: Option<Event>,
-) {
-    let mut view = app.view(resources, internal_state, draw_data);
-
-    let mut msg_queue = vec![];
-    let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
-
-    if let Some(event) = event {
-        view.as_widget_mut().on_event(
-            event,
-            (internal_state.mouse_x, internal_state.mouse_y),
-            dispatch_event,
-        );
-    }
-
-    let mut state = State::new(internal_state, resources);
-    let mut draw_context = DrawContext::new(&mut state, draw_data);
-    view.as_widget_mut().draw(&mut draw_context);
-    drop(view);
-
-    for subscription_msg in event.into_iter().flat_map(|e| app.subscriptions(&e)) {
-        msg_queue.push(subscription_msg);
-    }
-    for msg in msg_queue.into_iter() {
-        app.update(&msg, resources, internal_state);
-    }
 }
 
 fn set_next_timer(control_flow: &mut ControlFlow) {

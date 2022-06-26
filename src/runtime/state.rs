@@ -18,7 +18,6 @@ pub struct InternalState {
     down: ButtonState,
     x: ButtonState,
     c: ButtonState,
-    pub(crate) escape: ButtonState,
     pub mouse_x: i32,
     pub mouse_y: i32,
     mouse_pressed: ButtonState,
@@ -33,7 +32,6 @@ impl InternalState {
             down: NotPressed,
             x: NotPressed,
             c: NotPressed,
-            escape: NotPressed,
             mouse_x: 64,
             mouse_y: 64,
             mouse_pressed: NotPressed,
@@ -52,7 +50,6 @@ impl InternalState {
         self.down.update(keys.down);
         self.x.update(keys.x);
         self.c.update(keys.c);
-        self.escape.update(keys.escape);
         self.mouse_pressed.update(keys.mouse);
     }
 
