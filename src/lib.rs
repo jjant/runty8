@@ -237,6 +237,7 @@ pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<(
     Ok(())
 }
 
+/// Game assets: sprite sheet, map, flags.
 #[derive(Debug)]
 pub struct Resources {
     pub(crate) assets_path: String,
