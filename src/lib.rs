@@ -254,7 +254,7 @@ pub(crate) fn write_and_log(file_name: &str, contents: &str) {
 }
 
 /*Pico8 math functions */
-/// https://pico-8.fandom.com/wiki/Sin
+/// <https://pico-8.fandom.com/wiki/Sin>
 pub fn sin(f: f32) -> f32 {
     (-f * 2.0 * PI).sin()
 }
