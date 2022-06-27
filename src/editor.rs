@@ -1,4 +1,4 @@
-mod key_combo;
+pub mod key_combo;
 mod notification;
 pub mod serialize;
 mod undo_redo;
@@ -6,18 +6,18 @@ use crate::app::{ElmApp, Right, WhichOne};
 use crate::editor::notification::Notification;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
-use crate::screen::Resources;
 use crate::ui::button::{self, Button};
 use crate::ui::{
     cursor::{self, Cursor},
     text::Text,
 };
 use crate::ui::{DrawFn, Element, Tree};
+use crate::Resources;
 use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;
 
-use self::key_combo::KeyCombo;
+use self::key_combo::KeyCombos;
 use self::undo_redo::{Command, Commands};
 
 #[derive(Debug)]
@@ -41,7 +41,7 @@ pub(crate) struct Editor {
     hovered_map_button: usize,
     show_sprites_in_map: bool,
     notification: notification::State,
-    key_combos: Vec<KeyCombo<KeyComboAction>>,
+    key_combos: KeyCombos<KeyComboAction>,
     clipboard: Clipboard,
     commands: Commands,
 }
@@ -79,28 +79,16 @@ impl Editor {
     }
 
     fn handle_key_combos(&mut self, key_event: KeyboardEvent, resources: &mut Resources) {
-        let mut handled = false;
-
-        for key_combo in self.key_combos.iter_mut() {
-            match key_event.state {
-                KeyState::Up => key_combo.key_up(key_event.key),
-                KeyState::Down => {
-                    if let Some(action) = key_combo.key_down(key_event.key) {
-                        if !handled {
-                            handled = true;
-                            handle_key_combo(
-                                action,
-                                self.selected_sprite,
-                                &mut self.notification,
-                                &mut self.clipboard,
-                                resources,
-                                &mut self.commands,
-                            );
-                        }
-                    }
-                }
-            }
-        }
+        self.key_combos.on_event(key_event, |action| {
+            handle_key_combo(
+                action,
+                self.selected_sprite,
+                &mut self.notification,
+                &mut self.clipboard,
+                resources,
+                &mut self.commands,
+            );
+        })
     }
 }
 
@@ -219,15 +207,14 @@ impl ElmApp for Editor {
             hovered_map_button: 0,
             show_sprites_in_map: false,
             notification: notification::State::new(),
-            key_combos: vec![
-                KeyCombo::new(KeyComboAction::Copy, Key::C, &[Key::Control]),
-                KeyCombo::new(KeyComboAction::Paste, Key::V, &[Key::Control]),
-                KeyCombo::new(KeyComboAction::Undo, Key::Z, &[Key::Control]),
-                KeyCombo::new(KeyComboAction::Redo, Key::Y, &[Key::Control]),
-                KeyCombo::new(KeyComboAction::Save, Key::S, &[Key::Control]),
-                KeyCombo::new(KeyComboAction::FlipVertically, Key::V, &[]),
-                KeyCombo::new(KeyComboAction::FlipHorizontally, Key::F, &[]),
-            ],
+            key_combos: KeyCombos::new()
+                .push(KeyComboAction::Copy, Key::C, &[Key::Control])
+                .push(KeyComboAction::Paste, Key::V, &[Key::Control])
+                .push(KeyComboAction::Undo, Key::Z, &[Key::Control])
+                .push(KeyComboAction::Redo, Key::Y, &[Key::Control])
+                .push(KeyComboAction::Save, Key::S, &[Key::Control])
+                .push(KeyComboAction::FlipVertically, Key::V, &[])
+                .push(KeyComboAction::FlipHorizontally, Key::F, &[]),
             clipboard: Clipboard::new(),
             commands: Commands::new(),
         }
@@ -364,12 +351,14 @@ impl ElmApp for Editor {
             .into()
     }
 
-    fn subscriptions(&self, event: &Event) -> Option<Msg> {
+    fn subscriptions(&self, event: &Event) -> Vec<Msg> {
         match event {
             Event::Mouse(_) => None,
-            Event::Keyboard(event @ KeyboardEvent { .. }) => Some(Msg::KeyboardEvent(*event)),
+            Event::Keyboard(event) => Some(Msg::KeyboardEvent(*event)),
             Event::Tick { .. } => None,
         }
+        .into_iter()
+        .collect()
     }
 }
 

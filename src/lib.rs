@@ -4,22 +4,21 @@
 pub mod app;
 pub mod runtime;
 pub mod ui;
-pub use screen::Resources;
 
+mod controller;
 mod draw;
 mod editor;
 mod font;
 mod graphics;
-mod screen;
+mod run;
+// mod screen;
 use crate::editor::serialize::Serialize;
 use app::AppCompat;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 use runtime::{
-    draw_context::DrawData,
     flags::Flags,
     map::Map,
     sprite_sheet::{Color, Sprite, SpriteSheet},
-    state::State,
 };
 use std::{f32::consts::PI, fmt::Debug};
 
@@ -43,6 +42,7 @@ pub enum MouseEvent {
         ///
         y: i32,
     },
+    // TODO: Refactor these two below to factor out the MouseButton
     /// Mouse button pressed
     Down(MouseButton),
     /// Mouse button released
@@ -79,6 +79,11 @@ pub enum Key {
     Y,
     Z,
     Control,
+    LeftArrow,
+    RightArrow,
+    UpArrow,
+    DownArrow,
+    Escape,
 }
 
 impl Key {
@@ -111,7 +116,11 @@ impl Key {
             VirtualKeyCode::Y => Some(Self::Y),
             VirtualKeyCode::Z => Some(Self::Z),
             VirtualKeyCode::LControl => Some(Self::Control),
-            // VirtualKeyCode::Escape => todo!(),
+            VirtualKeyCode::Left => Some(Self::LeftArrow),
+            VirtualKeyCode::Right => Some(Self::RightArrow),
+            VirtualKeyCode::Up => Some(Self::UpArrow),
+            VirtualKeyCode::Down => Some(Self::DownArrow),
+            VirtualKeyCode::Escape => Some(Self::Escape),
             _ => None,
         }
     }
@@ -217,11 +226,24 @@ pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<(
     let sprite_flags: Flags = create_sprite_flags(&assets_path);
     let sprite_sheet = create_sprite_sheet(&assets_path);
 
-    let draw_data = DrawData::new();
-
-    crate::screen::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
+    let resources = Resources {
+        assets_path,
+        sprite_sheet,
+        sprite_flags,
+        map,
+    };
+    crate::run::run_app::<T>(resources);
 
     Ok(())
+}
+
+/// Game assets: sprite sheet, map, flags.
+#[derive(Debug)]
+pub struct Resources {
+    pub(crate) assets_path: String,
+    pub(crate) sprite_sheet: SpriteSheet,
+    pub(crate) sprite_flags: Flags,
+    pub(crate) map: Map,
 }
 
 /* UTILS */
@@ -232,7 +254,7 @@ pub(crate) fn write_and_log(file_name: &str, contents: &str) {
 }
 
 /*Pico8 math functions */
-/// https://pico-8.fandom.com/wiki/Sin
+/// <https://pico-8.fandom.com/wiki/Sin>
 pub fn sin(f: f32) -> f32 {
     (-f * 2.0 * PI).sin()
 }

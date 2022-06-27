@@ -1,5 +1,5 @@
-use super::{flags::Flags, map::Map, sprite_sheet::SpriteSheet};
-use crate::screen::{Keys, Resources};
+use super::{flags::Flags, input::Keys, map::Map, sprite_sheet::SpriteSheet};
+use crate::Resources;
 use ButtonState::*;
 
 #[derive(Debug)]
@@ -18,11 +18,9 @@ pub struct InternalState {
     down: ButtonState,
     x: ButtonState,
     c: ButtonState,
-    pub(crate) escape: ButtonState,
     pub mouse_x: i32,
     pub mouse_y: i32,
     mouse_pressed: ButtonState,
-    pub(crate) scene: Scene,
 }
 
 impl InternalState {
@@ -34,12 +32,15 @@ impl InternalState {
             down: NotPressed,
             x: NotPressed,
             c: NotPressed,
-            escape: NotPressed,
             mouse_x: 64,
             mouse_y: 64,
             mouse_pressed: NotPressed,
-            scene: Scene::initial(),
         }
+    }
+
+    pub(crate) fn on_mouse_move(&mut self, mouse_x: i32, mouse_y: i32) {
+        self.mouse_x = mouse_x;
+        self.mouse_y = mouse_y;
     }
 
     pub(crate) fn update_keys(&mut self, keys: &Keys) {
@@ -49,7 +50,6 @@ impl InternalState {
         self.down.update(keys.down);
         self.x.update(keys.x);
         self.c.update(keys.c);
-        self.escape.update(keys.escape);
         self.mouse_pressed.update(keys.mouse);
     }
 
@@ -121,12 +121,10 @@ impl<'a> State<'a> {
     }
 }
 
-// TODO: Implement properly
-// TODO2: I think this is fine, now?
 #[derive(Debug)]
 pub(crate) enum ButtonState {
-    JustPressed,
-    Held,
+    JustPressed, // btn => true, btnp => true
+    Held,        // btn => true, btnp => false
     NotPressed,
 }
 
@@ -187,23 +185,4 @@ pub enum Button {
     X,
     C,
     Mouse,
-}
-
-#[derive(Debug)]
-pub enum Scene {
-    Editor,
-    App,
-}
-
-impl Scene {
-    fn initial() -> Self {
-        Scene::Editor
-    }
-
-    pub fn flip(&mut self) {
-        *self = match self {
-            Scene::Editor => Scene::App,
-            Scene::App => Scene::Editor,
-        }
-    }
 }

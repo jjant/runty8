@@ -100,7 +100,7 @@ struct Delta<T> {
     new: T,
 }
 
-impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
+impl<'a, Msg: Copy + Debug + 'a> Widget for Button<'a, Msg> {
     type Msg = Msg;
 
     fn on_event(
@@ -189,9 +189,9 @@ impl<'a, Msg: Copy + Debug> Widget for Button<'a, Msg> {
         }
     }
 
-    fn draw(&self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut DrawContext) {
         draw.append_camera(-self.x, -self.y);
-        self.content.as_widget().draw(draw);
+        self.content.as_widget_mut().draw(draw);
         draw.append_camera(self.x, self.y);
     }
 }

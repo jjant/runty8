@@ -47,7 +47,7 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
         self.state.cursor_position = cursor_position;
     }
 
-    fn draw(&self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut DrawContext) {
         draw.palt(Some(0));
         draw.raw_spr(
             Sprite::new(editor::MOUSE_SPRITE),

@@ -1,10 +1,13 @@
-use crate::runtime::{
-    draw_context::{DrawContext, DrawData},
-    state::{InternalState, State},
-};
-use crate::screen::Resources;
-use crate::ui::{Element, Tree};
+use crate::ui::Element;
 use crate::Event;
+use crate::Resources;
+use crate::{
+    runtime::{
+        draw_context::DrawContext,
+        state::{InternalState, State},
+    },
+    ui::DrawFn,
+};
 use std::fmt::Debug;
 
 /// A regular pico8 app
@@ -19,7 +22,7 @@ pub trait ElmApp: WhichOne<Which = Right> {
     fn init() -> Self;
     fn update(&mut self, msg: &Self::Msg, resources: &mut Resources);
     fn view(&mut self, resources: &Resources) -> Element<'_, Self::Msg>;
-    fn subscriptions(&self, event: &Event) -> Option<Self::Msg>;
+    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg>;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -47,13 +50,8 @@ pub trait AppCompat {
     type Msg: Copy + Debug;
     fn init(state: &State) -> Self;
     fn update(&mut self, msg: &Self::Msg, resources: &mut Resources, state: &InternalState);
-    fn view(
-        &mut self,
-        resources: &mut Resources,
-        state: &mut InternalState,
-        draw_data: &mut DrawData,
-    ) -> Element<'_, Self::Msg>;
-    fn subscriptions(&self, event: &Event) -> Option<Self::Msg>;
+    fn view(&mut self, resources: &mut Resources) -> Element<'_, Self::Msg>;
+    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg>;
 }
 
 impl<T> AppCompat for T
@@ -69,18 +67,11 @@ where
         <Self as IsEitherHelper<<T as WhichOne>::Which>>::update_helper(self, msg, resources, state)
     }
 
-    fn view(
-        &mut self,
-        resources: &mut Resources,
-        state: &mut InternalState,
-        draw_data: &mut DrawData,
-    ) -> Element<'_, Self::Msg> {
-        <Self as IsEitherHelper<<T as WhichOne>::Which>>::view_helper(
-            self, resources, state, draw_data,
-        )
+    fn view(&mut self, resources: &mut Resources) -> Element<'_, Self::Msg> {
+        <Self as IsEitherHelper<<T as WhichOne>::Which>>::view_helper(self, resources)
     }
 
-    fn subscriptions(&self, event: &Event) -> Option<Self::Msg> {
+    fn subscriptions(&self, event: &Event) -> Vec<Self::Msg> {
         <Self as IsEitherHelper<<T as WhichOne>::Which>>::subscriptions_helper(self, event)
     }
 }
@@ -95,13 +86,8 @@ pub trait IsEitherHelper<Which>: WhichOne {
         resources: &mut Resources,
         state: &InternalState,
     );
-    fn view_helper(
-        &mut self,
-        resources: &mut Resources,
-        state: &mut InternalState,
-        draw_data: &mut DrawData,
-    ) -> Element<'_, Self::MsgHelper>;
-    fn subscriptions_helper(&self, event: &Event) -> Option<Self::MsgHelper>;
+    fn view_helper(&mut self, resources: &mut Resources) -> Element<'_, Self::MsgHelper>;
+    fn subscriptions_helper(&self, event: &Event) -> Vec<Self::MsgHelper>;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -129,26 +115,18 @@ where
         <Self as App>::update(self, &state);
     }
 
-    fn view_helper(
-        &mut self,
-        resources: &mut Resources,
-        internal_state: &mut InternalState,
-        draw_data: &mut DrawData,
-    ) -> Element<'_, Self::MsgHelper> {
-        let mut state = State::new(internal_state, resources);
-        let mut draw = DrawContext::new(&mut state, draw_data);
-        <Self as App>::draw(self, &mut draw);
-
-        // Ugly hack
-        Tree::new().into()
+    fn view_helper(&mut self, _: &mut Resources) -> Element<'_, Self::MsgHelper> {
+        DrawFn::new(|draw| <Self as App>::draw(self, draw)).into()
     }
 
-    fn subscriptions_helper(&self, event: &Event) -> Option<Self::MsgHelper> {
+    fn subscriptions_helper(&self, event: &Event) -> Vec<Self::MsgHelper> {
         match event {
             Event::Tick { .. } => Some(Pico8AppMsg::Tick),
             Event::Mouse(_) => None,
             Event::Keyboard(_) => None,
         }
+        .into_iter()
+        .collect()
     }
 }
 
@@ -171,16 +149,11 @@ where
         <T as ElmApp>::update(self, msg, resources)
     }
 
-    fn view_helper(
-        &mut self,
-        resources: &mut Resources,
-        _: &mut InternalState,
-        _: &mut DrawData,
-    ) -> Element<'_, Self::MsgHelper> {
+    fn view_helper(&mut self, resources: &mut Resources) -> Element<'_, Self::MsgHelper> {
         <T as ElmApp>::view(self, resources)
     }
 
-    fn subscriptions_helper(&self, event: &Event) -> Option<Self::MsgHelper> {
+    fn subscriptions_helper(&self, event: &Event) -> Vec<Self::MsgHelper> {
         <Self as ElmApp>::subscriptions(self, event)
     }
 }
