@@ -6,9 +6,16 @@ use crate::editor::serialize::Serialize;
 use crate::runtime::sprite_sheet::SpriteSheet;
 
 #[derive(Debug)]
-pub struct Flags {
+pub(crate) struct Flags {
     flags: [u8; SpriteSheet::SPRITE_COUNT],
 }
+
+impl Flags {
+    pub(crate) fn file_name() -> String {
+        "sprite_flags.txt".to_owned()
+    }
+}
+
 impl Display for Flags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(
@@ -102,10 +109,6 @@ impl Flags {
 }
 
 impl Serialize for Flags {
-    fn file_name() -> String {
-        "sprite_flags.txt".to_owned()
-    }
-
     fn serialize(&self) -> String {
         self.flags
             .iter()

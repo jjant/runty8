@@ -5,20 +5,20 @@ use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use std::fmt::Display;
 
-pub fn serialize_named<T: Serialize>(assets_path: &str, file_name: &str, serializable: &T) {
+pub fn serialize(assets_path: &str, file_name: &str, serializable: &impl Serialize) {
     let file_path = format!("{assets_path}/{}", file_name);
 
     crate::write_and_log(&file_path, &serializable.serialize());
 }
 
-pub fn serialize<T: Serialize>(assets_path: &str, serializable: &T) {
-    serialize_named(assets_path, &T::file_name(), serializable);
+pub trait Serialize {
+    fn serialize(&self) -> String;
 }
 
-pub trait Serialize {
-    fn file_name() -> String;
-
-    fn serialize(&self) -> String;
+impl<T: Serialize + ?Sized> Serialize for &T {
+    fn serialize(&self) -> String {
+        T::serialize(self)
+    }
 }
 
 #[repr(C, packed)]
@@ -130,10 +130,6 @@ impl Ppm {
 }
 
 impl Serialize for Ppm {
-    fn file_name() -> String {
-        "sprite_sheet.ppm".to_owned()
-    }
-
     /// Plain PPM format (P3)
     fn serialize(&self) -> String {
         let header = format!("P3\n{} {}\n255", self.width, self.height);

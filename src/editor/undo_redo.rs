@@ -3,7 +3,7 @@ use crate::runtime::sprite_sheet::SpriteSheet;
 use super::notification;
 
 #[derive(Debug)]
-pub struct Commands {
+pub(crate) struct Commands {
     commands: Vec<Command>,
     current: usize,
 }

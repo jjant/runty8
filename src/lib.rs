@@ -11,8 +11,6 @@ mod editor;
 mod font;
 mod graphics;
 mod run;
-// mod screen;
-use crate::editor::serialize::Serialize;
 use app::AppCompat;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 use runtime::{

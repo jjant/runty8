@@ -4,6 +4,7 @@ pub mod serialize;
 mod undo_redo;
 use crate::app::{ElmApp, Right, WhichOne};
 use crate::editor::notification::Notification;
+use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
 use crate::ui::button::{self, Button};
@@ -18,6 +19,7 @@ use itertools::Itertools;
 use serialize::serialize;
 
 use self::key_combo::KeyCombos;
+use self::serialize::{Ppm, Serialize};
 use self::undo_redo::{Command, Commands};
 
 #[derive(Debug)]
@@ -156,9 +158,20 @@ fn handle_key_combo(
 
 fn save(notification: &mut notification::State, resources: &Resources) {
     notification.alert("SAVED".to_owned());
-    serialize(&resources.assets_path, &resources.sprite_flags);
-    serialize(&resources.assets_path, &resources.sprite_sheet);
-    serialize(&resources.assets_path, &resources.map);
+
+    let map_ppm = Ppm::from_map(&resources.map, &resources.sprite_sheet);
+    let sprite_sheet_ppm = Ppm::from_sprite_sheet(&resources.sprite_sheet);
+    let to_serialize: &[(&str, &dyn Serialize)] = &[
+        (&Flags::file_name(), &resources.sprite_flags),
+        (&SpriteSheet::file_name(), &resources.sprite_sheet),
+        (&Map::file_name(), &resources.map),
+        ("map.ppm", &map_ppm),
+        ("sprite_sheet.ppm", &sprite_sheet_ppm),
+    ];
+
+    for (name, serializable) in to_serialize.iter() {
+        serialize(&resources.assets_path, name, serializable);
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

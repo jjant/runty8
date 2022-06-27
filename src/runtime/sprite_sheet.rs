@@ -5,8 +5,14 @@ use itertools::Itertools;
 use crate::editor::serialize::Serialize;
 
 #[derive(Debug)]
-pub struct SpriteSheet {
+pub(crate) struct SpriteSheet {
     pub(crate) sprite_sheet: Vec<Color>,
+}
+
+impl SpriteSheet {
+    pub(crate) fn file_name() -> String {
+        "sprite_sheet.txt".to_owned()
+    }
 }
 
 impl SpriteSheet {
@@ -81,10 +87,6 @@ impl SpriteSheet {
 }
 
 impl Serialize for SpriteSheet {
-    fn file_name() -> String {
-        "sprite_sheet.txt".to_owned()
-    }
-
     fn serialize(&self) -> String {
         let lines = self.sprite_sheet.chunks(128).map(|chunk| {
             Itertools::intersperse(chunk.iter().map(|n| format!("{:X}", n)), "".to_owned())

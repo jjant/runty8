@@ -6,9 +6,15 @@ use itertools::Itertools;
 type SpriteId = u8;
 
 #[derive(Debug, Clone)]
-pub struct Map {
+pub(crate) struct Map {
     // Don't really want the size to change
     pub(crate) map: [SpriteId; Self::MAP_SIZE],
+}
+
+impl Map {
+    pub(crate) fn file_name() -> String {
+        "map.txt".to_owned()
+    }
 }
 
 impl Map {
@@ -90,10 +96,6 @@ impl Map {
 }
 
 impl Serialize for Map {
-    fn file_name() -> String {
-        "map.txt".to_owned()
-    }
-
     // TODO: Make sure this works
     fn serialize(&self) -> String {
         self.map
