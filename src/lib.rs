@@ -16,7 +16,6 @@ use crate::editor::serialize::Serialize;
 use app::AppCompat;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 use runtime::{
-    draw_context::DrawData,
     flags::Flags,
     map::Map,
     sprite_sheet::{Color, Sprite, SpriteSheet},
@@ -227,18 +226,23 @@ pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<(
     let sprite_flags: Flags = create_sprite_flags(&assets_path);
     let sprite_sheet = create_sprite_sheet(&assets_path);
 
-    let draw_data = DrawData::new();
-
-    crate::run::run_app::<T>(assets_path, map, sprite_flags, sprite_sheet, draw_data);
+    let resources = Resources {
+        assets_path,
+        sprite_sheet,
+        sprite_flags,
+        map,
+    };
+    crate::run::run_app::<T>(resources);
 
     Ok(())
 }
 
+#[derive(Debug)]
 pub struct Resources {
-    pub assets_path: String,
-    pub sprite_sheet: SpriteSheet,
-    pub sprite_flags: Flags,
-    pub map: Map,
+    pub(crate) assets_path: String,
+    pub(crate) sprite_sheet: SpriteSheet,
+    pub(crate) sprite_flags: Flags,
+    pub(crate) map: Map,
 }
 
 /* UTILS */

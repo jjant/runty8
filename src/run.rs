@@ -2,9 +2,6 @@ use crate::app::AppCompat;
 use crate::controller::Controller;
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::DrawData;
-use crate::runtime::flags::Flags;
-use crate::runtime::map::Map;
-use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::{Event, KeyState, MouseButton, MouseEvent, Resources};
 use crate::{Key, KeyboardEvent};
 use glium::backend::Facade;
@@ -17,20 +14,8 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 
-pub(crate) fn run_app<Game: AppCompat + 'static>(
-    assets_path: String,
-    map: Map,
-    sprite_flags: Flags,
-    sprite_sheet: SpriteSheet,
-    mut draw_data: DrawData,
-) {
-    let mut resources = Resources {
-        assets_path,
-        sprite_flags,
-        sprite_sheet,
-        map,
-    };
-    let mut controller = Controller::<Game>::init(&mut resources);
+pub(crate) fn run_app<Game: AppCompat + 'static>(resources: Resources) {
+    let mut controller = Controller::<Game>::init(resources);
     let event_loop = glutin::event_loop::EventLoop::new();
     let display = make_display(&event_loop);
     let scale_factor = display.gl_window().window().scale_factor();
@@ -42,11 +27,12 @@ pub(crate) fn run_app<Game: AppCompat + 'static>(
 
     let (indices, program) = make_gl_program(&display);
 
+    let mut draw_data = DrawData::new();
     event_loop.run(move |glutin_event, _, control_flow| {
         let event: Option<Event> =
             translate_event(&glutin_event, scale_factor, &mut logical_size, control_flow);
 
-        controller.step(&mut resources, &mut draw_data, event);
+        controller.step(&mut draw_data, event);
 
         do_draw(
             &display,
