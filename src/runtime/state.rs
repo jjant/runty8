@@ -121,12 +121,10 @@ impl<'a> State<'a> {
     }
 }
 
-// TODO: Implement properly
-// TODO2: I think this is fine, now?
 #[derive(Debug)]
 pub(crate) enum ButtonState {
-    JustPressed,
-    Held,
+    JustPressed, // btn => true, btnp => true
+    Held,        // btn => true, btnp => false
     NotPressed,
 }
 
