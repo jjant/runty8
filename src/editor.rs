@@ -1,7 +1,9 @@
 pub mod key_combo;
 mod notification;
 pub mod serialize;
+mod tool_size;
 mod undo_redo;
+
 use crate::app::{ElmApp, Right, WhichOne};
 use crate::editor::notification::Notification;
 use crate::runtime::flags::Flags;
@@ -13,13 +15,14 @@ use crate::ui::{
     text::Text,
 };
 use crate::ui::{DrawFn, Element, Tree};
-use crate::Resources;
 use crate::{Event, Key, KeyState, KeyboardEvent};
+use crate::{MouseEvent, Resources};
 use itertools::Itertools;
 use serialize::serialize;
 
 use self::key_combo::KeyCombos;
 use self::serialize::{Ppm, Serialize};
+use self::tool_size::BrushSize;
 use self::undo_redo::{Command, Commands};
 
 #[derive(Debug)]
@@ -46,6 +49,7 @@ pub(crate) struct Editor {
     key_combos: KeyCombos<KeyComboAction>,
     clipboard: Clipboard,
     commands: Commands,
+    brush_size: BrushSize,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -68,6 +72,7 @@ pub(crate) enum Msg {
     MapSpriteHovered(usize),
     ClickedMapTile { x: usize, y: usize },
     KeyboardEvent(KeyboardEvent),
+    MouseEvent(MouseEvent),
 }
 
 impl Editor {
@@ -230,6 +235,7 @@ impl ElmApp for Editor {
                 .push(KeyComboAction::FlipHorizontally, Key::F, &[]),
             clipboard: Clipboard::new(),
             commands: Commands::new(),
+            brush_size: BrushSize::Tiny,
         }
     }
 
@@ -242,7 +248,12 @@ impl ElmApp for Editor {
                     KeyboardEvent {
                         key: Key::C,
                         state: KeyState::Down,
-                    } => self.switch_map_mode(),
+                    } => {
+                        self.brush_size = self.brush_size.next_size();
+                        self.notification
+                            .alert(format!("BRUSH_SIZE: {:?}", self.brush_size))
+                    }
+
                     KeyboardEvent {
                         key,
                         state: KeyState::Down,
@@ -309,6 +320,11 @@ impl ElmApp for Editor {
             &Msg::ClickedMapTile { x, y } => {
                 resources.map.mset(x, y, self.selected_sprite as u8);
             }
+            &Msg::MouseEvent(mouse_event) => {
+                if let MouseEvent::Move { x, y } = mouse_event {
+                    self.bottom_bar_text = format!("{} {}", x, y);
+                }
+            }
         }
     }
 
@@ -332,6 +348,7 @@ impl ElmApp for Editor {
                     resources.sprite_sheet.get_sprite(self.selected_sprite),
                     &mut self.flag_buttons,
                     &mut self.pixel_buttons,
+                    self.brush_size,
                 ),
                 Tab::MapEditor => Tree::new()
                     .push(map_view(
@@ -366,7 +383,7 @@ impl ElmApp for Editor {
 
     fn subscriptions(&self, event: &Event) -> Vec<Msg> {
         match event {
-            Event::Mouse(_) => None,
+            Event::Mouse(mouse_event) => Some(Msg::MouseEvent(*mouse_event)),
             Event::Keyboard(event) => Some(Msg::KeyboardEvent(*event)),
             Event::Tick { .. } => None,
         }
@@ -397,6 +414,7 @@ fn sprite_editor_view<'a, 'b>(
     selected_sprite: &'b Sprite,
     flag_buttons: &'a mut [button::State],
     pixel_buttons: &'a mut [button::State],
+    brush_size: BrushSize,
 ) -> Element<'a, Msg> {
     Tree::new()
         .push(color_selector(
@@ -410,6 +428,7 @@ fn sprite_editor_view<'a, 'b>(
         ))
         .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
+        .push(tool_size::view(79, 55, brush_size, selected_color))
         .into()
 }
 
