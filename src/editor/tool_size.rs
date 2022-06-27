@@ -2,34 +2,15 @@ use std::fmt::Debug;
 
 use crate::{
     runtime::{draw_context::colors, sprite_sheet::Color},
-    ui::{DrawFn, Element},
+    ui::{slider::SliderValue, DrawFn, Element},
 };
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum BrushSize {
-    Tiny,
-    Small,
-    Medium,
-    Large,
-}
-
-impl BrushSize {
-    pub(crate) fn next_size(&self) -> Self {
-        match self {
-            BrushSize::Tiny => BrushSize::Small,
-            BrushSize::Small => BrushSize::Medium,
-            BrushSize::Medium => BrushSize::Large,
-            BrushSize::Large => BrushSize::Tiny,
-        }
-    }
-
-    fn to_screen_size(self) -> i32 {
-        match self {
-            BrushSize::Tiny => 1,
-            BrushSize::Small => 2,
-            BrushSize::Medium => 3,
-            BrushSize::Large => 5,
-        }
+fn slider_to_screen_size(value: SliderValue) -> i32 {
+    match value {
+        SliderValue::Tiny => 1,
+        SliderValue::Small => 2,
+        SliderValue::Medium => 3,
+        SliderValue::Large => 5,
     }
 }
 
@@ -37,13 +18,13 @@ const WIDGET_SIZE: i32 = 7;
 pub(crate) fn view<'a, Msg: Copy + Debug + 'a>(
     x: i32,
     y: i32,
-    brush_size: BrushSize,
+    brush_size: SliderValue,
     selected_color: Color,
 ) -> Element<'a, Msg> {
     let local_center_x = WIDGET_SIZE / 2;
     let local_center_y = WIDGET_SIZE / 2;
 
-    let size = brush_size.to_screen_size();
+    let size = slider_to_screen_size(brush_size);
 
     let local_left = local_center_x - (size - 1) / 2;
     let local_top = local_center_y - (size - 1) / 2;
