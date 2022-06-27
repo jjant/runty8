@@ -5,9 +5,8 @@ use crate::runtime::draw_context::DrawData;
 use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
-use crate::runtime::state::InternalState;
 use crate::{Event, KeyState, MouseButton, MouseEvent, Resources};
-use crate::{Key, KeyboardEvent, State};
+use crate::{Key, KeyboardEvent};
 use glium::backend::Facade;
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
 use glium::glutin::event::{self, ElementState, KeyboardInput};
@@ -25,15 +24,13 @@ pub(crate) fn run_app<Game: AppCompat + 'static>(
     sprite_sheet: SpriteSheet,
     mut draw_data: DrawData,
 ) {
-    let mut internal_state = InternalState::new();
     let mut resources = Resources {
         assets_path,
         sprite_flags,
         sprite_sheet,
         map,
     };
-
-    let mut controller = Controller::<Game>::init(&State::new(&internal_state, &mut resources));
+    let mut controller = Controller::<Game>::init(&mut resources);
     let event_loop = glutin::event_loop::EventLoop::new();
     let display = make_display(&event_loop);
     let scale_factor = display.gl_window().window().scale_factor();
@@ -49,7 +46,7 @@ pub(crate) fn run_app<Game: AppCompat + 'static>(
         let event: Option<Event> =
             translate_event(&glutin_event, scale_factor, &mut logical_size, control_flow);
 
-        controller.step(&mut internal_state, &mut resources, &mut draw_data, event);
+        controller.step(&mut resources, &mut draw_data, event);
 
         do_draw(
             &display,

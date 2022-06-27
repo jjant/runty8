@@ -20,7 +20,6 @@ use runtime::{
     flags::Flags,
     map::Map,
     sprite_sheet::{Color, Sprite, SpriteSheet},
-    state::State,
 };
 use std::{f32::consts::PI, fmt::Debug};
 
