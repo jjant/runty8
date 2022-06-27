@@ -435,8 +435,8 @@ fn sprite_editor_view<'a, 'b>(
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
         .push(tool_size::view(79, 55, brush_size, selected_color))
         .push(slider::view(
-            90,
-            55,
+            93,
+            52,
             brush_size,
             Msg::BrushSizeSelected,
             Msg::BrushSizeSliderHovered,

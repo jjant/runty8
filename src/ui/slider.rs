@@ -77,17 +77,16 @@ pub(crate) fn view<'a, Msg: Debug + Copy + 'a>(
     .into_iter()
     .enumerate()
     .map(move |(index, button_state)| {
-        let size = 7;
+        let width = 8;
+        let height = 7;
         Button::new(
-            x + (index as i32) * size - size / 2 + 1,
-            y + size / 2,
-            size,
-            size,
+            x + (index as i32) * width - width / 2,
+            y + 2,
+            width,
+            height,
             Some(on_press(SliderValue::from_index(index))),
             button_state,
-            DrawFn::new(move |draw| {
-                draw.rect(0, 0, size - 1, size - 1, index as u8);
-            }),
+            Tree::new(),
         )
         .on_hover(on_hover)
         .event_on_press()
