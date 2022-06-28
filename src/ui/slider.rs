@@ -41,6 +41,7 @@ impl SliderValue {
         }
     }
 }
+
 #[derive(Debug)]
 pub(crate) struct State {
     button_tiny: button::State,

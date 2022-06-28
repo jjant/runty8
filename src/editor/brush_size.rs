@@ -2,7 +2,10 @@ use std::fmt::Debug;
 
 use crate::{
     runtime::{draw_context::colors, sprite_sheet::Color},
-    ui::{slider::SliderValue, DrawFn, Element},
+    ui::{
+        slider::{self, SliderValue},
+        DrawFn, Element, Tree,
+    },
 };
 
 fn slider_to_screen_size(value: SliderValue) -> i32 {
@@ -13,9 +16,40 @@ fn slider_to_screen_size(value: SliderValue) -> i32 {
         SliderValue::Large => 5,
     }
 }
-
 const WIDGET_SIZE: i32 = 7;
-pub(crate) fn view<'a, Msg: Copy + Debug + 'a>(
+
+pub(crate) struct BrushSize<'a, Msg, F> {
+    pub(crate) x: i32,
+    pub(crate) y: i32,
+    pub(crate) selected_color: Color,
+    pub(crate) brush_size: SliderValue,
+    pub(crate) slider_state: &'a mut slider::State,
+    pub(crate) on_press: F,
+    pub(crate) on_hover: Msg,
+}
+
+impl<'a, Msg: Copy + Debug + 'a, F: Fn(SliderValue) -> Msg> BrushSize<'a, Msg, F> {
+    pub(crate) fn view(self) -> Element<'a, Msg> {
+        Tree::new()
+            .push(size_indicator(
+                self.x,
+                self.y,
+                self.brush_size,
+                self.selected_color,
+            ))
+            .push(slider::view(
+                self.x + 14,
+                self.y - 3,
+                self.brush_size,
+                self.on_press,
+                self.on_hover,
+                self.slider_state,
+            ))
+            .into()
+    }
+}
+
+fn size_indicator<'a, Msg: Copy + Debug + 'a>(
     x: i32,
     y: i32,
     brush_size: SliderValue,

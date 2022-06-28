@@ -1,7 +1,7 @@
+mod brush_size;
 pub mod key_combo;
 mod notification;
 pub mod serialize;
-mod tool_size;
 mod undo_redo;
 
 use crate::app::{ElmApp, Right, WhichOne};
@@ -21,6 +21,7 @@ use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;
 
+use self::brush_size::BrushSize;
 use self::key_combo::KeyCombos;
 use self::serialize::{Ppm, Serialize};
 use self::undo_redo::{Command, Commands};
@@ -433,15 +434,19 @@ fn sprite_editor_view<'a, 'b>(
         ))
         .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
-        .push(tool_size::view(79, 55, brush_size, selected_color))
-        .push(slider::view(
-            93,
-            52,
-            brush_size,
-            Msg::BrushSizeSelected,
-            Msg::BrushSizeSliderHovered,
-            brush_size_slider,
-        ))
+        .push(
+            BrushSize {
+                x: 79,
+                y: 55,
+                brush_size,
+                selected_color,
+                slider_state: brush_size_slider,
+                on_press: Msg::BrushSizeSelected,
+                on_hover: Msg::BrushSizeSliderHovered,
+            }
+            .view(),
+        )
+        // .push(slider::view(93, 52, brush_size))
         .into()
 }
 
