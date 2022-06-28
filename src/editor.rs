@@ -15,7 +15,7 @@ use crate::ui::{
     cursor::{self, Cursor},
     text::Text,
 };
-use crate::ui::{slider, DrawFn, Element, Tree};
+use crate::ui::{DrawFn, Element, Tree};
 use crate::Resources;
 use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
@@ -51,7 +51,7 @@ pub(crate) struct Editor {
     clipboard: Clipboard,
     commands: Commands,
     brush_size: SliderValue,
-    brush_size_slider: slider::State,
+    brush_size_state: brush_size::State,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -239,7 +239,7 @@ impl ElmApp for Editor {
             clipboard: Clipboard::new(),
             commands: Commands::new(),
             brush_size: SliderValue::Tiny,
-            brush_size_slider: slider::State::new(),
+            brush_size_state: brush_size::State::new(),
         }
     }
 
@@ -353,7 +353,7 @@ impl ElmApp for Editor {
                     &mut self.flag_buttons,
                     &mut self.pixel_buttons,
                     self.brush_size,
-                    &mut self.brush_size_slider,
+                    &mut self.brush_size_state,
                 ),
                 Tab::MapEditor => Tree::new()
                     .push(map_view(
@@ -420,7 +420,7 @@ fn sprite_editor_view<'a, 'b>(
     flag_buttons: &'a mut [button::State],
     pixel_buttons: &'a mut [button::State],
     brush_size: SliderValue,
-    brush_size_slider: &'a mut slider::State,
+    brush_size_state: &'a mut brush_size::State,
 ) -> Element<'a, Msg> {
     Tree::new()
         .push(color_selector(
@@ -440,9 +440,9 @@ fn sprite_editor_view<'a, 'b>(
                 y: 55,
                 brush_size,
                 selected_color,
-                slider_state: brush_size_slider,
                 on_press: Msg::BrushSizeSelected,
                 on_hover: Msg::BrushSizeSliderHovered,
+                state: brush_size_state,
             }
             .view(),
         )
