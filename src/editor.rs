@@ -10,7 +10,6 @@ use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
 use crate::ui::button::{self, Button};
-use crate::ui::slider::SliderValue;
 use crate::ui::{
     cursor::{self, Cursor},
     text::Text,
@@ -21,7 +20,7 @@ use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;
 
-use self::brush_size::BrushSize;
+use self::brush_size::{BrushSize, BrushSizeSelector};
 use self::key_combo::KeyCombos;
 use self::serialize::{Ppm, Serialize};
 use self::undo_redo::{Command, Commands};
@@ -50,7 +49,7 @@ pub(crate) struct Editor {
     key_combos: KeyCombos<KeyComboAction>,
     clipboard: Clipboard,
     commands: Commands,
-    brush_size: SliderValue,
+    brush_size: BrushSize,
     brush_size_state: brush_size::State,
 }
 
@@ -75,7 +74,7 @@ pub(crate) enum Msg {
     ClickedMapTile { x: usize, y: usize },
     KeyboardEvent(KeyboardEvent),
     BrushSizeSliderHovered,
-    BrushSizeSelected(SliderValue),
+    BrushSizeSelected(BrushSize),
 }
 
 impl Editor {
@@ -238,7 +237,7 @@ impl ElmApp for Editor {
                 .push(KeyComboAction::FlipHorizontally, Key::F, &[]),
             clipboard: Clipboard::new(),
             commands: Commands::new(),
-            brush_size: SliderValue::Tiny,
+            brush_size: BrushSize::tiny(),
             brush_size_state: brush_size::State::new(),
         }
     }
@@ -305,7 +304,14 @@ impl ElmApp for Editor {
                     previous_color,
                     self.selected_color,
                 ));
-                sprite.pset(x, y, self.selected_color);
+
+                for (x, y) in self
+                    .brush_size
+                    .iter()
+                    .map(|(local_x, local_y)| (local_x + x, local_y + y))
+                {
+                    sprite.pset(x, y, self.selected_color);
+                }
             }
             &Msg::ToolSelected(selected_tool) => {
                 self.selected_tool = selected_tool;
@@ -419,7 +425,7 @@ fn sprite_editor_view<'a, 'b>(
     selected_sprite: &'b Sprite,
     flag_buttons: &'a mut [button::State],
     pixel_buttons: &'a mut [button::State],
-    brush_size: SliderValue,
+    brush_size: BrushSize,
     brush_size_state: &'a mut brush_size::State,
 ) -> Element<'a, Msg> {
     Tree::new()
@@ -435,7 +441,7 @@ fn sprite_editor_view<'a, 'b>(
         .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
         .push(
-            BrushSize {
+            BrushSizeSelector {
                 x: 79,
                 y: 55,
                 brush_size,

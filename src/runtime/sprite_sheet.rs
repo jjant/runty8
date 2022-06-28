@@ -126,9 +126,9 @@ impl Sprite {
 
     pub fn pset(&mut self, x: isize, y: isize, color: Color) {
         // TODO: is unwrapping here ok? Why?
-        let index = Self::index(x, y).unwrap();
-
-        self.set(index, color);
+        if let Some(index) = Self::index(x, y) {
+            self.set(index, color);
+        }
     }
 
     pub fn pget(&self, x: isize, y: isize) -> Color {
@@ -136,7 +136,14 @@ impl Sprite {
     }
 
     fn index(x: isize, y: isize) -> Option<usize> {
-        (x + y * (Sprite::WIDTH as isize)).try_into().ok()
+        let x: usize = x.try_into().ok()?;
+        let y: usize = y.try_into().ok()?;
+
+        if x < Sprite::WIDTH && y < Sprite::HEIGHT {
+            Some(x + y * Sprite::WIDTH)
+        } else {
+            None
+        }
     }
 
     pub(crate) fn shift_up(&mut self) {

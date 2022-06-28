@@ -23,15 +23,6 @@ impl SliderValue {
         }
     }
 
-    pub(crate) fn next(self) -> Self {
-        match self {
-            SliderValue::Tiny => SliderValue::Small,
-            SliderValue::Small => SliderValue::Medium,
-            SliderValue::Medium => SliderValue::Large,
-            SliderValue::Large => SliderValue::Tiny,
-        }
-    }
-
     fn from_index(index: usize) -> Self {
         match index {
             0 => Self::Tiny,
