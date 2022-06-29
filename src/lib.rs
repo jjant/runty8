@@ -13,6 +13,7 @@ mod graphics;
 mod run;
 use app::AppCompat;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
+use rand::Rng;
 use runtime::{
     flags::Flags,
     map::Map,
@@ -251,15 +252,21 @@ pub(crate) fn write_and_log(file_name: &str, contents: &str) {
     println!("success.")
 }
 
-/*Pico8 math functions */
+/* Pico8 math functions */
+
 /// <https://pico-8.fandom.com/wiki/Sin>
 pub fn sin(f: f32) -> f32 {
     (-f * 2.0 * PI).sin()
 }
 
+/// <https://pico-8.fandom.com/wiki/Rnd>
+pub fn rnd(limit: f32) -> f32 {
+    rand::thread_rng().gen_range(0.0..limit)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::sin;
+    use super::{rnd, sin};
 
     macro_rules! assert_delta {
         ($x:expr, $y:expr, $d:expr) => {
@@ -281,5 +288,14 @@ mod tests {
         assert_delta!(sin(0.75), 1.0, 0.00001);
         assert_delta!(sin(0.875), 0.70710677, 0.00001);
         assert_delta!(sin(1.0), 0.0, 0.00001);
+    }
+
+    #[test]
+    fn rnd_works() {
+        for _ in 0..100 {
+            let random_value = rnd(50.0);
+
+            assert!(0.0 < random_value && random_value < 50.0);
+        }
     }
 }
