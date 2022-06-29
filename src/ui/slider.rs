@@ -14,15 +14,6 @@ pub(crate) enum SliderValue {
 }
 
 impl SliderValue {
-    pub(crate) fn to_human_readable(self) -> &'static str {
-        match self {
-            SliderValue::Tiny => "1",
-            SliderValue::Small => "2",
-            SliderValue::Medium => "3",
-            SliderValue::Large => "4",
-        }
-    }
-
     fn from_index(index: usize) -> Self {
         match index {
             0 => Self::Tiny,

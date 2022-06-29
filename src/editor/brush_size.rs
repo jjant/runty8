@@ -24,7 +24,12 @@ impl BrushSize {
     }
 
     pub(crate) fn to_human_readable(self) -> &'static str {
-        self.size.to_human_readable()
+        match self.size {
+            SliderValue::Tiny => "1",
+            SliderValue::Small => "2",
+            SliderValue::Medium => "3",
+            SliderValue::Large => "4",
+        }
     }
 
     fn to_screen_size(self) -> i32 {
