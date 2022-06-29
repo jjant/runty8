@@ -1,7 +1,9 @@
+mod brush_size;
 pub mod key_combo;
 mod notification;
 pub mod serialize;
 mod undo_redo;
+
 use crate::app::{ElmApp, Right, WhichOne};
 use crate::editor::notification::Notification;
 use crate::runtime::flags::Flags;
@@ -18,6 +20,7 @@ use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;
 
+use self::brush_size::{BrushSize, BrushSizeSelector};
 use self::key_combo::KeyCombos;
 use self::serialize::{Ppm, Serialize};
 use self::undo_redo::{Command, Commands};
@@ -46,6 +49,8 @@ pub(crate) struct Editor {
     key_combos: KeyCombos<KeyComboAction>,
     clipboard: Clipboard,
     commands: Commands,
+    brush_size: BrushSize,
+    brush_size_state: brush_size::State,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -68,6 +73,8 @@ pub(crate) enum Msg {
     MapSpriteHovered(usize),
     ClickedMapTile { x: usize, y: usize },
     KeyboardEvent(KeyboardEvent),
+    BrushSizeSliderHovered,
+    BrushSizeSelected(BrushSize),
 }
 
 impl Editor {
@@ -230,6 +237,8 @@ impl ElmApp for Editor {
                 .push(KeyComboAction::FlipHorizontally, Key::F, &[]),
             clipboard: Clipboard::new(),
             commands: Commands::new(),
+            brush_size: BrushSize::tiny(),
+            brush_size_state: brush_size::State::new(),
         }
     }
 
@@ -243,6 +252,7 @@ impl ElmApp for Editor {
                         key: Key::C,
                         state: KeyState::Down,
                     } => self.switch_map_mode(),
+
                     KeyboardEvent {
                         key,
                         state: KeyState::Down,
@@ -294,7 +304,14 @@ impl ElmApp for Editor {
                     previous_color,
                     self.selected_color,
                 ));
-                sprite.pset(x, y, self.selected_color);
+
+                for (x, y) in self
+                    .brush_size
+                    .iter()
+                    .map(|(local_x, local_y)| (local_x + x, local_y + y))
+                {
+                    sprite.pset(x, y, self.selected_color);
+                }
             }
             &Msg::ToolSelected(selected_tool) => {
                 self.selected_tool = selected_tool;
@@ -308,6 +325,15 @@ impl ElmApp for Editor {
             }
             &Msg::ClickedMapTile { x, y } => {
                 resources.map.mset(x, y, self.selected_sprite as u8);
+            }
+            &Msg::BrushSizeSelected(brush_size) => {
+                self.brush_size = brush_size;
+                self.bottom_bar_text =
+                    format!("BRUSH SIZE: {}", self.brush_size.to_human_readable());
+            }
+            &Msg::BrushSizeSliderHovered => {
+                self.bottom_bar_text =
+                    format!("BRUSH SIZE: {}", self.brush_size.to_human_readable());
             }
         }
     }
@@ -332,6 +358,8 @@ impl ElmApp for Editor {
                     resources.sprite_sheet.get_sprite(self.selected_sprite),
                     &mut self.flag_buttons,
                     &mut self.pixel_buttons,
+                    self.brush_size,
+                    &mut self.brush_size_state,
                 ),
                 Tab::MapEditor => Tree::new()
                     .push(map_view(
@@ -397,6 +425,8 @@ fn sprite_editor_view<'a, 'b>(
     selected_sprite: &'b Sprite,
     flag_buttons: &'a mut [button::State],
     pixel_buttons: &'a mut [button::State],
+    brush_size: BrushSize,
+    brush_size_state: &'a mut brush_size::State,
 ) -> Element<'a, Msg> {
     Tree::new()
         .push(color_selector(
@@ -410,6 +440,19 @@ fn sprite_editor_view<'a, 'b>(
         ))
         .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
         .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
+        .push(
+            BrushSizeSelector {
+                x: 79,
+                y: 55,
+                brush_size,
+                selected_color,
+                on_press: Msg::BrushSizeSelected,
+                on_hover: Msg::BrushSizeSliderHovered,
+                state: brush_size_state,
+            }
+            .view(),
+        )
+        // .push(slider::view(93, 52, brush_size))
         .into()
 }
 

@@ -1,5 +1,6 @@
 pub mod button;
 pub mod cursor;
+pub mod slider;
 pub mod text;
 use crate::{runtime::draw_context::DrawContext, Event};
 use std::{fmt::Debug, marker::PhantomData};

@@ -16,6 +16,8 @@ A Pico8 clone in rust
       It'd be cool to have a way to bundle all the code and assets together in a single executable file for ease of distribution.
       This should also facilitate using wasm.
 - [ ] Wasm support
+- [ ] Add a concept of "active widget" in the sprite editor
+      If you're click-dragging the mouse in the color picker, moving the mouse away will trigger interactions in other components, this is wrong
 
 ## Running
 
