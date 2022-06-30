@@ -276,7 +276,6 @@ mod tests {
         };
     }
 
-    #[allow(clippy::approx_constant)]
     #[test]
     fn sin_works() {
         assert_delta!(sin(0.0), 0.0, 0.00001);
