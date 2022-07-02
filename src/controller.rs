@@ -38,12 +38,12 @@ pub(crate) struct Controller<Game> {
 }
 
 impl<Game: AppCompat> Controller<Game> {
-    pub fn init(mut resources: Resources) -> Self {
+    pub fn init(scene: Scene, mut resources: Resources) -> Self {
         let internal_state = InternalState::new();
         let app = Game::init(&State::new(&internal_state, &mut resources));
 
         Self {
-            scene: Scene::initial(),
+            scene,
             editor: <Editor as ElmApp>::init(),
             app,
             key_combos: KeyCombos::new()
@@ -176,10 +176,6 @@ pub enum Scene {
 }
 
 impl Scene {
-    fn initial() -> Self {
-        Scene::Editor
-    }
-
     pub fn flip(&mut self) {
         *self = match self {
             Scene::Editor => Scene::App,

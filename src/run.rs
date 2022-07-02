@@ -1,5 +1,5 @@
 use crate::app::AppCompat;
-use crate::controller::Controller;
+use crate::controller::{Controller, Scene};
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
 use crate::runtime::draw_context::DrawData;
 use crate::{Event, KeyState, MouseButton, MouseEvent, Resources};
@@ -14,8 +14,8 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 
-pub(crate) fn run_app<Game: AppCompat + 'static>(resources: Resources) {
-    let mut controller = Controller::<Game>::init(resources);
+pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {
+    let mut controller = Controller::<Game>::init(scene, resources);
     let event_loop = glutin::event_loop::EventLoop::new();
     let display = make_display(&event_loop);
     let scale_factor = display.gl_window().window().scale_factor();

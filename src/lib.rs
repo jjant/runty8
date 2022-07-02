@@ -12,6 +12,7 @@ mod font;
 mod graphics;
 mod run;
 use app::AppCompat;
+use controller::Scene;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 use rand::Rng;
 use runtime::{
@@ -231,9 +232,19 @@ pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<(
         sprite_flags,
         map,
     };
-    crate::run::run_app::<T>(resources);
+
+    let starting_scene = start_scene();
+    crate::run::run_app::<T>(starting_scene, resources);
 
     Ok(())
+}
+
+fn start_scene() -> Scene {
+    if std::env::args().find(|arg| arg == "--game").is_some() {
+        Scene::App
+    } else {
+        Scene::Editor
+    }
 }
 
 /// Game assets: sprite sheet, map, flags.
