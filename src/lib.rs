@@ -4,6 +4,14 @@
 pub mod app;
 pub mod runtime;
 pub mod ui;
+// TODO: Remove when we make these modules non-public.
+// (in that case doc(inline) will be the default)
+#[doc(inline)]
+pub use app::App;
+#[doc(inline)]
+pub use runtime::draw_context::DrawContext;
+#[doc(inline)]
+pub use runtime::state::Button;
 
 mod controller;
 mod draw;
@@ -240,7 +248,7 @@ pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<(
 }
 
 fn start_scene() -> Scene {
-    if std::env::args().find(|arg| arg == "--game").is_some() {
+    if std::env::args().any(|arg| arg == "--game") {
         Scene::App
     } else {
         Scene::Editor
