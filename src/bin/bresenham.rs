@@ -1,6 +1,4 @@
-use runty8::app::{Left, WhichOne};
-use runty8::runtime::state::State;
-use runty8::{self, App, Button, DrawContext};
+use runty8::{self, App, Button, DrawContext, State};
 
 fn main() {
     runty8::run_app::<MyThing>("src/bin/bresenham".to_owned()).unwrap();
@@ -10,10 +8,6 @@ struct MyThing {
     center_x: i32,
     center_y: i32,
     radius: i32,
-}
-
-impl WhichOne for MyThing {
-    type Which = Left;
 }
 
 impl App for MyThing {

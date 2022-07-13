@@ -1,8 +1,4 @@
-use runty8::{
-    app::{App, Left, WhichOne},
-    runtime::state::{Button, State},
-    DrawContext,
-};
+use runty8::{App, Button, DrawContext, State};
 
 fn main() {
     runty8::run_app::<StressLines>("".to_owned()).unwrap();
@@ -60,10 +56,6 @@ impl MouseState {
             } => (current_x, current_y),
         }
     }
-}
-
-impl WhichOne for StressLines {
-    type Which = Left;
 }
 
 impl App for StressLines {

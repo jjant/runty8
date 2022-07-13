@@ -1,20 +1,21 @@
 #![doc = include_str!("../README.md")]
 #![allow(clippy::new_without_default)]
 // #![deny(missing_docs)]
-pub mod app;
-pub mod runtime;
+mod app;
+mod runtime;
 pub mod ui;
 // TODO: Remove when we make these modules non-public.
 // (in that case doc(inline) will be the default)
 #[doc(inline)]
 pub use app::App;
+pub use app::ElmApp;
 pub use runtime::draw_context::colors;
 #[doc(inline)]
 pub use runtime::draw_context::DrawContext;
 
 pub use runtime::sprite_sheet::Color;
 #[doc(inline)]
-pub use runtime::state::Button;
+pub use runtime::state::{Button, State};
 
 mod controller;
 mod draw;
@@ -22,7 +23,7 @@ mod editor;
 mod font;
 mod graphics;
 mod run;
-use app::AppCompat;
+use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 use rand::Rng;
@@ -229,8 +230,16 @@ fn create_directory(path: &str) -> std::io::Result<()> {
 }
 
 /// Run a Pico8 application
+pub fn run_app<T: App + 'static>(assets_path: String) -> std::io::Result<()> {
+    run_app_compat::<Pico8AppCompat<T>>(assets_path)
+}
+
+/// Run an Elm-style application
+pub fn run_elm_app<T: ElmApp + 'static>(assets_path: String) -> std::io::Result<()> {
+    run_app_compat::<ElmAppCompat<T>>(assets_path)
+}
 // TODO: add example
-pub fn run_app<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<()> {
+fn run_app_compat<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<()> {
     create_directory(&assets_path)?;
 
     let map: Map = create_map(&assets_path);

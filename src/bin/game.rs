@@ -6,14 +6,13 @@ use rpg::entity::{Entity, EntityT, ShouldDestroy};
 use rpg::inventory::Inventory;
 use rpg::item::{DroppedItem, Item};
 use rpg::player::Player;
-use runty8::app::{ElmApp, Right, WhichOne};
 use runty8::ui::cursor::{self, Cursor};
 use runty8::ui::{DrawFn, Element, Tree};
 use runty8::Resources;
-use runty8::{Event, Key, KeyState, KeyboardEvent};
+use runty8::{ElmApp, Event, Key, KeyState, KeyboardEvent};
 
 fn main() {
-    runty8::run_app::<GameState>("src/bin/game".to_owned()).unwrap();
+    runty8::run_elm_app::<GameState>("src/bin/game".to_owned()).unwrap();
 }
 
 struct GameState {
@@ -43,10 +42,6 @@ pub enum Msg {
     Attack,
 }
 use Msg::*;
-
-impl WhichOne for GameState {
-    type Which = Right;
-}
 
 pub struct Keys {
     left: bool,

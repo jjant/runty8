@@ -2,9 +2,7 @@ use std::f32::consts::{FRAC_1_SQRT_2, PI};
 use std::path::Path;
 
 use rand::Rng;
-use runty8::app::{App, Left, WhichOne};
-use runty8::runtime::state::{Button, State};
-use runty8::DrawContext;
+use runty8::{App, Button, DrawContext, State};
 
 use std::iter::{Chain, Map};
 use std::slice;
@@ -54,10 +52,6 @@ struct GameState {
 
 struct GameEffects {
     shake: i32,
-}
-
-impl WhichOne for GameState {
-    type Which = Left;
 }
 
 impl App for GameState {

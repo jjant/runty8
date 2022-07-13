@@ -11,7 +11,7 @@ pub struct State<'a> {
 }
 
 #[derive(Debug)]
-pub struct InternalState {
+pub(crate) struct InternalState {
     left: ButtonState,
     right: ButtonState,
     up: ButtonState,

@@ -4,7 +4,7 @@ mod notification;
 pub mod serialize;
 mod undo_redo;
 
-use crate::app::{ElmApp, Right, WhichOne};
+use crate::app::ElmApp;
 use crate::editor::notification::Notification;
 use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
@@ -190,10 +190,6 @@ enum KeyComboAction {
     Undo,
     Redo,
     Save,
-}
-
-impl WhichOne for Editor {
-    type Which = Right;
 }
 
 impl ElmApp for Editor {
