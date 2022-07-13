@@ -1,9 +1,7 @@
 use runty8::{
     app::{App, Left, WhichOne},
-    runtime::{
-        draw_context::DrawContext,
-        state::{Button, State},
-    },
+    runtime::state::{Button, State},
+    DrawContext,
 };
 
 fn main() {

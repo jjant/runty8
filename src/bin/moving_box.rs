@@ -1,6 +1,6 @@
 use runty8::app::{App, Left, WhichOne};
-use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
+use runty8::DrawContext;
 
 fn main() {
     runty8::run_app::<ExampleApp>("".to_owned()).unwrap();

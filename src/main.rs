@@ -2,7 +2,8 @@ use std::path::Path;
 
 use runty8::{
     app::{App, Left, WhichOne},
-    runtime::{draw_context::DrawContext, state::State},
+    runtime::state::State,
+    DrawContext,
 };
 
 fn assets_path() -> String {

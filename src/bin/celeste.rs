@@ -3,8 +3,8 @@ use std::path::Path;
 
 use rand::Rng;
 use runty8::app::{App, Left, WhichOne};
-use runty8::runtime::draw_context::DrawContext;
 use runty8::runtime::state::{Button, State};
+use runty8::DrawContext;
 
 use std::iter::{Chain, Map};
 use std::slice;

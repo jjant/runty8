@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use crate::{rpg::currency::Currency, Msg};
 use runty8::{
-    runtime::draw_context::colors,
+    colors,
     ui::{DrawFn, Element},
 };
 use ItemType::*;

@@ -1,4 +1,4 @@
-use runty8::runtime::draw_context::{colors, DrawContext};
+use runty8::{colors, DrawContext};
 
 use crate::{rpg::animate, Keys};
 

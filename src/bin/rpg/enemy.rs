@@ -1,8 +1,9 @@
 use rand::{thread_rng, Rng};
 
 use runty8::{
-    runtime::draw_context::{colors, DrawContext},
+    colors,
     ui::{DrawFn, Element},
+    DrawContext,
 };
 
 use crate::{rpg::rect::Rect, Msg};
