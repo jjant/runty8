@@ -1,4 +1,4 @@
-use runty8::runtime::{draw_context::DrawContext, sprite_sheet::Color};
+use runty8::{Color, DrawContext};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Rect {

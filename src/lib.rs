@@ -10,6 +10,7 @@ pub mod ui;
 pub use app::App;
 #[doc(inline)]
 pub use runtime::draw_context::DrawContext;
+pub use runtime::sprite_sheet::Color;
 #[doc(inline)]
 pub use runtime::state::Button;
 
@@ -26,7 +27,7 @@ use rand::Rng;
 use runtime::{
     flags::Flags,
     map::Map,
-    sprite_sheet::{Color, Sprite, SpriteSheet},
+    sprite_sheet::{Sprite, SpriteSheet},
 };
 use std::{f32::consts::PI, fmt::Debug};
 
