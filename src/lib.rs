@@ -15,7 +15,7 @@ pub use runtime::draw_context::DrawContext;
 
 pub use runtime::sprite_sheet::Color;
 #[doc(inline)]
-pub use runtime::state::{Button, State};
+pub use runtime::state::Button;
 
 mod controller;
 mod draw;

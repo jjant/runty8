@@ -2,7 +2,7 @@ use std::f32::consts::{FRAC_1_SQRT_2, PI};
 use std::path::Path;
 
 use rand::Rng;
-use runty8::{App, Button, DrawContext, State};
+use runty8::{App, Button, DrawContext};
 
 use std::iter::{Chain, Map};
 use std::slice;
@@ -55,7 +55,7 @@ struct GameEffects {
 }
 
 impl App for GameState {
-    fn init(state: &State) -> Self {
+    fn init(state: &mut DrawContext) -> Self {
         let clouds = (0..=16)
             .into_iter()
             .map(|_| Cloud {
@@ -110,7 +110,7 @@ impl App for GameState {
         gs
     }
 
-    fn update(&mut self, state: &State) {
+    fn update(&mut self, state: &mut DrawContext) {
         self.frames = (self.frames + 1) % 30;
 
         if self.frames == 0 && level_index(self.room) < 30 {
@@ -476,7 +476,7 @@ fn rnd(max: f32) -> f32 {
 }
 
 impl GameState {
-    fn begin_game(&mut self, state: &State) {
+    fn begin_game(&mut self, state: &DrawContext) {
         self.frames = 0;
         self.seconds = 0;
         self.minutes = 0;
@@ -494,7 +494,7 @@ const K_DOWN: Button = Button::Down;
 const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
 
-fn title_screen(game_state: &mut GameState, state: &State) {
+fn title_screen(game_state: &mut GameState, state: &DrawContext) {
     game_state.got_fruit = vec![false; 30];
     game_state.frames = 0;
     game_state.deaths = 0;
@@ -570,7 +570,7 @@ impl Player {
     fn update<T>(
         &mut self,
         this: &mut BaseObject,
-        state: &State,
+        state: &DrawContext,
         objects: &mut T,
         got_fruit: &[bool],
         room: Vec2<i32>,
@@ -1062,7 +1062,14 @@ impl BaseObject {
         result.map(|object| (others, object))
     }
 
-    fn is_solid<T>(&self, state: &State, objects: &mut T, room: Vec2<i32>, ox: i32, oy: i32) -> bool
+    fn is_solid<T>(
+        &self,
+        state: &DrawContext,
+        objects: &mut T,
+        room: Vec2<i32>,
+        ox: i32,
+        oy: i32,
+    ) -> bool
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
@@ -1094,7 +1101,7 @@ impl BaseObject {
         self.collide(objects, kind, ox, oy).is_some()
     }
 
-    fn is_ice(&self, state: &State, room: Vec2<i32>, ox: i32, oy: i32) -> bool {
+    fn is_ice(&self, state: &DrawContext, room: Vec2<i32>, ox: i32, oy: i32) -> bool {
         ice_at(
             state,
             room,
@@ -1246,7 +1253,7 @@ impl Object {
         effects: &mut GameEffects,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
-        state: &State,
+        state: &DrawContext,
         max_djump: i32,
         has_dashed: &mut bool,
         frames: i32,
@@ -1351,7 +1358,7 @@ impl Object {
         UpdateAction::noop()
     }
 
-    fn move_<T>(&mut self, state: &State, objects: &mut T, room: Vec2<i32>)
+    fn move_<T>(&mut self, state: &DrawContext, objects: &mut T, room: Vec2<i32>)
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
@@ -1373,7 +1380,7 @@ impl Object {
 
     fn move_x<T>(
         &mut self,
-        state: &State,
+        state: &DrawContext,
         objects: &mut T,
         room: Vec2<i32>,
         amount: i32,
@@ -1398,7 +1405,7 @@ impl Object {
         }
     }
 
-    fn move_y<T>(&mut self, state: &State, objects: &mut T, room: Vec2<i32>, amount: i32)
+    fn move_y<T>(&mut self, state: &DrawContext, objects: &mut T, room: Vec2<i32>, amount: i32)
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
@@ -1419,7 +1426,14 @@ impl Object {
         }
     }
 
-    fn is_solid<T>(&self, state: &State, objects: &mut T, room: Vec2<i32>, ox: i32, oy: i32) -> bool
+    fn is_solid<T>(
+        &self,
+        state: &DrawContext,
+        objects: &mut T,
+        room: Vec2<i32>,
+        ox: i32,
+        oy: i32,
+    ) -> bool
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
@@ -1470,7 +1484,15 @@ fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
     //     .draw(draw, base_object.x, base_object.y, 3);
 }
 
-fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, flag: u8) -> bool {
+fn tile_flag_at(
+    state: &DrawContext,
+    room: Vec2<i32>,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    flag: u8,
+) -> bool {
     let x_min = i32::max(0, flr(x as f32 / 8.0));
     let x_max = i32::min(15, flr((x as f32 + w as f32 - 1.0) / 8.0));
     for i in x_min..=x_max {
@@ -1485,11 +1507,11 @@ fn tile_flag_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32, 
     false
 }
 
-fn tile_at(state: &State, room: Vec2<i32>, x: i32, y: i32) -> usize {
+fn tile_at(state: &DrawContext, room: Vec2<i32>, x: i32, y: i32) -> usize {
     state.mget(room.x * 16 + x, room.y * 16 + y).into()
 }
 
-fn solid_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
+fn solid_at(state: &DrawContext, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
     tile_flag_at(state, room, x, y, w, h, 0)
 }
 
@@ -1547,7 +1569,7 @@ impl ObjectType {
         effects: &mut GameEffects,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
-        state: &State,
+        state: &DrawContext,
         max_djump: i32,
         has_dashed: &mut bool,
         frames: i32,
@@ -1560,7 +1582,7 @@ impl ObjectType {
     {
         match self {
             ObjectType::PlayerSpawn(player_spawn) => {
-                player_spawn.update(base_object, effects, got_fruit, room, max_djump, state)
+                player_spawn.update(base_object, effects, got_fruit, room, max_djump)
             }
             ObjectType::Smoke => Smoke::update(base_object),
             ObjectType::Platform(platform) => {
@@ -1583,14 +1605,9 @@ impl ObjectType {
             ObjectType::Fruit(fruit) => {
                 fruit.update(base_object, other_objects, got_fruit, room, max_djump)
             }
-            ObjectType::FakeWall => FakeWall::update(
-                base_object,
-                other_objects,
-                got_fruit,
-                room,
-                max_djump,
-                state,
-            ),
+            ObjectType::FakeWall => {
+                FakeWall::update(base_object, other_objects, got_fruit, room, max_djump)
+            }
             ObjectType::FallFloor(fall_floor) => {
                 fall_floor.update(base_object, other_objects, got_fruit, room, max_djump)
             }
@@ -1661,7 +1678,7 @@ fn restart_room(game_state: &mut GameState) {
     game_state.delay_restart = 15;
 }
 
-fn next_room(game_state: &mut GameState, state: &State) {
+fn next_room(game_state: &mut GameState, state: &DrawContext) {
     let room = game_state.room;
 
     #[allow(clippy::if_same_then_else)]
@@ -1681,7 +1698,7 @@ fn next_room(game_state: &mut GameState, state: &State) {
     }
 }
 
-fn load_room(game_state: &mut GameState, state: &State, x: i32, y: i32) {
+fn load_room(game_state: &mut GameState, state: &DrawContext, x: i32, y: i32) {
     game_state.has_dashed = false;
     game_state.has_key = false;
 
@@ -1797,13 +1814,13 @@ fn appr(val: f32, target: f32, amount: f32) -> f32 {
 fn maybe() -> bool {
     rand::thread_rng().gen()
 }
-fn ice_at(state: &State, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
+fn ice_at(state: &DrawContext, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
     tile_flag_at(state, room, x, y, w, h, 4)
 }
 
 #[allow(clippy::too_many_arguments)]
 fn spikes_at(
-    state: &State,
+    state: &DrawContext,
     room: Vec2<i32>,
     x: i32,
     y: i32,
@@ -1849,7 +1866,7 @@ impl Platform {
     fn update<T>(
         &mut self,
         this: &mut BaseObject,
-        state: &State,
+        state: &DrawContext,
         objects: &mut T,
         room: Vec2<i32>,
     ) -> UpdateAction
@@ -2195,7 +2212,6 @@ impl PlayerSpawn {
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
-        _: &State,
     ) -> UpdateAction {
         match self.state {
             PlayerSpawnState::Jumping => {
@@ -2292,7 +2308,6 @@ impl FakeWall {
         got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
-        _: &State,
     ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
@@ -2388,7 +2403,7 @@ impl FakeWall {
     }
 }
 
-fn horizontal_input(state: &State) -> i32 {
+fn horizontal_input(state: &DrawContext) -> i32 {
     if state.btn(K_RIGHT) {
         1
     } else if state.btn(K_LEFT) {
@@ -2398,7 +2413,7 @@ fn horizontal_input(state: &State) -> i32 {
     }
 }
 
-fn vertical_input(state: &State) -> i32 {
+fn vertical_input(state: &DrawContext) -> i32 {
     if state.btn(K_UP) {
         -1
     } else if state.btn(K_DOWN) {
@@ -2886,7 +2901,7 @@ impl BigChest {
                 {
                     let (base, _) = hit.to_player_mut().unwrap();
                     let is_solid = base.is_solid::<VecObjects<'_>>(
-                        draw.state,
+                        draw,
                         &mut VecObjects { vec: objects },
                         room,
                         0,

@@ -38,9 +38,9 @@ pub(crate) struct Controller<Game> {
 }
 
 impl<Game: AppCompat> Controller<Game> {
-    pub fn init(scene: Scene, mut resources: Resources) -> Self {
+    pub fn init(scene: Scene, mut resources: Resources, draw_data: &mut DrawData) -> Self {
         let internal_state = InternalState::new();
-        let app = Game::init(&State::new(&internal_state, &mut resources));
+        let app = Game::init(&mut resources, &internal_state, draw_data);
 
         Self {
             scene,
@@ -55,14 +55,14 @@ impl<Game: AppCompat> Controller<Game> {
         }
     }
 
-    fn update(&mut self, msg: &Msg<Game::Msg>) {
+    fn update(&mut self, msg: &Msg<Game::Msg>, draw_data: &mut DrawData) {
         match msg {
             Msg::Editor(editor_msg) => {
                 <Editor as ElmApp>::update(&mut self.editor, editor_msg, &mut self.resources);
             }
             Msg::App(msg) => {
                 self.app
-                    .update(msg, &mut self.resources, &self.internal_state);
+                    .update(msg, &mut self.resources, &self.internal_state, draw_data);
             }
             &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
                 self.internal_state.on_mouse_move(x, y);
@@ -130,7 +130,8 @@ impl<Game: AppCompat> Controller<Game> {
         let state = State::new(&self.internal_state, &mut self.resources);
         self.key_combos.on_event(key_event, |action| match action {
             KeyComboAction::RestartGame => {
-                self.app = Game::init(&state);
+                // TODO: Re-enable
+                // self.app = Game::init(&state);
                 self.scene = Scene::App;
             }
             KeyComboAction::SwitchScene => self.scene.flip(),
@@ -164,7 +165,7 @@ impl<Game: AppCompat> Controller<Game> {
             msg_queue.push(subscription_msg);
         }
         for msg in msg_queue.into_iter() {
-            self.update(&msg);
+            self.update(&msg, draw_data);
         }
     }
 }

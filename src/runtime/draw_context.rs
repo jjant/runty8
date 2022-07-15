@@ -58,10 +58,14 @@ impl Default for DrawData {
         Self::new()
     }
 }
+
+/// Context providing pico8 functionality:
+/// drawing to the screen, querying IO devices (button states), etc.
+// TODO: Rename to someting like Runty8?
 pub struct DrawContext<'a, 'resources> {
     data: &'a mut DrawData,
     // TODO: make pub(crate)
-    pub state: &'a mut State<'resources>,
+    pub(crate) state: &'a mut State<'resources>,
 }
 
 const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
@@ -325,7 +329,8 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
 
         for (i_x, map_x) in (cell_x..=(cell_x + cell_w)).enumerate() {
             for (i_y, map_y) in (cell_y..=(cell_y + cell_h)).enumerate() {
-                let spr = self.state.map.mget(map_x, map_y);
+                let spr = self.mget(map_x, map_y);
+
                 let flags = self.fget(spr.into());
 
                 if flags & layer == layer {
@@ -336,6 +341,14 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
                 }
             }
         }
+    }
+
+    pub fn mget(&self, x: i32, y: i32) -> u8 {
+        self.state.mget(x, y)
+    }
+
+    pub fn mouse(&self) -> (i32, i32) {
+        self.state.mouse()
     }
 }
 

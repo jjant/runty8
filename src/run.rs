@@ -15,7 +15,6 @@ use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 
 pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {
-    let mut controller = Controller::<Game>::init(scene, resources);
     let event_loop = glutin::event_loop::EventLoop::new();
     let display = make_display(&event_loop);
     let scale_factor = display.gl_window().window().scale_factor();
@@ -28,6 +27,7 @@ pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resour
     let (indices, program) = make_gl_program(&display);
 
     let mut draw_data = DrawData::new();
+    let mut controller = Controller::<Game>::init(scene, resources, &mut draw_data);
     event_loop.run(move |glutin_event, _, control_flow| {
         let event: Option<Event> =
             translate_event(&glutin_event, scale_factor, &mut logical_size, control_flow);

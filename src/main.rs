@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use runty8::App;
-use runty8::{DrawContext, State};
+use runty8::DrawContext;
 
 fn assets_path() -> String {
     let buf = Path::new("src/bin/ui_demo").to_path_buf();
@@ -16,11 +16,11 @@ fn main() {
 struct EmptyApp;
 
 impl App for EmptyApp {
-    fn init(_: &State) -> Self {
+    fn init(_: &mut DrawContext) -> Self {
         Self
     }
 
-    fn update(&mut self, _: &State) {}
+    fn update(&mut self, _: &mut DrawContext) {}
 
     fn draw(&mut self, draw: &mut DrawContext) {
         draw.cls();

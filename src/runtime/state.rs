@@ -3,7 +3,7 @@ use crate::Resources;
 use ButtonState::*;
 
 #[derive(Debug)]
-pub struct State<'a> {
+pub(crate) struct State<'a> {
     pub(crate) internal_state: &'a InternalState,
     pub(crate) sprite_sheet: &'a mut SpriteSheet,
     pub(crate) sprite_flags: &'a mut Flags,

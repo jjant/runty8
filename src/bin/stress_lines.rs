@@ -1,4 +1,4 @@
-use runty8::{App, Button, DrawContext, State};
+use runty8::{App, Button, DrawContext};
 
 fn main() {
     runty8::run_app::<StressLines>("".to_owned()).unwrap();
@@ -59,13 +59,13 @@ impl MouseState {
 }
 
 impl App for StressLines {
-    fn init(_: &State) -> Self {
+    fn init(_: &mut DrawContext) -> Self {
         Self {
             mouse: MouseState::new(64, 64),
         }
     }
 
-    fn update(&mut self, state: &State) {
+    fn update(&mut self, state: &mut DrawContext) {
         let (mouse_x, mouse_y) = state.mouse();
         self.mouse
             .update(state.btn(Button::Mouse), mouse_x, mouse_y);

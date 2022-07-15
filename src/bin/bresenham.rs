@@ -1,4 +1,4 @@
-use runty8::{self, App, Button, DrawContext, State};
+use runty8::{self, App, Button, DrawContext};
 
 fn main() {
     runty8::run_app::<MyThing>("src/bin/bresenham".to_owned()).unwrap();
@@ -11,7 +11,7 @@ struct MyThing {
 }
 
 impl App for MyThing {
-    fn init(_: &State) -> Self {
+    fn init(_: &mut DrawContext) -> Self {
         Self {
             center_x: 64,
             center_y: 64,
@@ -19,7 +19,7 @@ impl App for MyThing {
         }
     }
 
-    fn update(&mut self, state: &State) {
+    fn update(&mut self, state: &mut DrawContext) {
         if state.btn(Button::Down) {
             self.center_y += 1;
         }

@@ -1,4 +1,4 @@
-use runty8::{App, Button, DrawContext, State};
+use runty8::{App, Button, DrawContext};
 
 fn main() {
     runty8::run_app::<ExampleApp>("".to_owned()).unwrap();
@@ -13,7 +13,7 @@ pub struct ExampleApp {
 }
 
 impl App for ExampleApp {
-    fn init(_: &State) -> Self {
+    fn init(_: &mut DrawContext) -> Self {
         Self {
             x: 6400,
             y: 6400,
@@ -52,7 +52,7 @@ impl App for ExampleApp {
         // draw_context.raw_spr(sprite, self.x / 100, self.y / 100);
     }
 
-    fn update(&mut self, state: &State) {
+    fn update(&mut self, state: &mut DrawContext) {
         // println!("{:?}", state);
 
         // -- lower -100/100 less max spd
