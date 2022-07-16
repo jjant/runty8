@@ -5,11 +5,12 @@ use super::state::{Button, State};
 
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
+
 type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
 
-pub struct DrawData {
-    pub(crate) buffer: Buffer,
+pub(crate) struct DrawData {
+    buffer: Buffer,
     transparent_color: Option<Color>,
     draw_palette: [Color; 16],
     camera: (i32, i32),
@@ -50,6 +51,10 @@ impl DrawData {
             self.buffer[NUM_COMPONENTS * index + 1] = g;
             self.buffer[NUM_COMPONENTS * index + 2] = b;
         }
+    }
+
+    pub(crate) fn buffer(&self) -> &Buffer {
+        &self.buffer
     }
 }
 
@@ -349,6 +354,10 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
 
     pub fn mouse(&self) -> (i32, i32) {
         self.state.mouse()
+    }
+
+    pub fn btnp(&self, button: Button) -> bool {
+        self.state.btnp(button)
     }
 }
 

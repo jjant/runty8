@@ -72,7 +72,7 @@ impl<A: App> AppCompat for Pico8AppCompat<A> {
 
     fn init(resources: &mut Resources, state: &InternalState, draw_data: &mut DrawData) -> Self {
         let mut state = State::new(state, resources);
-        let mut draw_context = &mut DrawContext::new(&mut state, draw_data);
+        let draw_context = &mut DrawContext::new(&mut state, draw_data);
 
         Self {
             app: A::init(draw_context),
@@ -87,7 +87,7 @@ impl<A: App> AppCompat for Pico8AppCompat<A> {
         draw_data: &mut DrawData,
     ) {
         let mut state = State::new(state, resources);
-        let mut draw_context = &mut DrawContext::new(&mut state, draw_data);
+        let draw_context = &mut DrawContext::new(&mut state, draw_data);
         self.app.update(draw_context);
     }
 

@@ -2,19 +2,15 @@
 #![allow(clippy::new_without_default)]
 // #![deny(missing_docs)]
 mod app;
+mod pico8;
 mod runtime;
 pub mod ui;
-// TODO: Remove when we make these modules non-public.
-// (in that case doc(inline) will be the default)
-#[doc(inline)]
+
 pub use app::App;
 pub use app::ElmApp;
 pub use runtime::draw_context::colors;
-#[doc(inline)]
 pub use runtime::draw_context::DrawContext;
-
 pub use runtime::sprite_sheet::Color;
-#[doc(inline)]
 pub use runtime::state::Button;
 
 mod controller;

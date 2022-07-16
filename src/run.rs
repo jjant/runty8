@@ -37,7 +37,7 @@ pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resour
         do_draw(
             &display,
             display.draw(),
-            &draw_data.buffer,
+            draw_data.buffer(),
             &indices,
             &program,
         );
