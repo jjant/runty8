@@ -1,7 +1,9 @@
+use crate::runtime::flags::Flags;
+use crate::runtime::map::Map;
+use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::{draw, font};
 
 use super::sprite_sheet::{Color, Sprite};
-use super::state::{Button, State};
 
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
@@ -9,8 +11,12 @@ const NUM_COMPONENTS: usize = 3;
 type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
 
+const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+
+// Handles actually drawing to the screen buffer
 pub(crate) struct DrawData {
     buffer: Buffer,
+    // Maybe these properties below should be in internal state?
     transparent_color: Option<Color>,
     draw_palette: [Color; 16],
     camera: (i32, i32),
@@ -24,6 +30,10 @@ impl DrawData {
             draw_palette: ORIGINAL_PALETTE,
             camera: (0, 0),
         }
+    }
+
+    pub(crate) fn append_camera(&mut self, x: i32, y: i32) {
+        self.camera(self.camera.0 + x, self.camera.1 + y);
     }
 
     fn set_pixel_with_transparency(&mut self, index: usize, color: Color) {
@@ -56,49 +66,6 @@ impl DrawData {
     pub(crate) fn buffer(&self) -> &Buffer {
         &self.buffer
     }
-}
-
-impl Default for DrawData {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Context providing pico8 functionality:
-/// drawing to the screen, querying IO devices (button states), etc.
-// TODO: Rename to someting like Runty8?
-pub struct DrawContext<'a, 'resources> {
-    data: &'a mut DrawData,
-    // TODO: make pub(crate)
-    pub(crate) state: &'a mut State<'resources>,
-}
-
-const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-
-impl<'a, 'resources> DrawContext<'a, 'resources> {
-    pub(crate) fn new(state: &'a mut State<'resources>, data: &'a mut DrawData) -> Self {
-        Self { state, data }
-    }
-
-    pub(crate) fn append_camera(&mut self, x: i32, y: i32) {
-        self.camera(self.data.camera.0 + x, self.data.camera.1 + y);
-    }
-
-    pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
-        let buffer = &sprite.sprite;
-
-        for i in 0..8 {
-            for j in 0..8 {
-                let x = x + i;
-                let y = y + j;
-
-                if let Some(index) = self.index(x, y) {
-                    self.data
-                        .set_pixel_with_transparency(index, buffer[(i + j * 8) as usize]);
-                }
-            }
-        }
-    }
 
     fn print_char(&mut self, index: usize, x: i32, y: i32, color: Color) {
         let char_data = font::FONT.get(index).unwrap_or(&font::MISSING_CHAR);
@@ -114,6 +81,11 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         }
     }
 
+    fn apply_camera(&self, x: i32, y: i32) -> (i32, i32) {
+        (x - self.camera.0, y - self.camera.1)
+    }
+
+    /// Returns the linear index of the pixel with (x, y) coordinates in the screen
     fn index(&self, x: i32, y: i32) -> Option<usize> {
         let x_in_bounds = 0 <= x && x < WIDTH as i32;
         let y_in_bounds = 0 <= y && y < WIDTH as i32;
@@ -125,112 +97,105 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         }
     }
 
-    fn apply_camera(&self, x: i32, y: i32) -> (i32, i32) {
-        (x - self.data.camera.0, y - self.data.camera.1)
-    }
-}
-
-// Pico8 api
-impl<'a, 'resources> DrawContext<'a, 'resources> {
-    pub fn btn(&self, button: Button) -> bool {
-        self.state.btn(button)
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    // TODO: Implement w and h params functionality
-    pub fn spr_(
-        &mut self,
-        sprite: usize,
-        x: i32,
-        y: i32,
-        _w: f32,
-        _h: f32,
-        flip_x: bool,
-        flip_y: bool,
-    ) {
-        let sprite = self.state.sprite_sheet.get_sprite(sprite);
+    pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
         let buffer = &sprite.sprite;
 
         for i in 0..8 {
             for j in 0..8 {
-                let world_x = if flip_x { x + 7 - i } else { x + i };
-                let world_y = if flip_y { y + 7 - j } else { y + j };
+                let x = x + i;
+                let y = y + j;
 
-                let (x, y) = self.apply_camera(world_x, world_y);
                 if let Some(index) = self.index(x, y) {
-                    self.data
-                        .set_pixel_with_transparency(index, buffer[(i + j * 8) as usize])
+                    self.set_pixel_with_transparency(index, buffer[(i + j * 8) as usize]);
                 }
             }
         }
     }
 
-    pub fn spr(&mut self, sprite: usize, x: i32, y: i32) {
-        self.spr_(sprite, x, y, 1.0, 1.0, false, false)
+    pub(crate) fn quarter_bresenham(
+        &mut self,
+        cx: i32,
+        cy: i32,
+        radius: i32,
+        color: Color,
+        plot: fn(&mut Self, i32, i32, i32, i32, Color),
+    ) {
+        let mut x = radius;
+        let mut y = 0;
+        let mut error = 1 - radius;
+
+        while y <= x {
+            plot(self, cx, cy, x, y, color);
+
+            if error < 0 {
+                error += 2 * y + 3;
+            } else {
+                if x != y {
+                    plot(self, cx, cy, y, x, color);
+                }
+
+                x -= 1;
+                error += 2 * (y - x) + 3;
+            }
+
+            y += 1;
+        }
+    }
+}
+
+// Functions which more directly implement pico8 functionality
+impl DrawData {
+    pub(crate) fn pal(&mut self, c0: Color, c1: Color) {
+        // https://pico-8.fandom.com/wiki/Pal
+        self.draw_palette[c0 as usize] = c1;
     }
 
-    pub fn print(&mut self, str: &str, x: i32, y: i32, color: Color) {
-        for (pos, char) in str.chars().enumerate() {
-            let index = char as u8 - font::FIRST_CHAR as u8;
+    pub(crate) fn camera(&mut self, x: i32, y: i32) {
+        self.camera = (x, y);
+    }
 
-            self.print_char(index as usize, x + (pos * 4) as i32, y, color);
+    pub(crate) fn pset(&mut self, x: i32, y: i32, color: Color) {
+        let (x, y) = self.apply_camera(x, y);
+        if let Some(index) = self.index(x, y) {
+            self.set_pixel(index, color);
         }
     }
 
-    pub fn fget(&self, sprite: usize) -> u8 {
-        self.state.fget(sprite)
+    pub(crate) fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        for y in y0..=y1 {
+            self.line(x0, y, x1, y, color);
+        }
     }
 
-    pub fn fget_n(&self, sprite: usize, flag: u8) -> bool {
-        self.state.fget_n(sprite, flag)
+    pub(crate) fn rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        self.line(x0, y0, x1, y0, color);
+        self.line(x0, y0, x0, y1, color);
+        self.line(x0, y1, x1, y1, color);
+        self.line(x1, y0, x1, y1, color);
     }
 
-    pub fn reset_pal(&mut self) {
-        self.data.draw_palette = ORIGINAL_PALETTE;
+    pub(crate) fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        for (x, y) in draw::line(x0, y0, x1, y1) {
+            self.pset(x, y, color);
+        }
+    }
+
+    pub(crate) fn reset_pal(&mut self) {
+        self.draw_palette = ORIGINAL_PALETTE;
         // pal() resets transparency to default
         self.palt(Some(0));
     }
 
-    pub fn pal(&mut self, c0: Color, c1: Color) {
-        // https://pico-8.fandom.com/wiki/Pal
-        self.data.draw_palette[c0 as usize] = c1;
-    }
-
-    pub fn pset(&mut self, x: i32, y: i32, color: Color) {
-        let (x, y) = self.apply_camera(x, y);
-        if let Some(index) = self.index(x, y) {
-            self.data.set_pixel(index, color);
-        }
-    }
-
-    pub fn palt(&mut self, transparent_color: Option<Color>) {
-        self.data.transparent_color = transparent_color
-    }
-
-    pub fn camera(&mut self, x: i32, y: i32) {
-        self.data.camera = (x, y);
-    }
-
-    pub fn cls(&mut self) {
-        self.cls_color(colors::BLACK);
-    }
-
-    pub fn cls_color(&mut self, color: Color) {
-        self.rectfill(0, 0, 127, 127, color);
-    }
-
-    pub fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        for (x, y) in draw::line(x0, y0, x1, y1) {
-            self.pset(x, y, color);
-        }
+    pub(crate) fn palt(&mut self, transparent_color: Option<Color>) {
+        self.transparent_color = transparent_color
     }
 
     // Taken from Pemsa, a C++ implementation of pico8.
     // This looks similar to Bresenham's circle drawing algorithm.
     //
     // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
-    pub fn circ(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
-        fn plot(this: &mut DrawContext, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
+    pub(crate) fn circ(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
+        fn plot(this: &mut DrawData, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
             let points = [
                 (x, y),
                 (-x, y),
@@ -247,34 +212,15 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
             }
         }
 
-        let mut x = radius;
-        let mut y = 0;
-        let mut error = 1 - radius;
-
-        while y <= x {
-            plot(self, cx, cy, x, y, color);
-
-            if error < 0 {
-                error += 2 * y + 3;
-            } else {
-                if x != y {
-                    plot(self, cx, cy, y, x, color);
-                }
-
-                x -= 1;
-                error += 2 * (y - x) + 3;
-            }
-
-            y += 1;
-        }
+        self.quarter_bresenham(cx, cy, radius, color, plot);
     }
 
     // Taken from Pemsa, a C++ implementation of pico8.
     // This looks similar to Bresenham's circle drawing algorithm.
     //
     // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
-    pub fn circfill(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
-        fn plot(this: &mut DrawContext, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
+    pub(crate) fn circfill(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
+        fn plot(this: &mut DrawData, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
             this.line(cx - x, cy + y, cx + x, cy + y, c);
 
             if y != 0 {
@@ -282,44 +228,59 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
             }
         }
 
-        let mut x = radius;
-        let mut y = 0;
-        let mut error = 1 - radius;
+        self.quarter_bresenham(cx, cy, radius, color, plot);
+    }
 
-        while y <= x {
-            plot(self, cx, cy, x, y, color);
+    pub(crate) fn print(&mut self, str: &str, x: i32, y: i32, color: Color) {
+        for (pos, char) in str.chars().enumerate() {
+            let index = char as u8 - font::FIRST_CHAR as u8;
 
-            if error < 0 {
-                error += 2 * y + 3;
-            } else {
-                if x != y {
-                    plot(self, cx, cy, y, x, color);
+            self.print_char(index as usize, x + (pos * 4) as i32, y, color);
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    // TODO: Implement w and h params functionality
+    pub fn spr_(
+        &mut self,
+        sprite: &Sprite,
+        x: i32,
+        y: i32,
+        _w: f32,
+        _h: f32,
+        flip_x: bool,
+        flip_y: bool,
+    ) {
+        let buffer = &sprite.sprite;
+
+        for i in 0..8 {
+            for j in 0..8 {
+                let world_x = if flip_x { x + 7 - i } else { x + i };
+                let world_y = if flip_y { y + 7 - j } else { y + j };
+
+                let (x, y) = self.apply_camera(world_x, world_y);
+                if let Some(index) = self.index(x, y) {
+                    self.set_pixel_with_transparency(index, buffer[(i + j * 8) as usize])
                 }
-
-                x -= 1;
-                error += 2 * (y - x) + 3;
             }
-
-            y += 1;
         }
     }
 
-    pub fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        for y in y0..=y1 {
-            self.line(x0, y, x1, y, color);
-        }
+    pub(crate) fn spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
+        self.spr_(sprite, x, y, 1.0, 1.0, false, false)
     }
 
-    pub fn rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        self.line(x0, y0, x1, y0, color);
-        self.line(x0, y0, x0, y1, color);
-        self.line(x0, y1, x1, y1, color);
-        self.line(x1, y0, x1, y1, color);
+    pub(crate) fn cls(&mut self) {
+        self.cls_color(colors::BLACK);
+    }
+
+    pub(crate) fn cls_color(&mut self, color: Color) {
+        self.rectfill(0, 0, 127, 127, color);
     }
 
     /// <https://pico-8.fandom.com/wiki/Map>
     #[allow(clippy::too_many_arguments)]
-    pub fn map(
+    pub(crate) fn map(
         &mut self,
         cell_x: i32,
         cell_y: i32,
@@ -329,37 +290,36 @@ impl<'a, 'resources> DrawContext<'a, 'resources> {
         cell_h: i32,
         // TODO: Use layer
         layer: u8,
+        map: &Map,
+        flags: &Flags,
+        sprite_sheet: &SpriteSheet,
     ) {
         // TODO: Handle like pico8
-
         for (i_x, map_x) in (cell_x..=(cell_x + cell_w)).enumerate() {
             for (i_y, map_y) in (cell_y..=(cell_y + cell_h)).enumerate() {
-                let spr = self.mget(map_x, map_y);
+                let spr = map.mget(map_x, map_y);
 
-                let flags = self.fget(spr.into());
+                let flags = flags.get(spr.into()).unwrap();
 
                 if flags & layer == layer {
                     let x = screen_x + 8 * i_x as i32;
                     let y = screen_y + 8 * i_y as i32;
 
-                    self.spr(spr as usize, x, y);
+                    let spr = sprite_sheet.get_sprite(spr as usize);
+                    self.spr(spr, x, y);
                 }
             }
         }
     }
+}
 
-    pub fn mget(&self, x: i32, y: i32) -> u8 {
-        self.state.mget(x, y)
-    }
-
-    pub fn mouse(&self) -> (i32, i32) {
-        self.state.mouse()
-    }
-
-    pub fn btnp(&self, button: Button) -> bool {
-        self.state.btnp(button)
+impl Default for DrawData {
+    fn default() -> Self {
+        Self::new()
     }
 }
+
+// Pico8 api
 
 fn get_color(index: Color) -> u32 {
     COLORS[index as usize]

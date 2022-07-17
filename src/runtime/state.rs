@@ -1,14 +1,5 @@
-use super::{flags::Flags, input::Keys, map::Map, sprite_sheet::SpriteSheet};
-use crate::Resources;
+use crate::runtime::input::Keys;
 use ButtonState::*;
-
-#[derive(Debug)]
-pub(crate) struct State<'a> {
-    pub(crate) internal_state: &'a InternalState,
-    pub(crate) sprite_sheet: &'a mut SpriteSheet,
-    pub(crate) sprite_flags: &'a mut Flags,
-    pub(crate) map: &'a mut Map,
-}
 
 #[derive(Debug)]
 pub(crate) struct InternalState {
@@ -53,7 +44,7 @@ impl InternalState {
         self.mouse_pressed.update(keys.mouse);
     }
 
-    fn button(&self, button: Button) -> &ButtonState {
+    pub(crate) fn button(&self, button: Button) -> &ButtonState {
         match button {
             Button::Left => &self.left,
             Button::Right => &self.right,
@@ -64,60 +55,9 @@ impl InternalState {
             Button::Mouse => &self.mouse_pressed,
         }
     }
-}
 
-// Temporary?
-impl<'a> State<'a> {
-    pub fn mouse(&self) -> (i32, i32) {
-        (self.internal_state.mouse_x, self.internal_state.mouse_y)
-    }
-}
-
-impl<'a> State<'a> {
-    pub(crate) fn new(internal_state: &'a InternalState, resources: &'a mut Resources) -> Self {
-        let Resources {
-            sprite_sheet,
-            sprite_flags,
-            map,
-            ..
-        } = resources;
-
-        Self {
-            internal_state,
-            sprite_sheet,
-            sprite_flags,
-            map,
-        }
-    }
-
-    pub fn mget(&self, cel_x: i32, cel_y: i32) -> u8 {
-        self.map.mget(cel_x, cel_y)
-    }
-
-    pub fn mset(&mut self, cel_x: usize, cel_y: usize, sprite: u8) {
-        self.map.mset(cel_x, cel_y, sprite);
-    }
-
-    pub fn fget(&self, sprite: usize) -> u8 {
-        self.sprite_flags.get(sprite).unwrap()
-    }
-
-    // TODO: Check we do the same left-to-right (or vice versa)
-    // order as pico8
-    pub fn fget_n(&self, sprite: usize, flag: u8) -> bool {
-        self.sprite_flags.fget_n(sprite, flag)
-    }
-
-    pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
-        self.sprite_flags.fset(sprite, flag, value)
-    }
-
-    pub fn btn(&self, button: Button) -> bool {
-        self.internal_state.button(button).btn()
-    }
-
-    pub fn btnp(&self, button: Button) -> bool {
-        self.internal_state.button(button).btnp()
+    pub(crate) fn mouse(&self) -> (i32, i32) {
+        (self.mouse_x, self.mouse_y)
     }
 }
 

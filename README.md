@@ -18,6 +18,7 @@ A Pico8 clone in rust
 - [ ] Wasm support
 - [ ] Add a concept of "active widget" in the sprite editor
       If you're click-dragging the mouse in the color picker, moving the mouse away will trigger interactions in other components, this is wrong
+- [ ] Find a way to name the multiple overloads on functions (in Lua, `spr` can be called with `3-7` attributes)
 
 ## Running
 

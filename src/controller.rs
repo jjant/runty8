@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 
-use crate::runtime::draw_context::{DrawContext, DrawData};
+use crate::pico8::Pico8Impl;
+use crate::runtime::draw_context::DrawData;
 use crate::runtime::input::Keys;
 use crate::ui::DispatchEvent;
 use crate::{
     app::{AppCompat, ElmApp},
     editor::{self, key_combo::KeyCombos, Editor},
-    runtime::state::{InternalState, State},
+    runtime::state::InternalState,
     ui::Element,
     Event, Key, KeyboardEvent, MouseButton, MouseEvent, Resources,
 };
@@ -80,7 +81,7 @@ impl<Game: AppCompat> Controller<Game> {
             }
 
             &Msg::KeyboardEvent(event) => {
-                self.handle_key_combos(event);
+                self.handle_key_combos(event, draw_data);
                 self.keys.on_event(event);
             }
             &Msg::Tick => {
@@ -126,12 +127,10 @@ fn view<'a, Game: AppCompat>(
 }
 
 impl<Game: AppCompat> Controller<Game> {
-    fn handle_key_combos(&mut self, key_event: KeyboardEvent) {
-        let state = State::new(&self.internal_state, &mut self.resources);
+    fn handle_key_combos(&mut self, key_event: KeyboardEvent, draw_data: &mut DrawData) {
         self.key_combos.on_event(key_event, |action| match action {
             KeyComboAction::RestartGame => {
-                // TODO: Re-enable
-                // self.app = Game::init(&state);
+                self.app = Game::init(&mut self.resources, &self.internal_state, &mut draw_data);
                 self.scene = Scene::App;
             }
             KeyComboAction::SwitchScene => self.scene.flip(),
@@ -156,9 +155,8 @@ impl<Game: AppCompat> Controller<Game> {
                 .on_event(event, cursor_position, dispatch_event);
         }
 
-        let mut state = State::new(&self.internal_state, &mut self.resources);
-        let mut draw_context = DrawContext::new(&mut state, draw_data);
-        view.as_widget_mut().draw(&mut draw_context);
+        let pico8impl = Pico8Impl::new(&mut draw_data, &self.internal_state, &mut self.resources);
+        view.as_widget_mut().draw(&mut pico8impl);
         drop(view);
 
         for subscription_msg in event.into_iter().flat_map(|e| self.subscriptions(&e)) {
