@@ -130,7 +130,7 @@ impl<Game: AppCompat> Controller<Game> {
     fn handle_key_combos(&mut self, key_event: KeyboardEvent, draw_data: &mut DrawData) {
         self.key_combos.on_event(key_event, |action| match action {
             KeyComboAction::RestartGame => {
-                self.app = Game::init(&mut self.resources, &self.internal_state, &mut draw_data);
+                self.app = Game::init(&mut self.resources, &self.internal_state, draw_data);
                 self.scene = Scene::App;
             }
             KeyComboAction::SwitchScene => self.scene.flip(),
@@ -155,7 +155,7 @@ impl<Game: AppCompat> Controller<Game> {
                 .on_event(event, cursor_position, dispatch_event);
         }
 
-        let pico8impl = Pico8Impl::new(&mut draw_data, &self.internal_state, &mut self.resources);
+        let mut pico8impl = Pico8Impl::new(draw_data, &self.internal_state, &mut self.resources);
         view.as_widget_mut().draw(&mut pico8impl);
         drop(view);
 

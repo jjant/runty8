@@ -10,7 +10,6 @@ pub use app::App;
 pub use app::ElmApp;
 pub use pico8::Pico8;
 pub use runtime::draw_context::colors;
-pub use runtime::draw_context::DrawContext;
 pub use runtime::sprite_sheet::Color;
 pub use runtime::state::Button;
 

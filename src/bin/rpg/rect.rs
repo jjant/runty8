@@ -1,4 +1,4 @@
-use runty8::{Color, DrawContext};
+use runty8::{Color, Pico8};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Rect {
@@ -58,7 +58,7 @@ impl Rect {
             && self.bottom() > other.top()
     }
 
-    pub fn outline(&self, draw: &mut DrawContext, color: Color) {
+    pub fn outline(&self, draw: &mut dyn Pico8, color: Color) {
         if self.is_empty() {
             return;
         }
@@ -71,7 +71,7 @@ impl Rect {
         )
     }
 
-    pub fn fill(&self, draw: &mut DrawContext, color: Color) {
+    pub fn fill(&self, draw: &mut dyn Pico8, color: Color) {
         if self.is_empty() {
             return;
         }

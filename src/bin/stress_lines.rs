@@ -1,4 +1,4 @@
-use runty8::{App, Button, DrawContext};
+use runty8::{App, Button, Pico8};
 
 fn main() {
     runty8::run_app::<StressLines>("".to_owned()).unwrap();
@@ -59,13 +59,13 @@ impl MouseState {
 }
 
 impl App for StressLines {
-    fn init(_: &mut DrawContext) -> Self {
+    fn init(_: &mut dyn Pico8) -> Self {
         Self {
             mouse: MouseState::new(64, 64),
         }
     }
 
-    fn update(&mut self, state: &mut DrawContext) {
+    fn update(&mut self, state: &mut dyn Pico8) {
         let (mouse_x, mouse_y) = state.mouse();
         self.mouse
             .update(state.btn(Button::Mouse), mouse_x, mouse_y);
@@ -81,8 +81,8 @@ impl App for StressLines {
         // }
     }
 
-    fn draw(&mut self, draw_context: &mut DrawContext) {
-        draw_context.cls();
+    fn draw(&mut self, draw_context: &mut dyn Pico8) {
+        draw_context.cls(0);
 
         // Diagonal line
         draw_context.line(0, 0, 64, 64, 7);

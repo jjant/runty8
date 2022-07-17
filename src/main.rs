@@ -1,7 +1,6 @@
 use std::path::Path;
 
-use runty8::App;
-use runty8::DrawContext;
+use runty8::{App, Pico8};
 
 fn assets_path() -> String {
     let buf = Path::new("src/bin/ui_demo").to_path_buf();
@@ -16,14 +15,14 @@ fn main() {
 struct EmptyApp;
 
 impl App for EmptyApp {
-    fn init(_: &mut DrawContext) -> Self {
+    fn init(_: &mut dyn Pico8) -> Self {
         Self
     }
 
-    fn update(&mut self, _: &mut DrawContext) {}
+    fn update(&mut self, _: &mut dyn Pico8) {}
 
-    fn draw(&mut self, draw: &mut DrawContext) {
-        draw.cls();
+    fn draw(&mut self, draw: &mut dyn Pico8) {
+        draw.cls(0);
         draw.print("EMPTY", 0, 0, 7);
     }
 }

@@ -1,5 +1,5 @@
 use rand::Rng;
-use runty8::{App, Button, DrawContext};
+use runty8::{App, Button, Pico8};
 
 fn main() {
     runty8::run_app::<Confetti>("".to_owned()).unwrap();
@@ -12,7 +12,7 @@ struct Confetti {
 }
 
 impl App for Confetti {
-    fn init(_: &mut DrawContext) -> Self {
+    fn init(_: &mut dyn Pico8) -> Self {
         Self {
             particles: vec![],
             mouse_x: 64,
@@ -20,7 +20,7 @@ impl App for Confetti {
         }
     }
 
-    fn update(&mut self, state: &mut DrawContext) {
+    fn update(&mut self, state: &mut dyn Pico8) {
         (self.mouse_x, self.mouse_y) = state.mouse();
 
         if state.btn(Button::Mouse) {
@@ -42,8 +42,8 @@ impl App for Confetti {
         }
     }
 
-    fn draw(&mut self, draw_context: &mut DrawContext) {
-        draw_context.cls();
+    fn draw(&mut self, draw_context: &mut dyn Pico8) {
+        draw_context.cls(0);
 
         let text_x = 3;
         let text_y = 3;
@@ -104,7 +104,7 @@ impl Particle {
         self.ttl -= 1;
     }
 
-    fn draw(&self, draw_context: &mut DrawContext) {
+    fn draw(&self, draw_context: &mut dyn Pico8) {
         draw_context.pset(self.x as i32, self.y as i32, self.color);
     }
 }

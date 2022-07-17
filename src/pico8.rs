@@ -27,7 +27,7 @@ impl<'a> Pico8 for Pico8Impl<'a> {
         self.resources.map.mget(x, y)
     }
 
-    fn mset(&self, x: i32, y: i32, spr: u8) {
+    fn mset(&mut self, x: i32, y: i32, spr: u8) {
         self.resources
             .map
             .mset(x.try_into().unwrap(), y.try_into().unwrap(), spr);
@@ -54,7 +54,12 @@ impl<'a> Pico8 for Pico8Impl<'a> {
     fn pal(&mut self, old: Color, new: Color) {
         todo!()
     }
+
     fn palt(&mut self, transparent_color: Option<Color>) {
+        todo!()
+    }
+
+    fn reset_pal(&mut self) {
         todo!()
     }
 
@@ -73,11 +78,15 @@ impl<'a> Pico8 for Pico8Impl<'a> {
     }
 
     // todo
-    fn map(&mut self) {
+    fn map(&mut self, cell_x: i32, cell_y: i32, sx: i32, sy: i32, celw: i32, celh: i32, layer: u8) {
         todo!()
     }
 
     fn spr(&mut self, spr: usize, x: i32, y: i32) {
+        todo!()
+    }
+
+    fn spr_(&mut self, spr: usize, x: i32, y: i32, w: f32, h: f32, flip_x: bool, flip_y: bool) {
         todo!()
     }
 
@@ -114,6 +123,14 @@ impl<'a> Pico8 for Pico8Impl<'a> {
     fn music(&mut self, music_id: u8) {
         todo!()
     }
+
+    fn append_camera(&mut self, x: i32, y: i32) {
+        todo!()
+    }
+
+    fn mouse(&self) -> (i32, i32) {
+        self.state.mouse()
+    }
 }
 
 pub trait Pico8 {
@@ -124,6 +141,9 @@ pub trait Pico8 {
     fn pal(&mut self, old: Color, new: Color);
     fn palt(&mut self, transparent_color: Option<Color>);
 
+    // TODO: Find better name?
+    fn reset_pal(&mut self);
+
     fn pset(&mut self, x: i32, y: i32, color: Color);
 
     fn cls(&mut self, color: Color);
@@ -131,13 +151,14 @@ pub trait Pico8 {
     fn clip(&mut self, x: i32, y: i32, w: i32, h: i32);
 
     fn mget(&self, x: i32, y: i32) -> u8;
-    fn mset(&self, x: i32, y: i32, spr: u8);
+    fn mset(&mut self, x: i32, y: i32, spr: u8);
     fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8;
 
-    // todo
-    fn map(&mut self);
+    fn map(&mut self, cell_x: i32, cell_y: i32, sx: i32, sy: i32, celw: i32, celh: i32, layer: u8);
 
     fn spr(&mut self, spr: usize, x: i32, y: i32);
+    // TODO: Rename?
+    fn spr_(&mut self, spr: usize, x: i32, y: i32, w: f32, h: f32, flip_x: bool, flip_y: bool);
 
     fn fillp(&mut self);
 
@@ -158,6 +179,10 @@ pub trait Pico8 {
     // input
     fn btnp(&self, button: Button) -> bool;
     fn btn(&self, button: Button) -> bool;
+
+    fn append_camera(&mut self, x: i32, y: i32);
+
+    fn mouse(&self) -> (i32, i32);
 }
 
 // Top level functions that pico8 provides that don't modify the global state.

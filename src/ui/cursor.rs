@@ -1,5 +1,6 @@
 use super::{DispatchEvent, Widget};
-use crate::{editor, runtime::draw_context::DrawContext, Sprite};
+use crate::Pico8;
+use crate::{editor, Sprite};
 use std::{fmt::Debug, marker::PhantomData};
 
 pub struct Cursor<'a, Msg> {
@@ -47,12 +48,13 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
         self.state.cursor_position = cursor_position;
     }
 
-    fn draw(&mut self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut dyn Pico8) {
         draw.palt(Some(0));
-        draw.raw_spr(
-            Sprite::new(editor::MOUSE_SPRITE),
-            self.state.cursor_position.0 - 3,
-            self.state.cursor_position.1 - 1,
-        );
+        // TODO: Re-add
+        // draw.raw_spr(
+        //     Sprite::new(editor::MOUSE_SPRITE),
+        //     self.state.cursor_position.0 - 3,
+        //     self.state.cursor_position.1 - 1,
+        // );
     }
 }

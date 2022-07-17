@@ -2,7 +2,7 @@ use std::f32::consts::{FRAC_1_SQRT_2, PI};
 use std::path::Path;
 
 use rand::Rng;
-use runty8::{App, Button, DrawContext};
+use runty8::{App, Button, Pico8};
 
 use std::iter::{Chain, Map};
 use std::slice;
@@ -55,7 +55,7 @@ struct GameEffects {
 }
 
 impl App for GameState {
-    fn init(state: &mut DrawContext) -> Self {
+    fn init(state: &mut dyn Pico8) -> Self {
         let clouds = (0..=16)
             .into_iter()
             .map(|_| Cloud {
@@ -110,7 +110,7 @@ impl App for GameState {
         gs
     }
 
-    fn update(&mut self, state: &mut DrawContext) {
+    fn update(&mut self, state: &mut dyn Pico8) {
         self.frames = (self.frames + 1) % 30;
 
         if self.frames == 0 && level_index(self.room) < 30 {
@@ -228,7 +228,7 @@ impl App for GameState {
         }
     }
 
-    fn draw(&mut self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut dyn Pico8) {
         draw.camera(0, 0);
         if self.effects.shake > 0 {
             draw.camera(
@@ -364,7 +364,7 @@ impl App for GameState {
 }
 
 impl GameState {
-    fn draw_objects(&mut self, draw: &mut DrawContext, predicate: impl Fn(ObjectKind) -> bool) {
+    fn draw_objects(&mut self, draw: &mut dyn Pico8, predicate: impl Fn(ObjectKind) -> bool) {
         {
             let mut i = 0;
             while i < self.objects.len() {
@@ -476,7 +476,7 @@ fn rnd(max: f32) -> f32 {
 }
 
 impl GameState {
-    fn begin_game(&mut self, state: &DrawContext) {
+    fn begin_game(&mut self, state: &dyn Pico8) {
         self.frames = 0;
         self.seconds = 0;
         self.minutes = 0;
@@ -494,7 +494,7 @@ const K_DOWN: Button = Button::Down;
 const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
 
-fn title_screen(game_state: &mut GameState, state: &DrawContext) {
+fn title_screen(game_state: &mut GameState, state: &dyn Pico8) {
     game_state.got_fruit = vec![false; 30];
     game_state.frames = 0;
     game_state.deaths = 0;
@@ -570,7 +570,7 @@ impl Player {
     fn update<T>(
         &mut self,
         this: &mut BaseObject,
-        state: &DrawContext,
+        state: &dyn Pico8,
         objects: &mut T,
         got_fruit: &[bool],
         room: Vec2<i32>,
@@ -862,7 +862,7 @@ impl Player {
         update_action
     }
 
-    fn draw(&mut self, base_object: &mut BaseObject, draw: &mut DrawContext, frames: i32) {
+    fn draw(&mut self, base_object: &mut BaseObject, draw: &mut dyn Pico8, frames: i32) {
         if base_object.x < -1 || base_object.x > 121 {
             base_object.x = clamp(base_object.x, -1, 121);
             base_object.spd.x = 0.0;
@@ -901,7 +901,7 @@ fn psfx(game_state: &GameState, num: i32) {
     }
 }
 
-fn set_hair_color(draw: &mut DrawContext, frames: i32, djump: i32) {
+fn set_hair_color(draw: &mut dyn Pico8, frames: i32, djump: i32) {
     let c = if djump == 1 {
         8
     } else if djump == 2 {
@@ -914,7 +914,7 @@ fn set_hair_color(draw: &mut DrawContext, frames: i32, djump: i32) {
 }
 
 #[allow(dead_code)]
-fn unset_hair_color(draw: &mut DrawContext) {
+fn unset_hair_color(draw: &mut dyn Pico8) {
     draw.pal(8, 8);
 }
 
@@ -1064,7 +1064,7 @@ impl BaseObject {
 
     fn is_solid<T>(
         &self,
-        state: &DrawContext,
+        state: &dyn Pico8,
         objects: &mut T,
         room: Vec2<i32>,
         ox: i32,
@@ -1101,7 +1101,7 @@ impl BaseObject {
         self.collide(objects, kind, ox, oy).is_some()
     }
 
-    fn is_ice(&self, state: &DrawContext, room: Vec2<i32>, ox: i32, oy: i32) -> bool {
+    fn is_ice(&self, state: &dyn Pico8, room: Vec2<i32>, ox: i32, oy: i32) -> bool {
         ice_at(
             state,
             room,
@@ -1138,7 +1138,7 @@ impl LifeUp {
         UpdateAction::noop().destroy_if(self.duration <= 0)
     }
 
-    fn draw(&mut self, this: &BaseObject, draw: &mut DrawContext) {
+    fn draw(&mut self, this: &BaseObject, draw: &mut dyn Pico8) {
         self.flash += 0.5;
 
         draw.print("1000", this.x - 2, this.y, 7 + (self.flash % 2.0) as u8);
@@ -1161,7 +1161,7 @@ impl RoomTitle {
         UpdateAction::noop().destroy_if(self.delay < -30)
     }
 
-    fn draw(&self, draw: &mut DrawContext, room: Vec2<i32>, seconds: i32, minutes: i32) {
+    fn draw(&self, draw: &mut dyn Pico8, room: Vec2<i32>, seconds: i32, minutes: i32) {
         if self.delay < 0 {
             draw.rectfill(24, 58, 104, 70, 0);
 
@@ -1253,7 +1253,7 @@ impl Object {
         effects: &mut GameEffects,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
-        state: &DrawContext,
+        state: &dyn Pico8,
         max_djump: i32,
         has_dashed: &mut bool,
         frames: i32,
@@ -1283,7 +1283,7 @@ impl Object {
     #[allow(clippy::too_many_arguments)]
     fn draw<T>(
         &mut self,
-        draw: &mut DrawContext,
+        draw: &mut dyn Pico8,
         objects: &mut T,
         room: Vec2<i32>,
         got_fruit: &[bool],
@@ -1358,7 +1358,7 @@ impl Object {
         UpdateAction::noop()
     }
 
-    fn move_<T>(&mut self, state: &DrawContext, objects: &mut T, room: Vec2<i32>)
+    fn move_<T>(&mut self, state: &dyn Pico8, objects: &mut T, room: Vec2<i32>)
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
@@ -1380,7 +1380,7 @@ impl Object {
 
     fn move_x<T>(
         &mut self,
-        state: &DrawContext,
+        state: &dyn Pico8,
         objects: &mut T,
         room: Vec2<i32>,
         amount: i32,
@@ -1405,7 +1405,7 @@ impl Object {
         }
     }
 
-    fn move_y<T>(&mut self, state: &DrawContext, objects: &mut T, room: Vec2<i32>, amount: i32)
+    fn move_y<T>(&mut self, state: &dyn Pico8, objects: &mut T, room: Vec2<i32>, amount: i32)
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
@@ -1428,7 +1428,7 @@ impl Object {
 
     fn is_solid<T>(
         &self,
-        state: &DrawContext,
+        state: &dyn Pico8,
         objects: &mut T,
         room: Vec2<i32>,
         ox: i32,
@@ -1466,7 +1466,7 @@ impl Object {
     }
 }
 
-fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
+fn default_draw(base_object: &mut BaseObject, draw: &mut dyn Pico8) {
     if base_object.spr > 0. {
         draw.spr_(
             base_object.spr.floor() as usize,
@@ -1485,7 +1485,7 @@ fn default_draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
 }
 
 fn tile_flag_at(
-    state: &DrawContext,
+    state: &dyn Pico8,
     room: Vec2<i32>,
     x: i32,
     y: i32,
@@ -1507,11 +1507,11 @@ fn tile_flag_at(
     false
 }
 
-fn tile_at(state: &DrawContext, room: Vec2<i32>, x: i32, y: i32) -> usize {
+fn tile_at(state: &dyn Pico8, room: Vec2<i32>, x: i32, y: i32) -> usize {
     state.mget(room.x * 16 + x, room.y * 16 + y).into()
 }
 
-fn solid_at(state: &DrawContext, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
+fn solid_at(state: &dyn Pico8, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
     tile_flag_at(state, room, x, y, w, h, 0)
 }
 
@@ -1569,7 +1569,7 @@ impl ObjectType {
         effects: &mut GameEffects,
         got_fruit: &mut [bool],
         room: Vec2<i32>,
-        state: &DrawContext,
+        state: &dyn Pico8,
         max_djump: i32,
         has_dashed: &mut bool,
         frames: i32,
@@ -1678,7 +1678,7 @@ fn restart_room(game_state: &mut GameState) {
     game_state.delay_restart = 15;
 }
 
-fn next_room(game_state: &mut GameState, state: &DrawContext) {
+fn next_room(game_state: &mut GameState, state: &dyn Pico8) {
     let room = game_state.room;
 
     #[allow(clippy::if_same_then_else)]
@@ -1698,7 +1698,7 @@ fn next_room(game_state: &mut GameState, state: &DrawContext) {
     }
 }
 
-fn load_room(game_state: &mut GameState, state: &DrawContext, x: i32, y: i32) {
+fn load_room(game_state: &mut GameState, state: &dyn Pico8, x: i32, y: i32) {
     game_state.has_dashed = false;
     game_state.has_key = false;
 
@@ -1770,7 +1770,7 @@ fn load_room(game_state: &mut GameState, state: &DrawContext, x: i32, y: i32) {
     }
 }
 
-fn draw_time(seconds: i32, minutes: i32, draw: &mut DrawContext, x: i32, y: i32) {
+fn draw_time(seconds: i32, minutes: i32, draw: &mut dyn Pico8, x: i32, y: i32) {
     let s = seconds;
     let m = minutes % 60;
     let h = minutes / 60;
@@ -1814,13 +1814,13 @@ fn appr(val: f32, target: f32, amount: f32) -> f32 {
 fn maybe() -> bool {
     rand::thread_rng().gen()
 }
-fn ice_at(state: &DrawContext, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
+fn ice_at(state: &dyn Pico8, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
     tile_flag_at(state, room, x, y, w, h, 4)
 }
 
 #[allow(clippy::too_many_arguments)]
 fn spikes_at(
-    state: &DrawContext,
+    state: &dyn Pico8,
     room: Vec2<i32>,
     x: i32,
     y: i32,
@@ -1866,7 +1866,7 @@ impl Platform {
     fn update<T>(
         &mut self,
         this: &mut BaseObject,
-        state: &DrawContext,
+        state: &dyn Pico8,
         objects: &mut T,
         room: Vec2<i32>,
     ) -> UpdateAction
@@ -1902,7 +1902,7 @@ impl Platform {
         UpdateAction::noop()
     }
 
-    fn draw(&self, this: &BaseObject, draw: &mut DrawContext) {
+    fn draw(&self, this: &BaseObject, draw: &mut dyn Pico8) {
         draw.spr(11, this.x, this.y - 1);
         draw.spr(12, this.x + 8, this.y - 1)
     }
@@ -2096,7 +2096,7 @@ struct Hair {
 }
 
 impl Hair {
-    fn draw(&mut self, draw: &mut DrawContext, x: i32, y: i32, facing: i32) {
+    fn draw(&mut self, draw: &mut dyn Pico8, x: i32, y: i32, facing: i32) {
         let mut last = Vec2 {
             x: (x + (4 - facing * 2)) as f32,
             y: (y + (if draw.btn(K_DOWN) { 4 } else { 3 })) as f32,
@@ -2279,7 +2279,7 @@ impl PlayerSpawn {
     fn draw(
         &mut self,
         base_object: &mut BaseObject,
-        draw: &mut DrawContext,
+        draw: &mut dyn Pico8,
         frames: i32,
         max_djump: i32,
     ) {
@@ -2393,7 +2393,7 @@ impl FakeWall {
         update_action
     }
 
-    fn draw(base_object: &mut BaseObject, draw: &mut DrawContext) {
+    fn draw(base_object: &mut BaseObject, draw: &mut dyn Pico8) {
         let x = base_object.x;
         let y = base_object.y;
         draw.spr(64, x, y);
@@ -2403,7 +2403,7 @@ impl FakeWall {
     }
 }
 
-fn horizontal_input(state: &DrawContext) -> i32 {
+fn horizontal_input(state: &dyn Pico8) -> i32 {
     if state.btn(K_RIGHT) {
         1
     } else if state.btn(K_LEFT) {
@@ -2413,7 +2413,7 @@ fn horizontal_input(state: &DrawContext) -> i32 {
     }
 }
 
-fn vertical_input(state: &DrawContext) -> i32 {
+fn vertical_input(state: &dyn Pico8) -> i32 {
     if state.btn(K_UP) {
         -1
     } else if state.btn(K_DOWN) {
@@ -2530,7 +2530,7 @@ impl FlyFruit {
         update_action
     }
 
-    fn draw(&mut self, this: &mut BaseObject, draw: &mut DrawContext) {
+    fn draw(&mut self, this: &mut BaseObject, draw: &mut dyn Pico8) {
         let mut off = 0.0;
 
         if !self.fly {
@@ -2637,7 +2637,7 @@ impl FallFloor {
         update_action
     }
 
-    fn draw(&self, this: &mut BaseObject, draw: &mut DrawContext) {
+    fn draw(&self, this: &mut BaseObject, draw: &mut dyn Pico8) {
         match self.state {
             FallFloorState::Idling => draw.spr(23, this.x, this.y),
             FallFloorState::Shaking => {
@@ -2839,7 +2839,7 @@ impl Balloon {
         update_action
     }
 
-    fn draw(&self, this: &BaseObject, draw: &mut DrawContext) {
+    fn draw(&self, this: &BaseObject, draw: &mut dyn Pico8) {
         if this.spr == 22.0 {
             draw.spr(
                 flr(13.0 + (self.offset * 8.0) % 3.0) as usize,
@@ -2879,7 +2879,7 @@ impl BigChest {
     fn draw<T>(
         &mut self,
         this: &BaseObject,
-        draw: &mut DrawContext,
+        draw: &mut dyn Pico8,
         objects: &mut T,
         room: Vec2<i32>,
         got_fruit: &[bool],
@@ -3059,7 +3059,7 @@ impl Orb {
     fn draw<T>(
         &mut self,
         this: &mut BaseObject,
-        draw: &mut DrawContext,
+        draw: &mut dyn Pico8,
         objects: &mut T,
         max_djump: &mut i32,
         freeze: &mut i32,
@@ -3117,7 +3117,7 @@ impl Message {
         }
     }
 
-    fn draw<T>(&mut self, this: &mut BaseObject, draw: &mut DrawContext, objects: &mut T)
+    fn draw<T>(&mut self, this: &mut BaseObject, draw: &mut dyn Pico8, objects: &mut T)
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
@@ -3181,7 +3181,7 @@ impl Flag {
     fn draw<T>(
         &mut self,
         this: &mut BaseObject,
-        draw: &mut DrawContext,
+        draw: &mut dyn Pico8,
         objects: &mut T,
         frames: i32,
         seconds: i32,

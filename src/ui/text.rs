@@ -1,6 +1,7 @@
+use crate::Pico8;
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{runtime::draw_context::DrawContext, Color};
+use crate::Color;
 
 use super::{DispatchEvent, Widget};
 
@@ -35,7 +36,7 @@ impl<'a, Msg: Copy + Debug> Widget for Text<'a, Msg> {
     ) {
     }
 
-    fn draw(&mut self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut dyn Pico8) {
         draw.print(self.text, self.x, self.y, self.color);
     }
 }
