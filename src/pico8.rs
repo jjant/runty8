@@ -49,11 +49,11 @@ impl Pico8 for Pico8Impl {
     }
 
     fn pal(&mut self, old: Color, new: Color) {
-        todo!()
+        self.draw_data.pal(old, new);
     }
 
     fn palt(&mut self, transparent_color: Option<Color>) {
-        todo!()
+        self.draw_data.palt(transparent_color);
     }
 
     fn reset_pal(&mut self) {
@@ -65,8 +65,9 @@ impl Pico8 for Pico8Impl {
     }
 
     fn cls(&mut self, color: Color) {
-        todo!()
+        self.draw_data.cls_color(color);
     }
+
     fn camera(&mut self, x: i32, y: i32) {
         todo!()
     }
@@ -80,7 +81,9 @@ impl Pico8 for Pico8Impl {
     }
 
     fn spr(&mut self, spr: usize, x: i32, y: i32) {
-        todo!()
+        let spr = self.resources.sprite_sheet.get_sprite(spr);
+
+        self.draw_data.spr(spr, x, y);
     }
 
     fn spr_(&mut self, spr: usize, x: i32, y: i32, w: f32, h: f32, flip_x: bool, flip_y: bool) {
@@ -98,19 +101,20 @@ impl Pico8 for Pico8Impl {
         todo!()
     }
 
-    fn rect(&mut self, x: i32, y: i32, w: i32, h: i32, color: Color) {
-        todo!()
+    fn rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        self.draw_data.rect(x0, y0, x1, y1, color);
     }
-    fn rectfill(&mut self, x: i32, y: i32, w: i32, h: i32, color: Color) {
-        todo!()
+
+    fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        self.draw_data.rectfill(x0, y0, x1, y1, color);
     }
 
     fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        todo!()
+        self.draw_data.line(x0, y0, x1, y1, color);
     }
 
     fn print(&mut self, text: &str, x: i32, y: i32, color: Color) {
-        todo!()
+        self.draw_data.print(text, x, y, color);
     }
 
     // audio
@@ -122,7 +126,7 @@ impl Pico8 for Pico8Impl {
     }
 
     fn append_camera(&mut self, x: i32, y: i32) {
-        todo!()
+        self.draw_data.append_camera(x, y);
     }
 
     fn mouse(&self) -> (i32, i32) {

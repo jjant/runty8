@@ -1,7 +1,7 @@
 use runty8::{App, Button, Pico8};
 
 fn main() {
-    runty8::run_app::<ExampleApp>("".to_owned()).unwrap();
+    runty8::run_app::<ExampleApp>("./src/bin/moving_box".to_owned()).unwrap();
 }
 
 pub struct ExampleApp {
