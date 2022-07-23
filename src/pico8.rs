@@ -1,16 +1,16 @@
-use crate::runtime::draw_context::DrawData;
-use crate::runtime::state::InternalState;
+use crate::runtime::draw_data::DrawData;
+use crate::runtime::state::State;
 use crate::{Button, Color, Resources};
 
 #[derive(Debug)]
 pub(crate) struct Pico8Impl {
     pub(crate) draw_data: DrawData,
-    pub(crate) state: InternalState,
+    pub(crate) state: State,
     pub(crate) resources: Resources,
 }
 
 impl Pico8Impl {
-    pub(crate) fn new(draw_data: DrawData, state: InternalState, resources: Resources) -> Self {
+    pub(crate) fn new(draw_data: DrawData, state: State, resources: Resources) -> Self {
         Self {
             draw_data,
             state,

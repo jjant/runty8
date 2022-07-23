@@ -1,7 +1,7 @@
 use crate::app::AppCompat;
 use crate::controller::{Controller, Scene};
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::runtime::draw_context::DrawData;
+use crate::runtime::draw_data::DrawData;
 use crate::{Event, KeyState, MouseButton, MouseEvent, Resources};
 use crate::{Key, KeyboardEvent};
 use glium::backend::Facade;

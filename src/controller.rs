@@ -1,13 +1,13 @@
 use std::fmt::Debug;
 
 use crate::pico8::Pico8Impl;
-use crate::runtime::draw_context::DrawData;
+use crate::runtime::draw_data::DrawData;
 use crate::runtime::input::Keys;
 use crate::ui::DispatchEvent;
 use crate::{
     app::{AppCompat, ElmApp},
     editor::{self, key_combo::KeyCombos, Editor},
-    runtime::state::InternalState,
+    runtime::state::State,
     ui::Element,
     Event, Key, KeyboardEvent, MouseButton, MouseEvent, Resources,
 };
@@ -44,9 +44,7 @@ impl<T> Controller<T> {
 
 impl<Game: AppCompat> Controller<Game> {
     pub fn init(scene: Scene, resources: Resources) -> Self {
-        let internal_state = InternalState::new();
-        let draw_data = DrawData::new();
-        let mut pico8 = Pico8Impl::new(draw_data, internal_state, resources);
+        let mut pico8 = Pico8Impl::new(DrawData::new(), State::new(), resources);
 
         Self {
             scene,

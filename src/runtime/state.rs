@@ -2,7 +2,7 @@ use crate::runtime::input::Keys;
 use ButtonState::*;
 
 #[derive(Debug)]
-pub(crate) struct InternalState {
+pub(crate) struct State {
     left: ButtonState,
     right: ButtonState,
     up: ButtonState,
@@ -14,7 +14,7 @@ pub(crate) struct InternalState {
     mouse_pressed: ButtonState,
 }
 
-impl InternalState {
+impl State {
     pub(crate) fn new() -> Self {
         Self {
             left: NotPressed,
@@ -104,7 +104,7 @@ impl ButtonState {
         *self = NotPressed;
     }
 
-    pub fn btn(&self) -> bool {
+    pub(crate) fn btn(&self) -> bool {
         match *self {
             JustPressed => true,
             Held => true,
@@ -112,7 +112,7 @@ impl ButtonState {
         }
     }
 
-    pub fn btnp(&self) -> bool {
+    pub(crate) fn btnp(&self) -> bool {
         matches!(*self, JustPressed)
     }
 }
