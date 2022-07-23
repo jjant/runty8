@@ -1,18 +1,15 @@
 use crate::pico8::{Pico8, Pico8Impl};
+use crate::ui::DrawFn;
 use crate::ui::Element;
 use crate::Event;
 use crate::Resources;
-use crate::{
-    runtime::{draw_context::DrawData, state::InternalState},
-    ui::DrawFn,
-};
 use std::fmt::Debug;
 
 /// A regular pico8 app
 pub trait App {
-    fn init(state: &mut dyn Pico8) -> Self;
-    fn update(&mut self, draw_context: &mut dyn Pico8);
-    fn draw(&mut self, draw_context: &mut dyn Pico8);
+    fn init(pico8: &mut dyn Pico8) -> Self;
+    fn update(&mut self, pico8: &mut dyn Pico8);
+    fn draw(&mut self, pico8: &mut dyn Pico8);
 }
 
 /// An Elm-style app
@@ -33,18 +30,12 @@ pub(crate) struct ElmAppCompat<A> {
 impl<A: ElmApp> AppCompat for ElmAppCompat<A> {
     type Msg = A::Msg;
 
-    fn init(_: &mut Resources, _: &InternalState, _: &mut DrawData) -> Self {
+    fn init(_: &mut Pico8Impl) -> Self {
         Self { app: A::init() }
     }
 
-    fn update(
-        &mut self,
-        msg: &Self::Msg,
-        resources: &mut Resources,
-        _: &InternalState,
-        _: &mut DrawData,
-    ) {
-        self.app.update(msg, resources)
+    fn update(&mut self, msg: &Self::Msg, pico8: &mut Pico8Impl) {
+        self.app.update(msg, &mut pico8.resources)
     }
 
     fn view(&mut self, resources: &mut Resources) -> Element<'_, Self::Msg> {
@@ -68,23 +59,14 @@ pub(crate) struct Pico8AppCompat<A> {
 impl<A: App> AppCompat for Pico8AppCompat<A> {
     type Msg = Pico8AppMsg;
 
-    fn init(resources: &mut Resources, state: &InternalState, draw_data: &mut DrawData) -> Self {
-        let mut pico8impl = Pico8Impl::new(draw_data, state, resources);
-
+    fn init(pico8: &mut Pico8Impl) -> Self {
         Self {
-            app: A::init(&mut pico8impl),
+            app: A::init(pico8),
         }
     }
 
-    fn update(
-        &mut self,
-        _: &Self::Msg,
-        resources: &mut Resources,
-        state: &InternalState,
-        draw_data: &mut DrawData,
-    ) {
-        let mut pico8impl = Pico8Impl::new(draw_data, state, resources);
-        self.app.update(&mut pico8impl);
+    fn update(&mut self, _: &Self::Msg, pico8: &mut Pico8Impl) {
+        self.app.update(pico8);
     }
 
     fn view(&mut self, _: &mut Resources) -> Element<'_, Self::Msg> {
@@ -103,14 +85,8 @@ impl<A: App> AppCompat for Pico8AppCompat<A> {
 /// Not intended for direct use.
 pub(crate) trait AppCompat {
     type Msg: Copy + Debug;
-    fn init(resources: &mut Resources, state: &InternalState, draw_data: &mut DrawData) -> Self;
-    fn update(
-        &mut self,
-        msg: &Self::Msg,
-        resources: &mut Resources,
-        state: &InternalState,
-        draw_data: &mut DrawData,
-    );
+    fn init(pico8: &mut Pico8Impl) -> Self;
+    fn update(&mut self, msg: &Self::Msg, pico8: &mut Pico8Impl);
     fn view(&mut self, resources: &mut Resources) -> Element<'_, Self::Msg>;
     fn subscriptions(&self, event: &Event) -> Vec<Self::Msg>;
 }

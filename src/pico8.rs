@@ -2,18 +2,15 @@ use crate::runtime::draw_context::DrawData;
 use crate::runtime::state::InternalState;
 use crate::{Button, Color, Resources};
 
-pub(crate) struct Pico8Impl<'a> {
-    draw_data: &'a mut DrawData,
-    state: &'a InternalState,
-    resources: &'a mut Resources,
+#[derive(Debug)]
+pub(crate) struct Pico8Impl {
+    pub(crate) draw_data: DrawData,
+    pub(crate) state: InternalState,
+    pub(crate) resources: Resources,
 }
 
-impl<'a> Pico8Impl<'a> {
-    pub(crate) fn new(
-        draw_data: &'a mut DrawData,
-        state: &'a InternalState,
-        resources: &'a mut Resources,
-    ) -> Self {
+impl Pico8Impl {
+    pub(crate) fn new(draw_data: DrawData, state: InternalState, resources: Resources) -> Self {
         Self {
             draw_data,
             state,
@@ -22,7 +19,7 @@ impl<'a> Pico8Impl<'a> {
     }
 }
 
-impl<'a> Pico8 for Pico8Impl<'a> {
+impl Pico8 for Pico8Impl {
     fn mget(&self, x: i32, y: i32) -> u8 {
         self.resources.map.mget(x, y)
     }

@@ -14,6 +14,7 @@ const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
 const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 // Handles actually drawing to the screen buffer
+#[derive(Debug)]
 pub(crate) struct DrawData {
     buffer: Buffer,
     // Maybe these properties below should be in internal state?
