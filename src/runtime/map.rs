@@ -38,16 +38,6 @@ impl Map {
         Map { map }
     }
 
-    pub fn from_slice(v: &[SpriteId]) -> Self {
-        let mut m = Self::new();
-
-        for (i, s) in v.iter().copied().enumerate() {
-            m.map[i] = s;
-        }
-
-        m
-    }
-
     pub(crate) fn mget(&self, cel_x: i32, cel_y: i32) -> u8 {
         let index = Self::index(cel_x, cel_y);
 
@@ -62,10 +52,6 @@ impl Map {
         assert!(index <= self.map.len());
 
         self.map[index] = sprite;
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = SpriteId> + '_ {
-        self.map.iter().copied()
     }
 
     fn index(x: i32, y: i32) -> Option<usize> {
