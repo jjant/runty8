@@ -55,7 +55,7 @@ struct GameEffects {
 }
 
 impl App for GameState {
-    fn init(state: &mut Pico8) -> Self {
+    fn init(pico8: &mut Pico8) -> Self {
         let clouds = (0..=16)
             .into_iter()
             .map(|_| Cloud {
@@ -105,12 +105,12 @@ impl App for GameState {
             effects: GameEffects { shake: 0 },
         };
 
-        title_screen(&mut gs, state);
+        title_screen(&mut gs, pico8);
 
         gs
     }
 
-    fn update(&mut self, state: &mut Pico8) {
+    fn update(&mut self, pico8: &mut Pico8) {
         self.frames = (self.frames + 1) % 30;
 
         if self.frames == 0 && level_index(self.room) < 30 {
@@ -147,7 +147,7 @@ impl App for GameState {
             self.delay_restart -= 1;
             if self.delay_restart <= 0 {
                 self.will_restart = false;
-                load_room(self, state, self.room.x, self.room.y);
+                load_room(self, pico8, self.room.x, self.room.y);
             }
         }
 
@@ -159,7 +159,7 @@ impl App for GameState {
                 OtherObjects::split_slice(i, &mut self.objects).unwrap();
 
             // Apply velocity
-            object.move_(state, &mut other_objects, self.room);
+            object.move_(pico8, &mut other_objects, self.room);
             let UpdateAction {
                 should_destroy,
                 next_level,
@@ -169,7 +169,7 @@ impl App for GameState {
                 &mut self.effects,
                 &mut self.got_fruit,
                 self.room,
-                state,
+                pico8,
                 self.max_djump,
                 &mut self.has_dashed,
                 self.frames,
@@ -198,7 +198,7 @@ impl App for GameState {
         if player_dead {
             kill_player(self)
         } else if do_next_level {
-            next_room(self, state);
+            next_room(self, pico8);
         }
 
         if !is_title(self) {
@@ -210,10 +210,10 @@ impl App for GameState {
         // Update and remove dead dead_particles
         self.dead_particles.retain_mut(DeadParticle::update);
 
-        // self.begin_game(state);
+        // self.begin_game(pico8);
         // start game
         if is_title(self) {
-            if !self.start_game && (state.btn(K_JUMP) || state.btn(K_DASH)) {
+            if !self.start_game && (pico8.btn(K_JUMP) || pico8.btn(K_DASH)) {
                 // music(-1);
                 self.start_game_flash = 50;
                 self.start_game = true;
@@ -222,7 +222,7 @@ impl App for GameState {
             if self.start_game {
                 self.start_game_flash -= 1;
                 if self.start_game_flash <= -30 {
-                    self.begin_game(state);
+                    self.begin_game(pico8);
                 }
             }
         }
@@ -476,14 +476,14 @@ fn rnd(max: f32) -> f32 {
 }
 
 impl GameState {
-    fn begin_game(&mut self, state: &Pico8) {
+    fn begin_game(&mut self, pico8: &Pico8) {
         self.frames = 0;
         self.seconds = 0;
         self.minutes = 0;
         self.music_timer = 0;
         self.start_game = false;
         // music(0, 0, 7);
-        load_room(self, state, 0, 0);
+        load_room(self, pico8, 0, 0);
     }
 }
 
@@ -494,7 +494,7 @@ const K_DOWN: Button = Button::Down;
 const K_JUMP: Button = Button::C;
 const K_DASH: Button = Button::X;
 
-fn title_screen(game_state: &mut GameState, state: &Pico8) {
+fn title_screen(game_state: &mut GameState, pico8: &Pico8) {
     game_state.got_fruit = vec![false; 30];
     game_state.frames = 0;
     game_state.deaths = 0;
@@ -502,7 +502,7 @@ fn title_screen(game_state: &mut GameState, state: &Pico8) {
     game_state.start_game = false;
     game_state.start_game_flash = 0;
     // music(40,0,7)
-    load_room(game_state, state, 7, 3)
+    load_room(game_state, pico8, 7, 3)
 }
 
 fn level_index(room: Vec2<i32>) -> usize {

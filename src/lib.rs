@@ -22,13 +22,12 @@ mod run;
 use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
-use rand::Rng;
 use runtime::{
     flags::Flags,
     map::Map,
     sprite_sheet::{Sprite, SpriteSheet},
 };
-use std::{f32::consts::PI, fmt::Debug};
+use std::fmt::Debug;
 
 /// Mouse buttons
 #[derive(Clone, Copy, Debug)]
@@ -277,51 +276,4 @@ pub(crate) fn write_and_log(file_name: &str, contents: &str) {
     print!("Writing {file_name}... ");
     std::fs::write(&file_name, contents).unwrap();
     println!("success.")
-}
-
-/* Pico8 math functions */
-
-/// <https://pico-8.fandom.com/wiki/Sin>
-pub fn sin(f: f32) -> f32 {
-    (-f * 2.0 * PI).sin()
-}
-
-/// <https://pico-8.fandom.com/wiki/Rnd>
-pub fn rnd(limit: f32) -> f32 {
-    rand::thread_rng().gen_range(0.0..limit)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{rnd, sin};
-
-    macro_rules! assert_delta {
-        ($x:expr, $y:expr, $d:expr) => {
-            if !($x - $y < $d && $y - $x < $d) {
-                panic!();
-            }
-        };
-    }
-
-    #[test]
-    fn sin_works() {
-        assert_delta!(sin(0.0), 0.0, 0.00001);
-        assert_delta!(sin(0.125), -0.70710677, 0.00001);
-        assert_delta!(sin(0.25), -1.0, 0.00001);
-        assert_delta!(sin(0.375), -0.70710677, 0.00001);
-        assert_delta!(sin(0.5), 0.0, 0.00001);
-        assert_delta!(sin(0.625), 0.70710677, 0.00001);
-        assert_delta!(sin(0.75), 1.0, 0.00001);
-        assert_delta!(sin(0.875), 0.70710677, 0.00001);
-        assert_delta!(sin(1.0), 0.0, 0.00001);
-    }
-
-    #[test]
-    fn rnd_works() {
-        for _ in 0..100 {
-            let random_value = rnd(50.0);
-
-            assert!(0.0 < random_value && random_value < 50.0);
-        }
-    }
 }
