@@ -1,29 +1,20 @@
-use std::path::Path;
-
-use runty8::App;
-use runty8::DrawContext;
-
-fn assets_path() -> String {
-    let buf = Path::new("src/bin/ui_demo").to_path_buf();
-    let dir_name = buf.to_str().unwrap();
-    dir_name.to_owned()
-}
+use runty8::{App, Pico8};
 
 fn main() {
-    runty8::run_app::<EmptyApp>(assets_path()).unwrap()
+    runty8::run_app::<EmptyApp>("src/bin/ui_demo".to_owned()).unwrap()
 }
 
 struct EmptyApp;
 
 impl App for EmptyApp {
-    fn init(_: &mut DrawContext) -> Self {
+    fn init(_: &mut Pico8) -> Self {
         Self
     }
 
-    fn update(&mut self, _: &mut DrawContext) {}
+    fn update(&mut self, _: &mut Pico8) {}
 
-    fn draw(&mut self, draw: &mut DrawContext) {
-        draw.cls();
+    fn draw(&mut self, draw: &mut Pico8) {
+        draw.cls(0);
         draw.print("EMPTY", 0, 0, 7);
     }
 }

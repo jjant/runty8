@@ -1,7 +1,6 @@
 use crate::app::AppCompat;
 use crate::controller::{Controller, Scene};
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::runtime::draw_context::DrawData;
 use crate::{Event, KeyState, MouseButton, MouseEvent, Resources};
 use crate::{Key, KeyboardEvent};
 use glium::backend::Facade;
@@ -26,18 +25,17 @@ pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resour
 
     let (indices, program) = make_gl_program(&display);
 
-    let mut draw_data = DrawData::new();
-    let mut controller = Controller::<Game>::init(scene, resources, &mut draw_data);
+    let mut controller = Controller::<Game>::init(scene, resources);
     event_loop.run(move |glutin_event, _, control_flow| {
         let event: Option<Event> =
             translate_event(&glutin_event, scale_factor, &mut logical_size, control_flow);
 
-        controller.step(&mut draw_data, event);
+        controller.step(event);
 
         do_draw(
             &display,
             display.draw(),
-            &draw_data.buffer,
+            controller.screen_buffer(),
             &indices,
             &program,
         );

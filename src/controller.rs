@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 
-use crate::runtime::draw_context::{DrawContext, DrawData};
+use crate::pico8::Pico8;
+use crate::runtime::draw_data::DrawData;
 use crate::runtime::input::Keys;
 use crate::ui::DispatchEvent;
 use crate::{
     app::{AppCompat, ElmApp},
     editor::{self, key_combo::KeyCombos, Editor},
-    runtime::state::{InternalState, State},
+    runtime::state::State,
     ui::Element,
     Event, Key, KeyboardEvent, MouseButton, MouseEvent, Resources,
 };
@@ -33,39 +34,40 @@ pub(crate) struct Controller<Game> {
     app: Game,
     key_combos: KeyCombos<KeyComboAction>,
     keys: Keys,
-    internal_state: InternalState,
-    resources: Resources,
+    pico8: Pico8,
+}
+impl<T> Controller<T> {
+    pub(crate) fn screen_buffer(&self) -> &[u8] {
+        self.pico8.draw_data.buffer()
+    }
 }
 
 impl<Game: AppCompat> Controller<Game> {
-    pub fn init(scene: Scene, mut resources: Resources, draw_data: &mut DrawData) -> Self {
-        let internal_state = InternalState::new();
-        let app = Game::init(&mut resources, &internal_state, draw_data);
+    pub fn init(scene: Scene, resources: Resources) -> Self {
+        let mut pico8 = Pico8::new(DrawData::new(), State::new(), resources);
 
         Self {
             scene,
             editor: <Editor as ElmApp>::init(),
-            app,
+            app: Game::init(&mut pico8),
             key_combos: KeyCombos::new()
                 .push(KeyComboAction::RestartGame, Key::R, &[Key::Control])
                 .push(KeyComboAction::SwitchScene, Key::Escape, &[]),
             keys: Keys::new(),
-            internal_state,
-            resources,
+            pico8,
         }
     }
 
-    fn update(&mut self, msg: &Msg<Game::Msg>, draw_data: &mut DrawData) {
+    fn update(&mut self, msg: &Msg<Game::Msg>) {
         match msg {
             Msg::Editor(editor_msg) => {
-                <Editor as ElmApp>::update(&mut self.editor, editor_msg, &mut self.resources);
+                <Editor as ElmApp>::update(&mut self.editor, editor_msg, &mut self.pico8.resources);
             }
             Msg::App(msg) => {
-                self.app
-                    .update(msg, &mut self.resources, &self.internal_state, draw_data);
+                self.app.update(msg, &mut self.pico8);
             }
             &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
-                self.internal_state.on_mouse_move(x, y);
+                self.pico8.state.on_mouse_move(x, y);
             }
             &Msg::MouseEvent(event) => {
                 let left_pressed = match event {
@@ -84,7 +86,7 @@ impl<Game: AppCompat> Controller<Game> {
                 self.keys.on_event(event);
             }
             &Msg::Tick => {
-                self.internal_state.update_keys(&self.keys);
+                self.pico8.state.update_keys(&self.keys);
             }
         }
     }
@@ -127,11 +129,9 @@ fn view<'a, Game: AppCompat>(
 
 impl<Game: AppCompat> Controller<Game> {
     fn handle_key_combos(&mut self, key_event: KeyboardEvent) {
-        let state = State::new(&self.internal_state, &mut self.resources);
         self.key_combos.on_event(key_event, |action| match action {
             KeyComboAction::RestartGame => {
-                // TODO: Re-enable
-                // self.app = Game::init(&state);
+                self.app = Game::init(&mut self.pico8);
                 self.scene = Scene::App;
             }
             KeyComboAction::SwitchScene => self.scene.flip(),
@@ -139,33 +139,31 @@ impl<Game: AppCompat> Controller<Game> {
     }
 
     /// Thing that actually calls update/orchestrates stuff
-    pub(crate) fn step(&mut self, draw_data: &mut DrawData, event: Option<Event>) {
+    pub(crate) fn step(&mut self, event: Option<Event>) {
         let mut view = view(
             &self.scene,
             &mut self.editor,
             &mut self.app,
-            &mut self.resources,
+            &mut self.pico8.resources,
         );
 
         let mut msg_queue = vec![];
         let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
 
-        let cursor_position = (self.internal_state.mouse_x, self.internal_state.mouse_y);
+        let cursor_position = (self.pico8.state.mouse_x, self.pico8.state.mouse_y);
         if let Some(event) = event {
             view.as_widget_mut()
                 .on_event(event, cursor_position, dispatch_event);
         }
 
-        let mut state = State::new(&self.internal_state, &mut self.resources);
-        let mut draw_context = DrawContext::new(&mut state, draw_data);
-        view.as_widget_mut().draw(&mut draw_context);
+        view.as_widget_mut().draw(&mut self.pico8);
         drop(view);
 
         for subscription_msg in event.into_iter().flat_map(|e| self.subscriptions(&e)) {
             msg_queue.push(subscription_msg);
         }
         for msg in msg_queue.into_iter() {
-            self.update(&msg, draw_data);
+            self.update(&msg);
         }
     }
 }

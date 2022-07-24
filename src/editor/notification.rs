@@ -1,6 +1,7 @@
-use crate::runtime::draw_context::colors;
+use crate::runtime::draw_data::colors;
 use crate::ui::DispatchEvent;
-use crate::{runtime::draw_context::DrawContext, ui::Widget, Event};
+use crate::Pico8;
+use crate::{ui::Widget, Event};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -109,7 +110,7 @@ impl<'a, Msg: Copy + Debug> Widget for Notification<'a, Msg> {
         }
     }
 
-    fn draw(&mut self, draw: &mut DrawContext) {
+    fn draw(&mut self, draw: &mut Pico8) {
         let x = 1;
         let base_y = 122;
         let offset_y_max = 8;

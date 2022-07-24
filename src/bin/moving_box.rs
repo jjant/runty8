@@ -1,7 +1,7 @@
-use runty8::{App, Button, DrawContext};
+use runty8::{App, Button, Pico8};
 
 fn main() {
-    runty8::run_app::<ExampleApp>("".to_owned()).unwrap();
+    runty8::run_app::<ExampleApp>("./src/bin/moving_box".to_owned()).unwrap();
 }
 
 pub struct ExampleApp {
@@ -13,7 +13,7 @@ pub struct ExampleApp {
 }
 
 impl App for ExampleApp {
-    fn init(_: &mut DrawContext) -> Self {
+    fn init(_: &mut Pico8) -> Self {
         Self {
             x: 6400,
             y: 6400,
@@ -23,8 +23,8 @@ impl App for ExampleApp {
         }
     }
 
-    fn draw(&mut self, draw_context: &mut DrawContext) {
-        draw_context.cls();
+    fn draw(&mut self, draw_context: &mut Pico8) {
+        draw_context.cls(0);
         draw_context.print(
             &format!("X={} Y={} YC={}", self.x / 100, self.y / 100, self.yc),
             0,
@@ -52,7 +52,7 @@ impl App for ExampleApp {
         // draw_context.raw_spr(sprite, self.x / 100, self.y / 100);
     }
 
-    fn update(&mut self, state: &mut DrawContext) {
+    fn update(&mut self, state: &mut Pico8) {
         // println!("{:?}", state);
 
         // -- lower -100/100 less max spd

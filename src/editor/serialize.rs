@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::runtime::draw_context::COLORS;
+use crate::runtime::draw_data::COLORS;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use std::fmt::Display;

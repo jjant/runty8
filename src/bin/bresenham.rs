@@ -1,4 +1,4 @@
-use runty8::{self, App, Button, DrawContext};
+use runty8::{self, App, Button, Pico8};
 
 fn main() {
     runty8::run_app::<MyThing>("src/bin/bresenham".to_owned()).unwrap();
@@ -11,7 +11,7 @@ struct MyThing {
 }
 
 impl App for MyThing {
-    fn init(_: &mut DrawContext) -> Self {
+    fn init(_: &mut Pico8) -> Self {
         Self {
             center_x: 64,
             center_y: 64,
@@ -19,7 +19,7 @@ impl App for MyThing {
         }
     }
 
-    fn update(&mut self, state: &mut DrawContext) {
+    fn update(&mut self, state: &mut Pico8) {
         if state.btn(Button::Down) {
             self.center_y += 1;
         }
@@ -42,8 +42,8 @@ impl App for MyThing {
         }
     }
 
-    fn draw(&mut self, draw: &mut DrawContext) {
-        draw.cls();
+    fn draw(&mut self, draw: &mut Pico8) {
+        draw.cls(0);
         draw.pset(self.center_x, self.center_y, 7);
         for x_sign in [-1, 1] {
             for y_sign in [-1, 1] {

@@ -152,7 +152,7 @@ impl ElmApp for GameState {
     fn view(&mut self, _: &Resources) -> Element<'_, Self::Msg> {
         Tree::new()
             .push(DrawFn::new(|draw| {
-                draw.cls();
+                draw.cls(0);
                 self.player.draw(draw, self.frames);
             }))
             .push(view_entities(&self.entities))

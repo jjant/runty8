@@ -51,6 +51,7 @@ pub(crate) struct Editor {
     commands: Commands,
     brush_size: BrushSize,
     brush_size_state: brush_size::State,
+    editor_sprites: SpriteSheet,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -192,12 +193,19 @@ enum KeyComboAction {
     Save,
 }
 
+fn load_editor_sprite_sheet() -> Result<SpriteSheet, String> {
+    let editor_sprites = std::fs::read_to_string("./src/editor/sprite_sheet.txt")
+        .map_err(|_| "Couldn't find editor sprite sheet file.".to_owned())?;
+
+    SpriteSheet::deserialize(&editor_sprites)
+        .map_err(|_| "Couldn't parse editor sprite sheet.".to_owned())
+}
+
 impl ElmApp for Editor {
     type Msg = Msg;
 
     fn init() -> Self {
         let selected_sprite = 0;
-
         Self {
             cursor: cursor::State::new(),
             sprite_button_state: button::State::new(),
@@ -235,6 +243,9 @@ impl ElmApp for Editor {
             commands: Commands::new(),
             brush_size: BrushSize::tiny(),
             brush_size_state: brush_size::State::new(),
+            editor_sprites: load_editor_sprite_sheet()
+                // TODO: Change this to actually crash if it failed.
+                .unwrap_or_else(|_| SpriteSheet::new()),
         }
     }
 
@@ -356,6 +367,7 @@ impl ElmApp for Editor {
                     &mut self.pixel_buttons,
                     self.brush_size,
                     &mut self.brush_size_state,
+                    &self.editor_sprites,
                 ),
                 Tab::MapEditor => Tree::new()
                     .push(map_view(
@@ -423,6 +435,7 @@ fn sprite_editor_view<'a, 'b>(
     pixel_buttons: &'a mut [button::State],
     brush_size: BrushSize,
     brush_size_state: &'a mut brush_size::State,
+    editor_sprites: &'a SpriteSheet,
 ) -> Element<'a, Msg> {
     Tree::new()
         .push(color_selector(
@@ -435,7 +448,13 @@ fn sprite_editor_view<'a, 'b>(
             Msg::ColorHovered,
         ))
         .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
-        .push(flags(selected_sprite_flags, 78, 70, flag_buttons))
+        .push(flags(
+            selected_sprite_flags,
+            78,
+            70,
+            flag_buttons,
+            editor_sprites,
+        ))
         .push(
             BrushSizeSelector {
                 x: 79,
@@ -779,12 +798,13 @@ fn bottom_bar(text: &str) -> Element<'_, Msg> {
 // - Change color of highlight
 // - Don't show button underneath
 // - Optimize? (no Tree::new with draw commands)
-fn flags(
+fn flags<'a>(
     selected_sprite_flags: u8,
     x: i32,
     y: i32,
-    flag_buttons: &mut [button::State],
-) -> Element<'_, Msg> {
+    flag_buttons: &'a mut [button::State],
+    _editor_sprites: &'a SpriteSheet,
+) -> Element<'a, Msg> {
     const SPR_SIZE: i32 = 5;
     const FLAG_COLORS: [u8; 8] = [8, 9, 10, 11, 12, 13, 14, 15];
 
@@ -796,10 +816,16 @@ fn flags(
             let flag_on = selected_sprite_flags & (1 << index) != 0;
             let color = if flag_on { FLAG_COLORS[index] } else { 1 };
 
-            let button_content: Element<'_, Msg> = Tree::new()
+            let button_content: Element<'a, Msg> = Tree::new()
                 .push(palt(Some(7)))
                 .push(pal(1, color))
-                .push(spr(58, 0, 0))
+                .push(DrawFn::new(|pico8| {
+                    // TODO: Use the editor sprite sheet (not doing so currently,
+                    // because it's still WIP).
+                    //
+                    // pico8.spr_from(editor_sprites, 58, 0, 0);
+                    pico8.spr(58, 0, 0);
+                }))
                 .push(pal(1, 1))
                 .push(palt(Some(0)))
                 .into();
@@ -821,15 +847,15 @@ fn flags(
     Tree::with_children(children).into()
 }
 
-fn palt(transparent_color: Option<u8>) -> impl Into<Element<'static, Msg>> {
+fn palt<'a>(transparent_color: Option<u8>) -> impl Into<Element<'a, Msg>> {
     DrawFn::new(move |draw| draw.palt(transparent_color))
 }
 
-fn pal(c0: u8, c1: u8) -> impl Into<Element<'static, Msg>> {
+fn pal<'a>(c0: u8, c1: u8) -> impl Into<Element<'a, Msg>> {
     DrawFn::new(move |draw| draw.pal(c0, c1))
 }
 
-fn spr(sprite: usize, x: i32, y: i32) -> impl Into<Element<'static, Msg>> {
+fn spr<'a>(sprite: usize, x: i32, y: i32) -> impl Into<Element<'a, Msg>> {
     DrawFn::new(move |draw| draw.spr(sprite, x, y))
 }
 
