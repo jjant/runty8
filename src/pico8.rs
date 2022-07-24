@@ -124,7 +124,7 @@ impl Pico8 {
     }
 
     pub fn circ(&mut self, x: i32, y: i32, r: i32, color: Color) {
-        todo!()
+        self.draw_data.circ(x, y, r, color);
     }
     pub fn circfill(&mut self, x: i32, y: i32, r: i32, color: Color) {
         self.draw_data.circfill(x, y, r, color);

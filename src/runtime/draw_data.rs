@@ -271,10 +271,6 @@ impl DrawData {
         self.spr_(sprite, x, y, 1.0, 1.0, false, false)
     }
 
-    pub(crate) fn cls(&mut self) {
-        self.cls_color(colors::BLACK);
-    }
-
     pub(crate) fn cls_color(&mut self, color: Color) {
         self.rectfill(0, 0, 127, 127, color);
     }
