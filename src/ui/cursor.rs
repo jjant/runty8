@@ -50,11 +50,10 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
 
     fn draw(&mut self, draw: &mut Pico8) {
         draw.palt(Some(0));
-        // TODO: Re-add
-        // draw.raw_spr(
-        //     Sprite::new(editor::MOUSE_SPRITE),
-        //     self.state.cursor_position.0 - 3,
-        //     self.state.cursor_position.1 - 1,
-        // );
+        draw.raw_spr(
+            Sprite::new(editor::MOUSE_SPRITE),
+            self.state.cursor_position.0 - 3,
+            self.state.cursor_position.1 - 1,
+        );
     }
 }
