@@ -67,7 +67,7 @@ impl Pico8 {
     }
 
     pub fn pset(&mut self, x: i32, y: i32, color: Color) {
-        todo!()
+        self.draw_data.pset(x, y, color);
     }
 
     pub fn cls(&mut self, color: Color) {
@@ -78,7 +78,7 @@ impl Pico8 {
         self.draw_data.camera(x, y);
     }
 
-    pub fn clip(&mut self, x: i32, y: i32, w: i32, h: i32) {
+    pub fn clip(&mut self, _x: i32, _y: i32, _w: i32, _h: i32) {
         todo!()
     }
 
@@ -147,10 +147,10 @@ impl Pico8 {
     }
 
     // audio
-    pub fn sfx(&mut self, sound_id: u8) {
+    pub fn sfx(&mut self, _sound_id: u8) {
         todo!()
     }
-    pub fn music(&mut self, music_id: u8) {
+    pub fn music(&mut self, _music_id: u8) {
         todo!()
     }
 
@@ -165,6 +165,8 @@ impl Pico8 {
 
 // Utility pub(crate) methods
 impl Pico8 {
+    // TODO: Remove this `allow` when we use it in the editor.
+    #[allow(dead_code)]
     pub(crate) fn spr_from(&mut self, sprite_sheet: &SpriteSheet, spr: usize, x: i32, y: i32) {
         let spr = sprite_sheet.get_sprite(spr);
 
