@@ -193,16 +193,19 @@ enum KeyComboAction {
     Save,
 }
 
+fn load_editor_sprite_sheet() -> Result<SpriteSheet, String> {
+    let editor_sprites = std::fs::read_to_string("./src/editor/sprite_sheet.txt")
+        .map_err(|_| "Couldn't find editor sprite sheet file.".to_owned())?;
+
+    SpriteSheet::deserialize(&editor_sprites)
+        .map_err(|_| "Couldn't parse editor sprite sheet.".to_owned())
+}
+
 impl ElmApp for Editor {
     type Msg = Msg;
 
     fn init() -> Self {
         let selected_sprite = 0;
-        let editor_sprites = std::fs::read_to_string("./src/editor/sprite_sheet.txt")
-            .expect("Couldn't find editor sprite sheet file.");
-        let editor_sprites =
-            SpriteSheet::deserialize(&editor_sprites).expect("Couldn't parse editor sprite sheet.");
-
         Self {
             cursor: cursor::State::new(),
             sprite_button_state: button::State::new(),
@@ -240,7 +243,9 @@ impl ElmApp for Editor {
             commands: Commands::new(),
             brush_size: BrushSize::tiny(),
             brush_size_state: brush_size::State::new(),
-            editor_sprites,
+            editor_sprites: load_editor_sprite_sheet()
+                // TODO: Change this to actually crash if it failed.
+                .unwrap_or_else(|_| SpriteSheet::new()),
         }
     }
 
@@ -798,7 +803,7 @@ fn flags<'a>(
     x: i32,
     y: i32,
     flag_buttons: &'a mut [button::State],
-    editor_sprites: &'a SpriteSheet,
+    _editor_sprites: &'a SpriteSheet,
 ) -> Element<'a, Msg> {
     const SPR_SIZE: i32 = 5;
     const FLAG_COLORS: [u8; 8] = [8, 9, 10, 11, 12, 13, 14, 15];
@@ -815,7 +820,11 @@ fn flags<'a>(
                 .push(palt(Some(7)))
                 .push(pal(1, color))
                 .push(DrawFn::new(|pico8| {
-                    pico8.spr_from(editor_sprites, 58, 0, 0);
+                    // TODO: Use the editor sprite sheet (not doing so currently,
+                    // because it's still WIP).
+                    //
+                    // pico8.spr_from(editor_sprites, 58, 0, 0);
+                    pico8.spr(58, 0, 0);
                 }))
                 .push(pal(1, 1))
                 .push(palt(Some(0)))

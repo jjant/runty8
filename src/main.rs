@@ -1,15 +1,7 @@
-use std::path::Path;
-
 use runty8::{App, Pico8};
 
-fn assets_path() -> String {
-    let buf = Path::new("src/bin/ui_demo").to_path_buf();
-    let dir_name = buf.to_str().unwrap();
-    dir_name.to_owned()
-}
-
 fn main() {
-    runty8::run_app::<EmptyApp>(assets_path()).unwrap()
+    runty8::run_app::<EmptyApp>("src/bin/ui_demo".to_owned()).unwrap()
 }
 
 struct EmptyApp;
