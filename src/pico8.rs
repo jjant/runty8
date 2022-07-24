@@ -119,6 +119,13 @@ impl Pico8 {
         self.draw_data.spr_(spr, x, y, w, h, flip_x, flip_y);
     }
 
+    // TODO: Test
+    pub fn sset(&mut self, x: i32, y: i32, color: Color) {
+        if let (Ok(x), Ok(y)) = (x.try_into(), y.try_into()) {
+            self.resources.sprite_sheet.set(x, y, color);
+        }
+    }
+
     pub fn fillp(&mut self) {
         todo!()
     }

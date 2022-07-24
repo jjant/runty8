@@ -45,6 +45,7 @@ impl SpriteSheet {
         }
     }
 
+    /// Sets the pixel at coordinate (x,y) in the spritesheet to a specified color
     pub fn set(&mut self, x: usize, y: usize, c: Color) {
         self.sprite_sheet[Self::to_linear_index(x, y)] = c;
     }
@@ -198,6 +199,8 @@ mod tests {
 
     #[test]
     fn indexing_works() {
+        assert_eq!(SpriteSheet::to_linear_index(7, 0), 7);
+        assert_eq!(SpriteSheet::to_linear_index(0, 1), 8);
         assert_eq!(SpriteSheet::to_linear_index(8, 0), 64);
         assert_eq!(SpriteSheet::to_linear_index(8, 1), 64 + 8);
         assert_eq!(SpriteSheet::to_linear_index(1, 9), 1033);
