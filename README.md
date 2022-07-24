@@ -4,6 +4,8 @@ A Pico8 clone in rust
 
 ## Things to do
 
+- [ ] Unify data structures (sprite sheet/map/etc) under a single Memory byte array?
+      Not sure this is good (tho it may simplify having the map and sprite sheet overlapping in memory, otherwise that has to be programmer manually).
 - [x] Support Ctrl+r/Cmd+r to restart game
 - [ ] Modify editor W, A, S, D key short cuts (shift sprite) to use arrow keys
 - [ ] Implement sprite editor tools: line, circle, selection tool, zoom, etc
