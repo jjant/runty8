@@ -36,7 +36,7 @@ impl<'a, Msg: Copy + Debug> Widget for Text<'a, Msg> {
     ) {
     }
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         draw.print(self.text, self.x, self.y, self.color);
     }
 }

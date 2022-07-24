@@ -15,13 +15,13 @@ fn main() {
 struct EmptyApp;
 
 impl App for EmptyApp {
-    fn init(_: &mut dyn Pico8) -> Self {
+    fn init(_: &mut Pico8) -> Self {
         Self
     }
 
-    fn update(&mut self, _: &mut dyn Pico8) {}
+    fn update(&mut self, _: &mut Pico8) {}
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         draw.cls(0);
         draw.print("EMPTY", 0, 0, 7);
     }

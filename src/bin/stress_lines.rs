@@ -59,13 +59,13 @@ impl MouseState {
 }
 
 impl App for StressLines {
-    fn init(_: &mut dyn Pico8) -> Self {
+    fn init(_: &mut Pico8) -> Self {
         Self {
             mouse: MouseState::new(64, 64),
         }
     }
 
-    fn update(&mut self, state: &mut dyn Pico8) {
+    fn update(&mut self, state: &mut Pico8) {
         let (mouse_x, mouse_y) = state.mouse();
         self.mouse
             .update(state.btn(Button::Mouse), mouse_x, mouse_y);
@@ -81,25 +81,25 @@ impl App for StressLines {
         // }
     }
 
-    fn draw(&mut self, draw_context: &mut dyn Pico8) {
-        draw_context.cls(0);
+    fn draw(&mut self, pico8: &mut Pico8) {
+        pico8.cls(0);
 
         // Diagonal line
-        draw_context.line(0, 0, 64, 64, 7);
+        pico8.line(0, 0, 64, 64, 7);
         // Vertical line
-        draw_context.line(20, 64, 20, 127, 8);
+        pico8.line(20, 64, 20, 127, 8);
         // Horizontal line
-        draw_context.line(64, 30, 127, 30, 1);
+        pico8.line(64, 30, 127, 30, 1);
 
         // Inverted inputs: Diagonal line
-        draw_context.line(127, 127, 64, 64, 14);
+        pico8.line(127, 127, 64, 64, 14);
         // Inverted inputs: vertical
-        draw_context.line(40, 127, 40, 64, 11);
+        pico8.line(40, 127, 40, 64, 11);
         // Inverted inputs: horizontal
-        draw_context.line(127, 80, 64, 80, 10);
+        pico8.line(127, 80, 64, 80, 10);
 
         // Single point
-        draw_context.line(64, 64, 64, 64, 12);
+        pico8.line(64, 64, 64, 64, 12);
 
         if let MouseState::Pressed {
             start_x,
@@ -108,10 +108,10 @@ impl App for StressLines {
             current_y,
         } = self.mouse
         {
-            draw_context.line(start_x, start_y, current_x, current_y, 7);
+            pico8.line(start_x, start_y, current_x, current_y, 7);
         }
 
         let (x, y) = self.mouse.position();
-        draw_context.spr(8, x - 4, y - 3);
+        pico8.spr(8, x - 4, y - 3);
     }
 }

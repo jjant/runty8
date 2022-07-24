@@ -110,7 +110,7 @@ impl<'a, Msg: Copy + Debug> Widget for Notification<'a, Msg> {
         }
     }
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         let x = 1;
         let base_y = 122;
         let offset_y_max = 8;

@@ -12,7 +12,7 @@ struct Confetti {
 }
 
 impl App for Confetti {
-    fn init(_: &mut dyn Pico8) -> Self {
+    fn init(_: &mut Pico8) -> Self {
         Self {
             particles: vec![],
             mouse_x: 64,
@@ -20,7 +20,7 @@ impl App for Confetti {
         }
     }
 
-    fn update(&mut self, state: &mut dyn Pico8) {
+    fn update(&mut self, state: &mut Pico8) {
         (self.mouse_x, self.mouse_y) = state.mouse();
 
         if state.btn(Button::Mouse) {
@@ -42,7 +42,7 @@ impl App for Confetti {
         }
     }
 
-    fn draw(&mut self, draw_context: &mut dyn Pico8) {
+    fn draw(&mut self, draw_context: &mut Pico8) {
         draw_context.cls(0);
 
         let text_x = 3;
@@ -104,7 +104,7 @@ impl Particle {
         self.ttl -= 1;
     }
 
-    fn draw(&self, draw_context: &mut dyn Pico8) {
+    fn draw(&self, draw_context: &mut Pico8) {
         draw_context.pset(self.x as i32, self.y as i32, self.color);
     }
 }

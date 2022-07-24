@@ -11,7 +11,7 @@ struct MyThing {
 }
 
 impl App for MyThing {
-    fn init(_: &mut dyn Pico8) -> Self {
+    fn init(_: &mut Pico8) -> Self {
         Self {
             center_x: 64,
             center_y: 64,
@@ -19,7 +19,7 @@ impl App for MyThing {
         }
     }
 
-    fn update(&mut self, state: &mut dyn Pico8) {
+    fn update(&mut self, state: &mut Pico8) {
         if state.btn(Button::Down) {
             self.center_y += 1;
         }
@@ -42,7 +42,7 @@ impl App for MyThing {
         }
     }
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         draw.cls(0);
         draw.pset(self.center_x, self.center_y, 7);
         for x_sign in [-1, 1] {

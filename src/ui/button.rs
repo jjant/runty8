@@ -190,7 +190,7 @@ impl<'a, Msg: Copy + Debug + 'a> Widget for Button<'a, Msg> {
         }
     }
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         draw.append_camera(-self.x, -self.y);
         self.content.as_widget_mut().draw(draw);
         draw.append_camera(self.x, self.y);

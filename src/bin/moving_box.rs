@@ -13,7 +13,7 @@ pub struct ExampleApp {
 }
 
 impl App for ExampleApp {
-    fn init(_: &mut dyn Pico8) -> Self {
+    fn init(_: &mut Pico8) -> Self {
         Self {
             x: 6400,
             y: 6400,
@@ -23,7 +23,7 @@ impl App for ExampleApp {
         }
     }
 
-    fn draw(&mut self, draw_context: &mut dyn Pico8) {
+    fn draw(&mut self, draw_context: &mut Pico8) {
         draw_context.cls(0);
         draw_context.print(
             &format!("X={} Y={} YC={}", self.x / 100, self.y / 100, self.yc),
@@ -52,7 +52,7 @@ impl App for ExampleApp {
         // draw_context.raw_spr(sprite, self.x / 100, self.y / 100);
     }
 
-    fn update(&mut self, state: &mut dyn Pico8) {
+    fn update(&mut self, state: &mut Pico8) {
         // println!("{:?}", state);
 
         // -- lower -100/100 less max spd

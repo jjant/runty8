@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::pico8::Pico8Impl;
+use crate::pico8::Pico8;
 use crate::runtime::draw_data::DrawData;
 use crate::runtime::input::Keys;
 use crate::ui::DispatchEvent;
@@ -34,7 +34,7 @@ pub(crate) struct Controller<Game> {
     app: Game,
     key_combos: KeyCombos<KeyComboAction>,
     keys: Keys,
-    pico8: Pico8Impl,
+    pico8: Pico8,
 }
 impl<T> Controller<T> {
     pub(crate) fn screen_buffer(&self) -> &[u8] {
@@ -44,7 +44,7 @@ impl<T> Controller<T> {
 
 impl<Game: AppCompat> Controller<Game> {
     pub fn init(scene: Scene, resources: Resources) -> Self {
-        let mut pico8 = Pico8Impl::new(DrawData::new(), State::new(), resources);
+        let mut pico8 = Pico8::new(DrawData::new(), State::new(), resources);
 
         Self {
             scene,

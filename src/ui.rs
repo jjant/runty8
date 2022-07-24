@@ -29,7 +29,7 @@ pub trait Widget {
         dispatch_event: &mut DispatchEvent<Self::Msg>,
     );
 
-    fn draw(&mut self, draw: &mut dyn Pico8);
+    fn draw(&mut self, draw: &mut Pico8);
 }
 
 pub struct Tree<'a, Msg> {
@@ -95,7 +95,7 @@ impl<'a, Msg: Copy + Debug + 'a, BigMsg: Copy + Debug + 'a> Widget for Map<'a, M
         }
     }
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         self.element.as_widget_mut().draw(draw)
     }
 }
@@ -137,7 +137,7 @@ impl<'a, Msg: Copy + Debug> Widget for Tree<'a, Msg> {
         }
     }
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         for element in self.children.iter_mut() {
             element.widget.draw(draw);
         }
@@ -146,11 +146,11 @@ impl<'a, Msg: Copy + Debug> Widget for Tree<'a, Msg> {
 
 pub struct DrawFn<'a, Msg> {
     pd: PhantomData<Msg>,
-    f: Box<dyn FnMut(&mut dyn Pico8) + 'a>,
+    f: Box<dyn FnMut(&mut Pico8) + 'a>,
 }
 
 impl<'a, Msg: Copy + Debug + 'a> DrawFn<'a, Msg> {
-    pub fn new(f: impl FnMut(&mut dyn Pico8) + 'a) -> Self {
+    pub fn new(f: impl FnMut(&mut Pico8) + 'a) -> Self {
         Self {
             f: Box::new(f),
             pd: PhantomData,
@@ -169,7 +169,7 @@ impl<'a, Msg: Copy + Debug> Widget for DrawFn<'a, Msg> {
     ) {
     }
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         (self.f)(draw);
     }
 }

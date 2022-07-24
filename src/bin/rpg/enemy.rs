@@ -149,7 +149,7 @@ impl Enemy {
         self.hitbox.translate(self.x, self.y)
     }
 
-    fn view_sprite(&self, draw: &mut dyn Pico8) {
+    fn view_sprite(&self, draw: &mut Pico8) {
         if self.death_timer.is_some() {
             // Don't animate damage flash if dying
         } else if self.flash_timer > 0 && self.flash_timer % 2 == 0 {
@@ -162,7 +162,7 @@ impl Enemy {
         self.hitbox().outline(draw, 8);
     }
 
-    fn view_hp_bar(&self, draw: &mut dyn Pico8) {
+    fn view_hp_bar(&self, draw: &mut Pico8) {
         const BASE_WIDTH: i32 = 30;
         const BASE_HEIGHT: i32 = 4;
         const BORDER_WIDTH: i32 = 1;

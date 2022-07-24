@@ -52,7 +52,7 @@ impl Player {
         self.y = clamp(self.y, 0, 120);
     }
 
-    pub fn draw(&self, draw: &mut dyn Pico8, frames: usize) {
+    pub fn draw(&self, draw: &mut Pico8, frames: usize) {
         const BASE_SPR: usize = 1;
         const NUM_SPR: usize = 2;
 

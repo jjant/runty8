@@ -48,7 +48,7 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
         self.state.cursor_position = cursor_position;
     }
 
-    fn draw(&mut self, draw: &mut dyn Pico8) {
+    fn draw(&mut self, draw: &mut Pico8) {
         draw.palt(Some(0));
         // TODO: Re-add
         // draw.raw_spr(
