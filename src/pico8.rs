@@ -2,7 +2,7 @@ use rand::Rng;
 use std::f32::consts::PI;
 
 use crate::runtime::draw_data::DrawData;
-use crate::runtime::sprite_sheet::Sprite;
+use crate::runtime::sprite_sheet::{Sprite, SpriteSheet};
 use crate::runtime::state::State;
 use crate::{Button, Color, Resources};
 
@@ -165,10 +165,17 @@ impl Pico8 {
 
 // Utility pub(crate) methods
 impl Pico8 {
+    pub(crate) fn spr_from(&mut self, sprite_sheet: &SpriteSheet, spr: usize, x: i32, y: i32) {
+        let spr = sprite_sheet.get_sprite(spr);
+
+        self.draw_data.spr(spr, x, y);
+    }
+
     pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
         self.draw_data.raw_spr(sprite, x, y);
     }
 }
+
 // Top level functions that pico8 provides that don't modify the global state.
 // cos, sin, etc.
 
