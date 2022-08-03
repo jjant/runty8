@@ -534,7 +534,7 @@ fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg>
 
     editor_button(
         state,
-        63,
+        Icons::SpriteEditor.to_raw(),
         110,
         0,
         Msg::ChangedTab {
@@ -549,7 +549,7 @@ fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
 
     editor_button(
         state,
-        62,
+        Icons::MapEditor.to_raw(),
         118,
         0,
         Msg::ChangedTab {
@@ -973,5 +973,18 @@ impl ShiftDirection {
             ShiftDirection::Left => sprite.shift_left(),
             ShiftDirection::Right => sprite.shift_right(),
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(usize)]
+enum Icons {
+    MapEditor = 62,
+    SpriteEditor = 63,
+}
+
+impl Icons {
+    fn to_raw(&self) -> usize {
+        *self as usize
     }
 }
