@@ -42,6 +42,12 @@ impl Pico8 {
         self.resources.sprite_flags.fget_n(sprite, flag)
     }
 
+    // Pico8's fset(n, v)
+    // TODO: Reconsider naming.
+    pub fn fset_all(&mut self, sprite: usize, value: u8) -> u8 {
+        self.resources.sprite_flags.fset_all(sprite, value)
+    }
+
     pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
         self.resources.sprite_flags.fset(sprite, flag, value)
     }
