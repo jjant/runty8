@@ -35,6 +35,7 @@ pub(crate) struct Editor {
     selected_sprite_page: usize,
     sprite_button_state: button::State,
     map_button_state: button::State,
+    sound_button_state: button::State,
     tab_buttons: [button::State; 4],
     color_selector_state: Vec<button::State>,
     flag_buttons: Vec<button::State>,
@@ -56,7 +57,9 @@ pub(crate) struct Editor {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-enum Tab {
+pub(crate) enum Tab {
+    // ^ pub(crate) required because of Msg::ChangedTab
+    // We may want to fix that later (that is, we want this type to actually be private).
     SpriteEditor,
     MapEditor,
     SoundEditor,
@@ -211,6 +214,7 @@ impl ElmApp for Editor {
             cursor: cursor::State::new(),
             sprite_button_state: button::State::new(),
             map_button_state: button::State::new(),
+            sound_button_state: button::State::new(),
             tab: Tab::SpriteEditor,
             selected_color: 0,
             selected_sprite,
@@ -352,6 +356,7 @@ impl ElmApp for Editor {
             .push(top_bar(
                 &mut self.sprite_button_state,
                 &mut self.map_button_state,
+                &mut self.sound_button_state,
                 self.tab,
             ))
             .push(match self.tab {
@@ -412,6 +417,7 @@ impl ElmApp for Editor {
 fn top_bar<'a>(
     sprite_button_state: &'a mut button::State,
     map_button_state: &'a mut button::State,
+    sound_button_state: &'a mut button::State,
     tab: Tab,
 ) -> Element<'a, Msg> {
     Tree::new()
@@ -420,6 +426,7 @@ fn top_bar<'a>(
         }))
         .push(sprite_editor_button(sprite_button_state, tab))
         .push(map_editor_button(map_button_state, tab))
+        .push(sound_editor_button(sound_button_state, tab))
         .into()
 }
 
@@ -535,7 +542,7 @@ fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg>
     editor_button(
         state,
         Icons::SpriteEditor.to_raw(),
-        110,
+        102,
         0,
         Msg::ChangedTab {
             new_tab: Tab::SpriteEditor,
@@ -550,10 +557,25 @@ fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     editor_button(
         state,
         Icons::MapEditor.to_raw(),
-        118,
+        110,
         0,
         Msg::ChangedTab {
             new_tab: Tab::MapEditor,
+        },
+        selected,
+    )
+}
+
+fn sound_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
+    let selected = tab == Tab::SoundEditor;
+
+    editor_button(
+        state,
+        Icons::SoundEditor.to_raw(),
+        118,
+        0,
+        Msg::ChangedTab {
+            new_tab: Tab::SoundEditor,
         },
         selected,
     )
@@ -981,6 +1003,8 @@ impl ShiftDirection {
 enum Icons {
     MapEditor = 62,
     SpriteEditor = 63,
+    SoundEditor = 60,
+    // MusicEditor = 61,
 }
 
 impl Icons {
