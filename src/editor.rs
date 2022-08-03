@@ -2,6 +2,7 @@ mod brush_size;
 pub mod key_combo;
 mod notification;
 pub mod serialize;
+mod sound_editor;
 mod undo_redo;
 
 use crate::app::ElmApp;
@@ -58,12 +59,12 @@ pub(crate) struct Editor {
 enum Tab {
     SpriteEditor,
     MapEditor,
+    SoundEditor,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg {
-    SpriteTabClicked,
-    MapButtonClicked,
+    ChangedTab { new_tab: Tab },
     ColorSelected(usize),
     ColorHovered(usize),
     SpritePageSelected(usize),
@@ -271,13 +272,9 @@ impl ElmApp for Editor {
                     _ => {}
                 }
             }
-            Msg::SpriteTabClicked => {
-                self.tab = Tab::SpriteEditor;
-                println!("Sprite button clicked");
-            }
-            Msg::MapButtonClicked => {
-                self.tab = Tab::MapEditor;
-                println!("Map button clicked");
+            &Msg::ChangedTab { new_tab } => {
+                self.tab = new_tab;
+                println!("Changed tab: {:?}", new_tab);
             }
             Msg::ColorSelected(selected_color) => {
                 self.selected_color = *selected_color as u8;
@@ -379,6 +376,7 @@ impl ElmApp for Editor {
                         self.show_sprites_in_map,
                     ))
                     .into(),
+                Tab::SoundEditor => Tree::new().push(sound_editor::view()).into(),
             })
             .push(tools_row(
                 76,
@@ -534,13 +532,31 @@ fn map_view<'a, 'b>(
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::SpriteEditor;
 
-    editor_button(state, 63, 110, 0, Msg::SpriteTabClicked, selected)
+    editor_button(
+        state,
+        63,
+        110,
+        0,
+        Msg::ChangedTab {
+            new_tab: Tab::SpriteEditor,
+        },
+        selected,
+    )
 }
 
 fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::MapEditor;
 
-    editor_button(state, 62, 118, 0, Msg::MapButtonClicked, selected)
+    editor_button(
+        state,
+        62,
+        118,
+        0,
+        Msg::ChangedTab {
+            new_tab: Tab::MapEditor,
+        },
+        selected,
+    )
 }
 
 fn editor_button(
