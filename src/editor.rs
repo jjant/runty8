@@ -20,6 +20,7 @@ use crate::Resources;
 use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;
+use sound_editor::Sound;
 
 use self::brush_size::{BrushSize, BrushSizeSelector};
 use self::key_combo::KeyCombos;
@@ -215,7 +216,7 @@ impl ElmApp for Editor {
             sprite_button_state: button::State::new(),
             map_button_state: button::State::new(),
             sound_button_state: button::State::new(),
-            tab: Tab::SpriteEditor,
+            tab: Tab::SoundEditor,
             selected_color: 0,
             selected_sprite,
             selected_sprite_page: 0,
@@ -381,7 +382,7 @@ impl ElmApp for Editor {
                         self.show_sprites_in_map,
                     ))
                     .into(),
-                Tab::SoundEditor => Tree::new().push(sound_editor::view()).into(),
+                Tab::SoundEditor => Tree::new().push(sound_editor::view(&Sound::new())).into(),
             })
             .push(tools_row(
                 76,
