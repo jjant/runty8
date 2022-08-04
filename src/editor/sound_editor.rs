@@ -1,10 +1,10 @@
 use super::Msg;
 use crate::ui::text::Text;
-use crate::ui::Element;
+use crate::ui::{DrawFn, Element, Tree};
 
 #[derive(Clone, Copy)]
 enum BasicNote {
-    C,
+    C = 0,
     CSharp,
     D,
     DSharp,
@@ -54,5 +54,29 @@ impl Sound {
 }
 
 pub(crate) fn view<'a>(sound: &Sound) -> Element<'a, Msg> {
-    Text::new("THIS IS THE SOUND EDITOR", 20, 30, 7).into()
+    let note_bars: Vec<_> = sound
+        .notes
+        .iter()
+        .enumerate()
+        .map(|(index, (note, _volume))| note_bar(index, note))
+        .collect();
+
+    Tree::with_children(note_bars)
+        .push(Text::new("THIS IS THE SOUND EDITOR", 20, 30, 7))
+        .into()
+}
+
+fn note_bar<'a>(index: usize, note: &Note) -> Element<'a, Msg> {
+    let y_offset = note.octave as i32 * 12 + note.note as i32;
+
+    let padding = 1;
+    let width = 2;
+    let x = index as i32 * 4 + padding;
+    let y = 80 - y_offset;
+
+    DrawFn::new(move |draw| {
+        draw.rectfill(x, y, x + width - 1, 80, 1);
+        draw.rectfill(x, y, x + width - 1, y + width - 1, 8);
+    })
+    .into()
 }
