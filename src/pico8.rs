@@ -42,6 +42,12 @@ impl Pico8 {
         self.resources.sprite_flags.fget_n(sprite, flag)
     }
 
+    // Pico8's fset(n, v)
+    // TODO: Reconsider naming.
+    pub fn fset_all(&mut self, sprite: usize, value: u8) -> u8 {
+        self.resources.sprite_flags.fset_all(sprite, value)
+    }
+
     pub fn fset(&mut self, sprite: usize, flag: usize, value: bool) -> u8 {
         self.resources.sprite_flags.fset(sprite, flag, value)
     }
@@ -153,20 +159,22 @@ impl Pico8 {
         self.draw_data.print(text, x, y, color);
     }
 
-    // audio
-    pub fn sfx(&mut self, _sound_id: u8) {
-        todo!()
-    }
-    pub fn music(&mut self, _music_id: u8) {
-        todo!()
-    }
-
     pub fn append_camera(&mut self, x: i32, y: i32) {
         self.draw_data.append_camera(x, y);
     }
 
     pub fn mouse(&self) -> (i32, i32) {
         self.state.mouse()
+    }
+}
+
+/// Audio
+impl Pico8 {
+    pub fn sfx(&mut self, _sound_id: u8) {
+        todo!()
+    }
+    pub fn music(&mut self, _music_id: u8) {
+        todo!()
     }
 }
 

@@ -54,7 +54,7 @@ impl Flags {
     }
 
     // Pico8's fset(n, v)
-    pub fn fset_all(&mut self, sprite: usize, flags: u8) -> u8 {
+    pub(crate) fn fset_all(&mut self, sprite: usize, flags: u8) -> u8 {
         self.set(sprite, flags);
 
         flags

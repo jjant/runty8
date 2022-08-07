@@ -2,6 +2,7 @@ mod brush_size;
 pub mod key_combo;
 mod notification;
 pub mod serialize;
+mod sound_editor;
 mod undo_redo;
 
 use crate::app::ElmApp;
@@ -34,6 +35,7 @@ pub(crate) struct Editor {
     selected_sprite_page: usize,
     sprite_button_state: button::State,
     map_button_state: button::State,
+    sound_button_state: button::State,
     tab_buttons: [button::State; 4],
     color_selector_state: Vec<button::State>,
     flag_buttons: Vec<button::State>,
@@ -55,15 +57,17 @@ pub(crate) struct Editor {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-enum Tab {
+pub(crate) enum Tab {
+    // ^ pub(crate) required because of Msg::ChangedTab
+    // We may want to fix that later (that is, we want this type to actually be private).
     SpriteEditor,
     MapEditor,
+    SoundEditor,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg {
-    SpriteTabClicked,
-    MapButtonClicked,
+    ChangedTab { new_tab: Tab },
     ColorSelected(usize),
     ColorHovered(usize),
     SpritePageSelected(usize),
@@ -210,6 +214,7 @@ impl ElmApp for Editor {
             cursor: cursor::State::new(),
             sprite_button_state: button::State::new(),
             map_button_state: button::State::new(),
+            sound_button_state: button::State::new(),
             tab: Tab::SpriteEditor,
             selected_color: 0,
             selected_sprite,
@@ -271,13 +276,9 @@ impl ElmApp for Editor {
                     _ => {}
                 }
             }
-            Msg::SpriteTabClicked => {
-                self.tab = Tab::SpriteEditor;
-                println!("Sprite button clicked");
-            }
-            Msg::MapButtonClicked => {
-                self.tab = Tab::MapEditor;
-                println!("Map button clicked");
+            &Msg::ChangedTab { new_tab } => {
+                self.tab = new_tab;
+                println!("Changed tab: {:?}", new_tab);
             }
             Msg::ColorSelected(selected_color) => {
                 self.selected_color = *selected_color as u8;
@@ -355,6 +356,7 @@ impl ElmApp for Editor {
             .push(top_bar(
                 &mut self.sprite_button_state,
                 &mut self.map_button_state,
+                &mut self.sound_button_state,
                 self.tab,
             ))
             .push(match self.tab {
@@ -379,6 +381,7 @@ impl ElmApp for Editor {
                         self.show_sprites_in_map,
                     ))
                     .into(),
+                Tab::SoundEditor => Tree::new().push(sound_editor::view()).into(),
             })
             .push(tools_row(
                 76,
@@ -414,6 +417,7 @@ impl ElmApp for Editor {
 fn top_bar<'a>(
     sprite_button_state: &'a mut button::State,
     map_button_state: &'a mut button::State,
+    sound_button_state: &'a mut button::State,
     tab: Tab,
 ) -> Element<'a, Msg> {
     Tree::new()
@@ -422,6 +426,7 @@ fn top_bar<'a>(
         }))
         .push(sprite_editor_button(sprite_button_state, tab))
         .push(map_editor_button(map_button_state, tab))
+        .push(sound_editor_button(sound_button_state, tab))
         .into()
 }
 
@@ -534,13 +539,46 @@ fn map_view<'a, 'b>(
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::SpriteEditor;
 
-    editor_button(state, 63, 110, 0, Msg::SpriteTabClicked, selected)
+    editor_button(
+        state,
+        Icons::SpriteEditor.to_raw(),
+        102,
+        0,
+        Msg::ChangedTab {
+            new_tab: Tab::SpriteEditor,
+        },
+        selected,
+    )
 }
 
 fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::MapEditor;
 
-    editor_button(state, 62, 118, 0, Msg::MapButtonClicked, selected)
+    editor_button(
+        state,
+        Icons::MapEditor.to_raw(),
+        110,
+        0,
+        Msg::ChangedTab {
+            new_tab: Tab::MapEditor,
+        },
+        selected,
+    )
+}
+
+fn sound_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
+    let selected = tab == Tab::SoundEditor;
+
+    editor_button(
+        state,
+        Icons::SoundEditor.to_raw(),
+        118,
+        0,
+        Msg::ChangedTab {
+            new_tab: Tab::SoundEditor,
+        },
+        selected,
+    )
 }
 
 fn editor_button(
@@ -957,5 +995,20 @@ impl ShiftDirection {
             ShiftDirection::Left => sprite.shift_left(),
             ShiftDirection::Right => sprite.shift_right(),
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(usize)]
+enum Icons {
+    MapEditor = 62,
+    SpriteEditor = 63,
+    SoundEditor = 60,
+    // MusicEditor = 61,
+}
+
+impl Icons {
+    fn to_raw(&self) -> usize {
+        *self as usize
     }
 }
