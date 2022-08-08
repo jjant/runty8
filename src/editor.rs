@@ -20,7 +20,7 @@ use crate::Resources;
 use crate::{Event, Key, KeyState, KeyboardEvent};
 use itertools::Itertools;
 use serialize::serialize;
-use sound_editor::Sound;
+use sound_editor::{Sound, SoundEditor};
 
 use self::brush_size::{BrushSize, BrushSizeSelector};
 use self::key_combo::KeyCombos;
@@ -55,6 +55,7 @@ pub(crate) struct Editor {
     brush_size: BrushSize,
     brush_size_state: brush_size::State,
     editor_sprites: SpriteSheet,
+    sound_editor: SoundEditor,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -252,6 +253,7 @@ impl ElmApp for Editor {
             editor_sprites: load_editor_sprite_sheet()
                 // TODO: Change this to actually crash if it failed.
                 .unwrap_or_else(|_| SpriteSheet::new()),
+            sound_editor: SoundEditor::new(),
         }
     }
 
@@ -382,7 +384,9 @@ impl ElmApp for Editor {
                         self.show_sprites_in_map,
                     ))
                     .into(),
-                Tab::SoundEditor => Tree::new().push(sound_editor::view(&Sound::new())).into(),
+                Tab::SoundEditor => Tree::new()
+                    .push(sound_editor::view(&mut self.sound_editor, &Sound::new()))
+                    .into(),
             })
             .push(tools_row(
                 76,
