@@ -46,7 +46,7 @@ pub(crate) struct Sound {
 
 impl Sound {
     pub fn new() -> Self {
-        let mut notes = [(
+        let notes = [(
             Note {
                 note: BasicNote::D,
                 octave: 3,
