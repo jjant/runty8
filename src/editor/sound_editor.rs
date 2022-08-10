@@ -19,7 +19,7 @@ enum BasicNote {
     B,
 }
 
-static NOTES: &'static [BasicNote] = {
+const NOTES: &'static [BasicNote] = {
     use BasicNote::*;
     &[C, CSharp, D, DSharp, E, F, FSharp, G, GSharp, A, ASharp, B]
 };
@@ -32,7 +32,13 @@ struct Note {
 
 impl Note {
     fn y_offset(&self) -> i32 {
-        self.octave as i32 * 12 + self.note as i32
+        2 * (self.octave as i32 * 12 + self.note as i32)
+    }
+
+    fn available_notes() -> Vec<Self> {
+        (0..5)
+            .flat_map(|octave| NOTES.iter().copied().map(move |note| Self { note, octave }))
+            .collect()
     }
 }
 
@@ -68,7 +74,7 @@ impl SoundEditor {
 
     pub(crate) fn new() -> Self {
         Self {
-            buttons: vec![vec![button::State::new(); 3]; Self::NOTES],
+            buttons: vec![vec![button::State::new(); Note::available_notes().len()]; Self::NOTES],
         }
     }
 }
@@ -87,10 +93,11 @@ pub(crate) fn view<'a>(sound_editor: &'a mut SoundEditor, sound: &Sound) -> Elem
         .into()
 }
 
-fn note_bar<'a>(
+fn note_bar<'a, Msg: std::fmt::Debug + Copy + 'a>(
     button_states: &'a mut [button::State],
     index: usize,
     note: &Note,
+    //on_click: &mut impl FnMut() -> Msg,
 ) -> Element<'a, Msg> {
     let y_offset = note.y_offset();
 
@@ -100,29 +107,21 @@ fn note_bar<'a>(
     let y = 80 - y_offset;
 
     let mut buttons = vec![];
-    for (note, button_chunk) in NOTES
-        .iter()
-        .copied()
-        .zip(button_states.chunks_mut(NOTES.len()))
-    {
-        for (octave, button) in (0..5).zip(button_chunk) {
-            let note = Note { note, octave };
-
-            buttons.push(
-                Button::new(
-                    x,
-                    y + note.y_offset(),
-                    2,
-                    2,
-                    None,
-                    button,
-                    DrawFn::new(|draw| {
-                        draw.pset(0, 0, 7);
-                    }),
-                )
-                .into(),
-            );
-        }
+    for (note, button_state) in Note::available_notes().into_iter().zip(button_states) {
+        buttons.push(
+            Button::new(
+                x,
+                y + note.y_offset(),
+                2,
+                2,
+                None, //              Some(on_click()),
+                button_state,
+                DrawFn::new(|draw| {
+                    draw.pset(0, 0, 7);
+                }),
+            )
+            .into(),
+        );
     }
 
     Tree::with_children(buttons).into()
