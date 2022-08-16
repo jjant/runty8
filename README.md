@@ -2,6 +2,10 @@
 
 A Pico8 clone in rust
 
+## Contributing
+
+See [the contributing guide](./CONTRIBUTING.md) for instructions on how to get started.
+
 ## Things to do
 
 - [ ] Unify data structures (sprite sheet/map/etc) under a single Memory byte array?
@@ -25,13 +29,13 @@ A Pico8 clone in rust
 
 ## Running
 
-Plain editor
+Run editor with a default "empty" game:
 
 ```bash
 cargo run
 ```
 
-Celeste
+Run Celeste:
 
 ```bash
 cargo run --bin celeste
