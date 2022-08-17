@@ -1,6 +1,6 @@
 # Runty8
 
-A Pico8 clone in rust
+A Pico8 clone in Rust.
 
 ## Contributing
 
