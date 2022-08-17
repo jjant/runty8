@@ -68,6 +68,8 @@ impl Editor {
             &Event::Mouse(MouseEvent::Move { x, y }) => Some(Msg::MouseMove(vec2(x, y))),
             // TODO: Check that the click is actually in the map area.
             // Probably don't want to use a sub here, but rather an event handler on an element.
+            //
+            // Actually we don't need to do this, pico8 uses the spacebar for this.
             &Event::Mouse(MouseEvent::Down(MouseButton::Left)) => Some(Msg::MouseDown),
             &Event::Mouse(MouseEvent::Up(MouseButton::Left)) => Some(Msg::MouseUp),
             _ => None,
