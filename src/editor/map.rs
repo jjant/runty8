@@ -1,7 +1,8 @@
 use crate::ui::button::{self, Button};
 use crate::ui::{DrawFn, Element, Tree};
+use crate::util::vec2::{vec2, Vec2i};
 use crate::Map;
-use crate::{Event, Key, KeyState, KeyboardEvent};
+use crate::{Event, Key, KeyState, KeyboardEvent, MouseEvent};
 use itertools::Itertools;
 use std::fmt::Debug;
 
@@ -10,6 +11,8 @@ pub(crate) struct Editor {
     buttons: Vec<button::State>,
     show_sprites_in_map: bool,
     hovered_tile: (usize, usize),
+    mouse_position: Vec2i,
+    camera: Vec2i,
 }
 
 impl Editor {
@@ -18,11 +21,21 @@ impl Editor {
             buttons: vec![button::State::new(); 144],
             show_sprites_in_map: true,
             hovered_tile: (0, 0),
+            mouse_position: vec2(64, 64),
+            camera: Vec2i::zero(),
         }
     }
 
     pub(crate) fn update(&mut self, msg: Msg) {
         match msg {
+            Msg::MouseMove(mouse_position) => {
+                let delta = self.mouse_position - mouse_position;
+
+                println!("[Map Editor] Mouse delta: {:?}", delta);
+
+                self.mouse_position = mouse_position;
+                self.camera = self.camera + delta;
+            }
             Msg::SwitchMapMode => {
                 self.show_sprites_in_map = !self.show_sprites_in_map;
             }
@@ -33,16 +46,16 @@ impl Editor {
     }
 
     pub(crate) fn subscriptions(event: &Event) -> Option<Msg> {
-        if let Event::Keyboard(event) = event {
-            match event {
+        match event {
+            Event::Keyboard(event) => match event {
                 KeyboardEvent {
                     key: Key::C,
                     state: KeyState::Down,
                 } => Some(Msg::SwitchMapMode),
                 _ => None,
-            }
-        } else {
-            None
+            },
+            &Event::Mouse(MouseEvent::Move { x, y }) => Some(Msg::MouseMove(vec2(x, y))),
+            _ => None,
         }
     }
 
@@ -59,10 +72,8 @@ impl Editor {
         let v: Vec<Element<'_, Msg>> = self
             .buttons
             .iter_mut()
-            // .zip(map)
             .chunks(16)
             .into_iter()
-            .take(9) // 9 rows
             .enumerate()
             .flat_map(|(row_index, row)| {
                 row.into_iter().enumerate().map(move |(col_index, state)| {
@@ -105,6 +116,7 @@ impl Editor {
 pub(crate) enum Msg {
     SwitchMapMode,
     HoveredTile((usize, usize)),
+    MouseMove(Vec2i),
 }
 
 fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(

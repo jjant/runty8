@@ -19,6 +19,7 @@ mod editor;
 mod font;
 mod graphics;
 mod run;
+mod util;
 use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
 use glium::glutin::event::{ElementState, VirtualKeyCode};
