@@ -2,8 +2,8 @@ use std::ops::{Add, Neg, Sub};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Vec2<T> {
-    x: T,
-    y: T,
+    pub x: T,
+    pub y: T,
 }
 
 impl Vec2i {

@@ -34,7 +34,7 @@ impl Editor {
                 println!("[Map Editor] Mouse delta: {:?}", delta);
 
                 self.mouse_position = mouse_position;
-                self.camera = self.camera + delta;
+                self.camera = self.camera - delta;
             }
             Msg::SwitchMapMode => {
                 self.show_sprites_in_map = !self.show_sprites_in_map;
@@ -68,6 +68,10 @@ impl Editor {
         on_map_editor_msg: &impl Fn(self::Msg) -> Msg,
     ) -> Element<'a, Msg> {
         let show_sprites_in_map = self.show_sprites_in_map;
+        let camera = self.camera;
+
+        let highlighted_tile_position =
+            tile_position(self.camera, self.hovered_tile.0, self.hovered_tile.1) + vec2(x, y);
 
         let v: Vec<Element<'_, Msg>> = self
             .buttons
@@ -78,9 +82,8 @@ impl Editor {
             .flat_map(|(row_index, row)| {
                 row.into_iter().enumerate().map(move |(col_index, state)| {
                     let sprite = map.mget(col_index as i32, row_index as i32);
-                    let x = x as usize + col_index * 8;
-                    let y = y as usize + row_index * 8;
 
+                    let Vec2i { x, y } = tile_position(camera, col_index, row_index) + vec2(x, y);
                     Button::new(
                         x as i32,
                         y as i32,
@@ -107,7 +110,7 @@ impl Editor {
             .collect();
 
         Tree::with_children(v)
-            .push(highlight_hovered(self.hovered_tile, x, y))
+            .push(highlight_hovered(highlighted_tile_position))
             .into()
     }
 }
@@ -119,14 +122,19 @@ pub(crate) enum Msg {
     MouseMove(Vec2i),
 }
 
-fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(
-    hovered_tile: (usize, usize),
-    x: i32,
-    y: i32,
-) -> Element<'a, Msg> {
-    let (col_index, row_index) = hovered_tile;
-    let x = x as usize + col_index * 8;
-    let y = y as usize + row_index * 8;
+fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(tile_position: Vec2i) -> Element<'a, Msg> {
+    DrawFn::new(move |draw| {
+        draw.rect(
+            tile_position.x as i32,
+            tile_position.y as i32,
+            (tile_position.x + 7) as i32,
+            (tile_position.y + 7) as i32,
+            7,
+        )
+    })
+    .into()
+}
 
-    DrawFn::new(move |draw| draw.rect(x as i32, y as i32, (x + 7) as i32, (y + 7) as i32, 7)).into()
+fn tile_position(camera: Vec2i, col_index: usize, row_index: usize) -> Vec2i {
+    camera + vec2(col_index as i32 * 8, row_index as i32 * 8)
 }
