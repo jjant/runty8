@@ -2,7 +2,7 @@ use crate::ui::button::{self, Button};
 use crate::ui::{DrawFn, Element, Tree};
 use crate::util::vec2::{vec2, Vec2i};
 use crate::Map;
-use crate::{Event, Key, KeyState, KeyboardEvent, MouseEvent};
+use crate::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
 use itertools::Itertools;
 use std::fmt::Debug;
 
@@ -13,6 +13,8 @@ pub(crate) struct Editor {
     hovered_tile: (usize, usize),
     mouse_position: Vec2i,
     camera: Vec2i,
+    // TODO: Use a proper enum
+    dragging: bool,
 }
 
 impl Editor {
@@ -23,6 +25,7 @@ impl Editor {
             hovered_tile: (0, 0),
             mouse_position: vec2(64, 64),
             camera: Vec2i::zero(),
+            dragging: false,
         }
     }
 
@@ -34,7 +37,15 @@ impl Editor {
                 println!("[Map Editor] Mouse delta: {:?}", delta);
 
                 self.mouse_position = mouse_position;
-                self.camera = self.camera - delta;
+                if self.dragging {
+                    self.camera = self.camera - delta;
+                }
+            }
+            Msg::MouseDown => {
+                self.dragging = true;
+            }
+            Msg::MouseUp => {
+                self.dragging = false;
             }
             Msg::SwitchMapMode => {
                 self.show_sprites_in_map = !self.show_sprites_in_map;
@@ -55,6 +66,10 @@ impl Editor {
                 _ => None,
             },
             &Event::Mouse(MouseEvent::Move { x, y }) => Some(Msg::MouseMove(vec2(x, y))),
+            // TODO: Check that the click is actually in the map area.
+            // Probably don't want to use a sub here, but rather an event handler on an element.
+            &Event::Mouse(MouseEvent::Down(MouseButton::Left)) => Some(Msg::MouseDown),
+            &Event::Mouse(MouseEvent::Up(MouseButton::Left)) => Some(Msg::MouseUp),
             _ => None,
         }
     }
@@ -120,6 +135,8 @@ pub(crate) enum Msg {
     SwitchMapMode,
     HoveredTile((usize, usize)),
     MouseMove(Vec2i),
+    MouseDown,
+    MouseUp,
 }
 
 fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(tile_position: Vec2i) -> Element<'a, Msg> {
