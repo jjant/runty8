@@ -1,5 +1,6 @@
 mod brush_size;
 pub mod key_combo;
+mod map;
 mod notification;
 pub mod serialize;
 mod undo_redo;
@@ -42,9 +43,6 @@ pub(crate) struct Editor {
     selected_tool: usize,
     tool_buttons: Vec<button::State>,
     bottom_bar_text: String,
-    map_buttons: Vec<button::State>,
-    hovered_map_button: usize,
-    show_sprites_in_map: bool,
     notification: notification::State,
     key_combos: KeyCombos<KeyComboAction>,
     clipboard: Clipboard,
@@ -52,6 +50,7 @@ pub(crate) struct Editor {
     brush_size: BrushSize,
     brush_size_state: brush_size::State,
     editor_sprites: SpriteSheet,
+    map_editor: map::Editor,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -87,18 +86,14 @@ pub(crate) enum Msg {
     FlagToggled(usize),
     SpriteEdited { x: usize, y: usize }, // TODO: Improve
     ToolSelected(usize),
-    MapSpriteHovered(usize),
     ClickedMapTile { x: usize, y: usize },
     KeyboardEvent(KeyboardEvent),
     BrushSizeSliderHovered,
     BrushSizeSelected(BrushSize),
+    MapEditorMsg(map::Msg),
 }
 
 impl Editor {
-    fn switch_map_mode(&mut self) {
-        self.show_sprites_in_map = !self.show_sprites_in_map;
-    }
-
     fn shift_sprite(&mut self, shift_direction: ShiftDirection, sprite_sheet: &mut SpriteSheet) {
         let sprite = sprite_sheet.get_sprite_mut(self.selected_sprite);
         shift_direction.shift(sprite);
@@ -253,9 +248,6 @@ impl ElmApp for Editor {
             selected_tool: 0,
             tool_buttons: vec![button::State::new(); 2],
             bottom_bar_text: "".to_owned(),
-            map_buttons: vec![button::State::new(); 144],
-            hovered_map_button: 0,
-            show_sprites_in_map: false,
             notification: notification::State::new(),
             key_combos: KeyCombos::new()
                 .push(KeyComboAction::Copy, Key::C, &[Key::Control])
@@ -274,20 +266,19 @@ impl ElmApp for Editor {
             editor_sprites: load_editor_sprite_sheet()
                 // TODO: Change this to actually crash if it failed.
                 .unwrap_or_else(|_| SpriteSheet::new()),
+            map_editor: map::Editor::new(),
         }
     }
 
     fn update(&mut self, msg: &Msg, resources: &mut Resources) {
         match msg {
+            &Msg::MapEditorMsg(map_msg) => {
+                self.map_editor.update(map_msg);
+            }
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event, resources);
 
                 match event {
-                    KeyboardEvent {
-                        key: Key::C,
-                        state: KeyState::Down,
-                    } => self.switch_map_mode(),
-
                     KeyboardEvent {
                         key,
                         state: KeyState::Down,
@@ -355,9 +346,6 @@ impl ElmApp for Editor {
                 self.bottom_bar_text = format!("COLOUR {}", color);
             }
 
-            &Msg::MapSpriteHovered(sprite) => {
-                self.hovered_map_button = sprite;
-            }
             &Msg::ClickedMapTile { x, y } => {
                 resources.map.mset(x, y, self.selected_sprite as u8);
             }
@@ -398,13 +386,12 @@ impl ElmApp for Editor {
                     &self.editor_sprites,
                 ),
                 Tab::MapEditor => Tree::new()
-                    .push(map_view(
+                    .push(self.map_editor.view(
                         &resources.map,
                         0,
                         8,
-                        &mut self.map_buttons,
-                        self.hovered_map_button,
-                        self.show_sprites_in_map,
+                        &|x, y| Msg::ClickedMapTile { x, y },
+                        &Msg::MapEditorMsg,
                     ))
                     .into(),
             })
@@ -435,6 +422,12 @@ impl ElmApp for Editor {
             Event::Tick { .. } => None,
         }
         .into_iter()
+        .chain(match self.tab {
+            Tab::MapEditor => map::Editor::subscriptions(event)
+                .map(Msg::MapEditorMsg)
+                .into_iter(),
+            _ => None.into_iter(),
+        })
         .collect()
     }
 }
@@ -497,66 +490,6 @@ fn sprite_editor_view<'a, 'b>(
         )
         // .push(slider::view(93, 52, brush_size))
         .into()
-}
-
-fn map_view<'a, 'b>(
-    map: &'a Map,
-    x: i32,
-    y: i32,
-    map_buttons: &'b mut [button::State],
-    hovered_map_button: usize,
-    show_sprites_in_map: bool,
-) -> Element<'b, Msg> {
-    let mut v: Vec<Element<'_, Msg>> = map_buttons
-        .iter_mut()
-        // .zip(map)
-        .chunks(16)
-        .into_iter()
-        .take(9) // 9 rows
-        .enumerate()
-        .flat_map(|(row_index, row)| {
-            row.into_iter().enumerate().map(move |(col_index, state)| {
-                let sprite = map.mget(col_index as i32, row_index as i32);
-                let x = x as usize + col_index * 8;
-                let y = y as usize + row_index * 8;
-
-                Button::new(
-                    x as i32,
-                    y as i32,
-                    8,
-                    8,
-                    Some(Msg::ClickedMapTile {
-                        x: col_index,
-                        y: row_index,
-                    }),
-                    state,
-                    DrawFn::new(move |draw| {
-                        draw.palt(None);
-                        if show_sprites_in_map {
-                            draw.spr(sprite.into(), 0, 0);
-                        } else {
-                            draw.print(&format!("{:0>2X}", sprite), 0, 1, 7);
-                        }
-                    }),
-                )
-                .event_on_press()
-                .on_hover(Msg::MapSpriteHovered(col_index + row_index * 16))
-                .into()
-            })
-        })
-        .collect();
-
-    // Draw highlight
-    let col_index = hovered_map_button % 16;
-    let row_index = hovered_map_button / 16;
-    let x = x as usize + col_index * 8;
-    let y = y as usize + row_index * 8;
-    v.push(
-        DrawFn::new(move |draw| draw.rect(x as i32, y as i32, (x + 7) as i32, (y + 7) as i32, 7))
-            .into(),
-    );
-
-    Tree::with_children(v).into()
 }
 
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
