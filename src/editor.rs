@@ -60,6 +60,22 @@ enum Tab {
     MapEditor,
 }
 
+impl Tab {
+    fn previous(self) -> Self {
+        match self {
+            Self::SpriteEditor => Self::MapEditor,
+            Self::MapEditor => Self::SpriteEditor,
+        }
+    }
+
+    fn next(self) -> Self {
+        match self {
+            Self::SpriteEditor => Self::MapEditor,
+            Self::MapEditor => Self::SpriteEditor,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg {
     SpriteTabClicked,
@@ -97,6 +113,7 @@ impl Editor {
                 &mut self.clipboard,
                 resources,
                 &mut self.commands,
+                &mut self.tab,
             );
         })
     }
@@ -129,6 +146,7 @@ fn handle_key_combo(
     clipboard: &mut Clipboard,
     resources: &mut Resources,
     commands: &mut Commands,
+    tab: &mut Tab,
 ) {
     match key_combo {
         KeyComboAction::Copy => {
@@ -161,6 +179,12 @@ fn handle_key_combo(
         KeyComboAction::Save => {
             save(notification, resources);
         }
+        KeyComboAction::PreviousTab => {
+            *tab = tab.previous();
+        }
+        KeyComboAction::NextTab => {
+            *tab = tab.next();
+        }
     }
 }
 
@@ -191,6 +215,8 @@ enum KeyComboAction {
     Undo,
     Redo,
     Save,
+    PreviousTab,
+    NextTab,
 }
 
 fn load_editor_sprite_sheet() -> Result<SpriteSheet, String> {
@@ -238,7 +264,9 @@ impl ElmApp for Editor {
                 .push(KeyComboAction::Redo, Key::Y, &[Key::Control])
                 .push(KeyComboAction::Save, Key::S, &[Key::Control])
                 .push(KeyComboAction::FlipVertically, Key::V, &[])
-                .push(KeyComboAction::FlipHorizontally, Key::F, &[]),
+                .push(KeyComboAction::FlipHorizontally, Key::F, &[])
+                .push(KeyComboAction::PreviousTab, Key::LeftArrow, &[Key::Alt])
+                .push(KeyComboAction::NextTab, Key::RightArrow, &[Key::Alt]),
             clipboard: Clipboard::new(),
             commands: Commands::new(),
             brush_size: BrushSize::tiny(),
