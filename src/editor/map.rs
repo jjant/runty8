@@ -2,7 +2,7 @@ use crate::ui::button::{self, Button};
 use crate::ui::{DrawFn, Element, Tree};
 use crate::util::vec2::{vec2, Vec2i};
 use crate::Map;
-use crate::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
+use crate::{Event, Key, KeyState, KeyboardEvent, MouseEvent};
 use itertools::Itertools;
 use std::fmt::Debug;
 
@@ -41,11 +41,8 @@ impl Editor {
                     self.camera = self.camera - delta;
                 }
             }
-            Msg::MouseDown => {
-                self.dragging = true;
-            }
-            Msg::MouseUp => {
-                self.dragging = false;
+            Msg::SetDragging(dragging) => {
+                self.dragging = dragging;
             }
             Msg::SwitchMapMode => {
                 self.show_sprites_in_map = !self.show_sprites_in_map;
@@ -59,19 +56,13 @@ impl Editor {
     pub(crate) fn subscriptions(event: &Event) -> Option<Msg> {
         match event {
             Event::Keyboard(event) => match event {
-                KeyboardEvent {
-                    key: Key::C,
-                    state: KeyState::Down,
-                } => Some(Msg::SwitchMapMode),
-                _ => None,
+                KeyboardEvent { key, state } => match (key, state) {
+                    (Key::C, KeyState::Down) => Some(Msg::SwitchMapMode),
+                    (Key::Space, key_state) => Some(Msg::SetDragging(*key_state == KeyState::Down)),
+                    _ => None,
+                },
             },
             &Event::Mouse(MouseEvent::Move { x, y }) => Some(Msg::MouseMove(vec2(x, y))),
-            // TODO: Check that the click is actually in the map area.
-            // Probably don't want to use a sub here, but rather an event handler on an element.
-            //
-            // Actually we don't need to do this, pico8 uses the spacebar for this.
-            &Event::Mouse(MouseEvent::Down(MouseButton::Left)) => Some(Msg::MouseDown),
-            &Event::Mouse(MouseEvent::Up(MouseButton::Left)) => Some(Msg::MouseUp),
             _ => None,
         }
     }
@@ -137,8 +128,7 @@ pub(crate) enum Msg {
     SwitchMapMode,
     HoveredTile((usize, usize)),
     MouseMove(Vec2i),
-    MouseDown,
-    MouseUp,
+    SetDragging(bool),
 }
 
 fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(tile_position: Vec2i) -> Element<'a, Msg> {

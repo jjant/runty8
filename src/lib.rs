@@ -93,6 +93,7 @@ pub enum Key {
     DownArrow,
     Escape,
     Alt,
+    Space,
 }
 
 impl Key {
@@ -131,6 +132,7 @@ impl Key {
             VirtualKeyCode::Down => Some(Self::DownArrow),
             VirtualKeyCode::Escape => Some(Self::Escape),
             VirtualKeyCode::LAlt => Some(Self::Alt),
+            VirtualKeyCode::Space => Some(Self::Space),
             _ => None,
         }
     }
