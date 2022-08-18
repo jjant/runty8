@@ -324,24 +324,25 @@ fn get_color(index: Color) -> u32 {
 
 // Add _FF at the end for alpha
 pub const COLORS: [u32; 16] = [
-    0x000000, // _FF,
-    0x1D2B53, // _FF,
-    0x7E2553, // _FF,
-    0x008751, // _FF,
-    0xAB5236, // _FF,
-    0x5F574F, // _FF,
-    0xC2C3C7, // _FF,
-    0xFFF1E8, // _FF,
-    0xFF004D, // _FF,
-    0xFFA300, // _FF,
-    0xFFEC27, // _FF,
-    0x00E436, // _FF,
-    0x29ADFF, // _FF,
-    0x83769C, // _FF,
-    0xFF77A8, // _FF,
-    0xFFCCAA, // _FF,
+    0x000000, //
+    0x1D2B53, //
+    0x7E2553, //
+    0x008751, //
+    0xAB5236, //
+    0x5F574F, //
+    0xC2C3C7, //
+    0xFFF1E8, //
+    0xFF004D, //
+    0xFFA300, //
+    0xFFEC27, //
+    0x00E436, //
+    0x29ADFF, //
+    0x83769C, //
+    0xFF77A8, //
+    0xFFCCAA, //
 ];
 
+/// Named constants for the colors in the Pico8 palette.
 pub mod colors {
     use crate::runtime::sprite_sheet::Color;
 
