@@ -634,6 +634,7 @@ fn tools_row<'a>(
                 Some(Msg::ToolSelected(tool_index)),
                 tool_button,
                 DrawFn::new(move |draw| {
+                    draw.palt(Some(0));
                     if selected_tool == tool_index {
                         draw.pal(13, 7);
                     }
@@ -668,7 +669,11 @@ fn tools_row<'a>(
     }
 
     const X: i32 = 70;
-    let sprite_preview = spr(sprite, X, y + 2);
+    let sprite_preview = DrawFn::new(move |draw| {
+        draw.palt(None);
+        draw.spr(sprite, X, y + 2);
+        draw.palt(Some(0));
+    });
     children.push(sprite_preview.into());
 
     let spr_str = format!("{:0>3}", sprite);
