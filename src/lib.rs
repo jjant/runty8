@@ -30,16 +30,16 @@ use runtime::{
 };
 use std::fmt::Debug;
 
-/// Mouse buttons
+/// Mouse buttons.
 #[derive(Clone, Copy, Debug)]
 pub enum MouseButton {
-    // TODO: Handle other mouse buttons? idk
+    // TODO: Handle other mouse buttons?
     Left,
     Right,
     Middle,
 }
 
-/// Mouse-related events
+/// Mouse events (mouse move, button presses).
 #[derive(Clone, Copy, Debug)]
 pub enum MouseEvent {
     /// Mouse move event.
@@ -51,13 +51,13 @@ pub enum MouseEvent {
         y: i32,
     },
     // TODO: Refactor these two below to factor out the MouseButton
-    /// Mouse button pressed
+    /// Mouse button pressed.
     Down(MouseButton),
-    /// Mouse button released
+    /// Mouse button released.
     Up(MouseButton),
 }
 
-/// Keyboard keys
+/// Keyboard keys.
 #[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub enum Key {
     A,
@@ -138,6 +138,7 @@ impl Key {
     }
 }
 
+/// Keyboard events (key up, key down).
 #[derive(Clone, Copy, Debug)]
 pub struct KeyboardEvent {
     pub key: Key,
@@ -229,12 +230,12 @@ fn create_directory(path: &str) -> std::io::Result<()> {
     }
 }
 
-/// Run a Pico8 application
+/// Run a Pico8 application.
 pub fn run_app<T: App + 'static>(assets_path: String) -> std::io::Result<()> {
     run_app_compat::<Pico8AppCompat<T>>(assets_path)
 }
 
-/// Run an Elm-style application
+/// Run an Elm-style application.
 pub fn run_elm_app<T: ElmApp + 'static>(assets_path: String) -> std::io::Result<()> {
     run_app_compat::<ElmAppCompat<T>>(assets_path)
 }
