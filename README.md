@@ -1,4 +1,6 @@
-![Runty8 Logo](img/logo.png)
+<p align="center">
+  <img src="img/logo.png" alt="Runty8 Logo" />
+</p>
 
 # Runty8
 
