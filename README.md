@@ -1,3 +1,5 @@
+![Runty8 Logo](img/logo.png)
+
 # Runty8
 
 A Pico8 clone in Rust.
