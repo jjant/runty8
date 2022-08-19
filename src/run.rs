@@ -15,7 +15,7 @@ use glium::{uniform, Frame};
 
 pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {
     let event_loop = glutin::event_loop::EventLoop::new();
-    let display = make_display(&event_loop);
+    let display = make_display(&event_loop, "Runty8");
     let scale_factor = display.gl_window().window().scale_factor();
     let mut logical_size = display
         .gl_window()
@@ -161,8 +161,10 @@ fn do_draw(
     target.finish().unwrap();
 }
 
-fn make_display(event_loop: &EventLoop<()>) -> Display {
-    let wb = glutin::window::WindowBuilder::new().with_inner_size(LogicalSize::new(640.0, 640.0));
+fn make_display(event_loop: &EventLoop<()>, title: &str) -> Display {
+    let wb = glutin::window::WindowBuilder::new()
+        .with_inner_size(LogicalSize::new(640.0, 640.0))
+        .with_title(title);
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, event_loop).unwrap();
     {
