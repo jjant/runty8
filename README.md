@@ -18,7 +18,7 @@ See [the contributing guide](./CONTRIBUTING.md) for instructions on how to get s
   </a>
 </p>
 
-- [Celeste](./src/bin/celeste.rs)
+- [Celeste](./src/bin/celeste.rs): A Rust port of Maddy Thorson and Noel Berry's [Celeste](https://www.lexaloffle.com/bbs/?tid=2145)
 - [Confetti mouse demo](./src/bin/confetti.rs)
 - [Moving box](./src/bin/moving_box.rs)
 
