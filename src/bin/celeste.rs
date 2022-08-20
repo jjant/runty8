@@ -56,6 +56,8 @@ struct GameEffects {
 
 impl App for GameState {
     fn init(pico8: &mut Pico8) -> Self {
+        pico8.set_title("Celeste".to_owned());
+
         let clouds = (0..=16)
             .into_iter()
             .map(|_| Cloud {
