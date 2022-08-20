@@ -40,6 +40,10 @@ impl<T> Controller<T> {
     pub(crate) fn screen_buffer(&self) -> &[u8] {
         self.pico8.draw_data.buffer()
     }
+
+    pub(crate) fn take_new_title(&mut self) -> Option<String> {
+        self.pico8.take_new_title()
+    }
 }
 
 impl<Game: AppCompat> Controller<Game> {

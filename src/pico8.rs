@@ -12,6 +12,7 @@ pub struct Pico8 {
     pub(crate) draw_data: DrawData,
     pub(crate) state: State,
     pub(crate) resources: Resources,
+    new_title: Option<String>,
 }
 
 impl Pico8 {
@@ -20,6 +21,7 @@ impl Pico8 {
             draw_data,
             state,
             resources,
+            new_title: None,
         }
     }
 }
@@ -161,12 +163,17 @@ impl Pico8 {
         todo!()
     }
 
+    // Non-standard stuf
     pub fn append_camera(&mut self, x: i32, y: i32) {
         self.draw_data.append_camera(x, y);
     }
 
     pub fn mouse(&self) -> (i32, i32) {
         self.state.mouse()
+    }
+
+    pub fn set_title(&mut self, new_title: String) {
+        self.new_title = Some(new_title);
     }
 }
 
@@ -182,6 +189,10 @@ impl Pico8 {
 
     pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
         self.draw_data.raw_spr(sprite, x, y);
+    }
+
+    pub(crate) fn take_new_title(&mut self) -> Option<String> {
+        self.new_title.take()
     }
 }
 

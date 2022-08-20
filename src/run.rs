@@ -32,6 +32,10 @@ pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resour
 
         controller.step(event);
 
+        if let Some(new_title) = controller.take_new_title() {
+            display.gl_window().window().set_title(&new_title);
+        }
+
         do_draw(
             &display,
             display.draw(),
