@@ -1943,7 +1943,7 @@ impl Fruit {
             player.djump = max_djump;
             // sfx_timer=20
             // sfx(13)
-            got_fruit[1 + level_index(room) as usize] = true;
+            got_fruit[level_index(room) as usize] = true;
 
             UpdateAction::noop().destroy().push(Object::init(
                 got_fruit,
