@@ -10,6 +10,16 @@ A Pico8 clone in Rust.
 
 See [the contributing guide](./CONTRIBUTING.md) for instructions on how to get started.
 
+## Examples
+
+<p align="center">
+  <img src="img/celeste.gif" alt="Celeste playthrough" />
+</p>
+
+- [Celeste](./src/bin/celeste.rs)
+- [Confetti mouse demo](./src/bin/confetti.rs)
+- [Moving box](./src/bin/moving_box.rs)
+
 ## Things to do
 
 - [ ] Unify data structures (sprite sheet/map/etc) under a single Memory byte array?
@@ -39,10 +49,10 @@ Run editor with a default "empty" game:
 cargo run
 ```
 
-Run Celeste:
+Run examples (`celeste`, `moving_box`, `confetti`) with:
 
 ```bash
-cargo run --bin celeste
+cargo run --bin example_name
 ```
 
 ## License
