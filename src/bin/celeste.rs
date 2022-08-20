@@ -347,8 +347,9 @@ impl App for GameState {
         // Credits
         if is_title(self) {
             draw.print("X+C", 58, 80, 5);
-            draw.print("MATT THORSON", 42, 96, 5);
+            draw.print("MADDY THORSON", 41, 96, 5);
             draw.print("NOEL BERRY", 46, 102, 5);
+            draw.print("PORTED BY JJANT", 34, 114, 5);
         }
 
         if level_index(self.room) == 30 {
