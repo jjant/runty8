@@ -3,6 +3,7 @@ pub mod key_combo;
 mod map;
 mod notification;
 pub mod serialize;
+mod sprite;
 mod undo_redo;
 
 use crate::app::ElmApp;
@@ -18,10 +19,9 @@ use crate::ui::{
 use crate::ui::{DrawFn, Element, Tree};
 use crate::Resources;
 use crate::{Event, Key, KeyState, KeyboardEvent};
-use itertools::Itertools;
+use brush_size::BrushSize;
 use serialize::serialize;
 
-use self::brush_size::{BrushSize, BrushSizeSelector};
 use self::key_combo::KeyCombos;
 use self::serialize::{Ppm, Serialize};
 use self::undo_redo::{Command, Commands};
@@ -30,16 +30,11 @@ use self::undo_redo::{Command, Commands};
 pub(crate) struct Editor {
     cursor: cursor::State,
     tab: Tab,
-    selected_color: u8,
-    selected_sprite: usize,
     selected_sprite_page: usize,
     sprite_button_state: button::State,
     map_button_state: button::State,
     tab_buttons: [button::State; 4],
-    color_selector_state: Vec<button::State>,
-    flag_buttons: Vec<button::State>,
     sprite_buttons: Vec<button::State>,
-    pixel_buttons: Vec<button::State>,
     selected_tool: usize,
     tool_buttons: Vec<button::State>,
     bottom_bar_text: String,
@@ -47,10 +42,12 @@ pub(crate) struct Editor {
     key_combos: KeyCombos<KeyComboAction>,
     clipboard: Clipboard,
     commands: Commands,
-    brush_size: BrushSize,
-    brush_size_state: brush_size::State,
     editor_sprites: SpriteSheet,
     map_editor: map::Editor,
+    sprite_editor: sprite::Editor,
+    brush_size: BrushSize,
+    brush_size_state: brush_size::State,
+    selected_sprite: usize,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -226,14 +223,11 @@ impl ElmApp for Editor {
     type Msg = Msg;
 
     fn init() -> Self {
-        let selected_sprite = 0;
         Self {
             cursor: cursor::State::new(),
             sprite_button_state: button::State::new(),
             map_button_state: button::State::new(),
             tab: Tab::SpriteEditor,
-            selected_color: 0,
-            selected_sprite,
             selected_sprite_page: 0,
             tab_buttons: [
                 button::State::new(),
@@ -241,10 +235,7 @@ impl ElmApp for Editor {
                 button::State::new(),
                 button::State::new(),
             ],
-            color_selector_state: vec![button::State::new(); 16],
-            flag_buttons: vec![button::State::new(); 8],
             sprite_buttons: vec![button::State::new(); 64],
-            pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
             selected_tool: 0,
             tool_buttons: vec![button::State::new(); 2],
             bottom_bar_text: "".to_owned(),
@@ -261,12 +252,14 @@ impl ElmApp for Editor {
                 .push(KeyComboAction::NextTab, Key::RightArrow, &[Key::Alt]),
             clipboard: Clipboard::new(),
             commands: Commands::new(),
-            brush_size: BrushSize::tiny(),
-            brush_size_state: brush_size::State::new(),
             editor_sprites: load_editor_sprite_sheet()
                 // TODO: Change this to actually crash if it failed.
                 .unwrap_or_else(|_| SpriteSheet::new()),
             map_editor: map::Editor::new(),
+            sprite_editor: sprite::Editor::new(),
+            brush_size: BrushSize::tiny(),
+            brush_size_state: brush_size::State::new(),
+            selected_sprite: 0,
         }
     }
 
@@ -374,17 +367,17 @@ impl ElmApp for Editor {
                 self.tab,
             ))
             .push(match self.tab {
-                Tab::SpriteEditor => sprite_editor_view(
-                    self.selected_color,
-                    &mut self.color_selector_state,
-                    resources.sprite_flags.get(self.selected_sprite).unwrap(),
-                    resources.sprite_sheet.get_sprite(self.selected_sprite),
-                    &mut self.flag_buttons,
-                    &mut self.pixel_buttons,
-                    self.brush_size,
-                    &mut self.brush_size_state,
-                    &self.editor_sprites,
-                ),
+                Tab::SpriteEditor => {
+                    let selected_sprite_flags =
+                        resources.sprite_flags.get(self.selected_sprite).unwrap();
+                    let selected_sprite = resources.sprite_sheet.get_sprite(self.selected_sprite);
+
+                    self.sprite_editor.view(
+                        selected_sprite_flags,
+                        selected_sprite,
+                        &self.editor_sprites,
+                    )
+                }
                 Tab::MapEditor => Tree::new()
                     .push(self.map_editor.view(
                         &resources.map,
@@ -446,52 +439,6 @@ fn top_bar<'a>(
         .into()
 }
 
-#[allow(clippy::too_many_arguments)]
-fn sprite_editor_view<'a, 'b>(
-    selected_color: u8,
-    color_selector_state: &'a mut [button::State],
-    selected_sprite_flags: u8,
-    selected_sprite: &'b Sprite,
-    flag_buttons: &'a mut [button::State],
-    pixel_buttons: &'a mut [button::State],
-    brush_size: BrushSize,
-    brush_size_state: &'a mut brush_size::State,
-    editor_sprites: &'a SpriteSheet,
-) -> Element<'a, Msg> {
-    Tree::new()
-        .push(color_selector(
-            79,
-            10,
-            10,
-            selected_color,
-            color_selector_state,
-            Msg::ColorSelected,
-            Msg::ColorHovered,
-        ))
-        .push(canvas_view(7, 10, pixel_buttons, selected_sprite))
-        .push(flags(
-            selected_sprite_flags,
-            78,
-            70,
-            flag_buttons,
-            editor_sprites,
-        ))
-        .push(
-            BrushSizeSelector {
-                x: 79,
-                y: 55,
-                brush_size,
-                selected_color,
-                on_press: Msg::BrushSizeSelected,
-                on_hover: Msg::BrushSizeSliderHovered,
-                state: brush_size_state,
-            }
-            .view(),
-        )
-        // .push(slider::view(93, 52, brush_size))
-        .into()
-}
-
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::SpriteEditor;
 
@@ -528,80 +475,6 @@ fn editor_button(
         }),
     )
     .into()
-}
-
-fn color_selector<'a>(
-    start_x: i32,
-    start_y: i32,
-    tile_size: i32,
-    selected_color: u8,
-    states: &'a mut [button::State],
-    on_press: impl (Fn(usize) -> Msg) + Copy + 'static,
-    on_hover: impl (Fn(usize) -> Msg) + Copy + 'static,
-) -> Element<'_, Msg> {
-    let mut v = Vec::with_capacity(16);
-
-    let coordinates = move |index| {
-        let i = index % 4;
-        let j = index / 4;
-        let x = start_x + 1 + i as i32 * tile_size;
-        let y = start_y + 1 + j as i32 * tile_size;
-
-        (x, y)
-    };
-
-    for (index, state) in states.iter_mut().enumerate() {
-        let (x, y) = coordinates(index);
-
-        let button: Element<'_, Msg> = Button::new(
-            x,
-            y,
-            tile_size,
-            tile_size,
-            Some(on_press(index)),
-            state,
-            DrawFn::new(move |draw| {
-                draw.palt(None);
-                draw.rectfill(0, 0, tile_size - 1, tile_size - 1, index as u8);
-                draw.palt(Some(0));
-            }),
-        )
-        .event_on_press()
-        .on_hover(on_hover(index))
-        .into();
-        v.push(button);
-    }
-
-    // Draw border
-    v.push(
-        DrawFn::new(move |draw| {
-            draw.palt(None);
-            draw.rect(
-                start_x,
-                start_y,
-                start_x + 4 * tile_size + 1,
-                start_y + 4 * tile_size + 1,
-                0,
-            );
-            draw.palt(Some(0));
-        })
-        .into(),
-    );
-
-    // Draw highlight
-    v.push(
-        DrawFn::new(move |draw| {
-            let (x, y) = coordinates(selected_color as usize);
-
-            draw.palt(None);
-            draw.rect(x, y, x + tile_size - 1, y + tile_size - 1, 0);
-            draw.rect(x - 1, y - 1, x + tile_size, y + tile_size, 7);
-            draw.palt(Some(0));
-        })
-        .into(),
-    );
-
-    Tree::with_children(v).into()
 }
 
 fn tools_row<'a>(
@@ -758,120 +631,6 @@ fn bottom_bar(text: &str) -> Element<'_, Msg> {
         }))
         .push(Text::new(text, X + 1, Y + 1, 2))
         .into()
-}
-
-// TODO:
-// - Change color of highlight
-// - Don't show button underneath
-// - Optimize? (no Tree::new with draw commands)
-fn flags<'a>(
-    selected_sprite_flags: u8,
-    x: i32,
-    y: i32,
-    flag_buttons: &'a mut [button::State],
-    _editor_sprites: &'a SpriteSheet,
-) -> Element<'a, Msg> {
-    const SPR_SIZE: i32 = 5;
-    const FLAG_COLORS: [u8; 8] = [8, 9, 10, 11, 12, 13, 14, 15];
-
-    let children = flag_buttons
-        .iter_mut()
-        .enumerate()
-        .map(|(index, button)| {
-            let x = x + (SPR_SIZE + 1) * index as i32;
-            let flag_on = selected_sprite_flags & (1 << index) != 0;
-            let color = if flag_on { FLAG_COLORS[index] } else { 1 };
-
-            let button_content: Element<'a, Msg> = Tree::new()
-                .push(palt(Some(7)))
-                .push(pal(1, color))
-                .push(DrawFn::new(|pico8| {
-                    // TODO: Use the editor sprite sheet (not doing so currently,
-                    // because it's still WIP).
-                    //
-                    // pico8.spr_from(editor_sprites, 58, 0, 0);
-                    pico8.spr(58, 0, 0);
-                }))
-                .push(pal(1, 1))
-                .push(palt(Some(0)))
-                .into();
-
-            let button = Button::new(
-                x,
-                y,
-                5,
-                5,
-                Some(Msg::FlagToggled(index)),
-                button,
-                button_content,
-            );
-
-            button.into()
-        })
-        .collect();
-
-    Tree::with_children(children).into()
-}
-
-fn palt<'a>(transparent_color: Option<u8>) -> impl Into<Element<'a, Msg>> {
-    DrawFn::new(move |draw| draw.palt(transparent_color))
-}
-
-fn pal<'a>(c0: u8, c1: u8) -> impl Into<Element<'a, Msg>> {
-    DrawFn::new(move |draw| draw.pal(c0, c1))
-}
-
-fn spr<'a>(sprite: usize, x: i32, y: i32) -> impl Into<Element<'a, Msg>> {
-    DrawFn::new(move |draw| draw.spr(sprite, x, y))
-}
-
-fn canvas_view<'a, 'b>(
-    x: i32,
-    y: i32,
-    pixel_buttons: &'a mut [button::State],
-    sprite: &'b Sprite,
-) -> Element<'a, Msg> {
-    let mut elements = vec![];
-
-    for (y_index, chunk) in pixel_buttons
-        .iter_mut()
-        .zip(sprite.iter())
-        .chunks(8)
-        .into_iter()
-        .enumerate()
-    {
-        let y = y + 1 + (y_index * Sprite::HEIGHT) as i32;
-        for (x_index, (button, pixel_color)) in chunk.enumerate() {
-            let x = x + 1 + (x_index * Sprite::WIDTH) as i32;
-
-            elements.push(
-                Button::new(
-                    x,
-                    y,
-                    Sprite::WIDTH as i32,
-                    Sprite::HEIGHT as i32,
-                    Some(Msg::SpriteEdited {
-                        x: x_index,
-                        y: y_index,
-                    }),
-                    button,
-                    DrawFn::new(move |draw| {
-                        draw.palt(None);
-                        draw.rectfill(0, 0, 7, 7, pixel_color);
-                    }),
-                )
-                .event_on_press()
-                .into(),
-            )
-        }
-    }
-
-    let highlight = DrawFn::new(move |draw| {
-        draw.palt(None);
-        draw.rect(x, y, x + 64 + 1, y + 64 + 1, 0)
-    });
-
-    Tree::with_children(elements).push(highlight).into()
 }
 
 pub(crate) static MOUSE_SPRITE: &[Color] = &[
