@@ -1,20 +1,21 @@
 use super::brush_size::{self, BrushSize, BrushSizeSelector};
-use super::Msg;
 use crate::runtime::sprite_sheet::{Sprite, SpriteSheet};
 use crate::ui::{
     button::{self, Button},
     DrawFn, Element, Tree,
 };
+use crate::Color;
 use itertools::Itertools;
 use std::fmt::Debug;
 
-enum Msg {
-    ColorSelected(u8),
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Msg {
+    ColorSelected(Color),
 }
 
 #[derive(Debug)]
 pub(crate) struct Editor {
-    selected_color: u8,
+    selected_color: Color,
     color_selector_state: Vec<button::State>,
     flag_buttons: Vec<button::State>,
     pixel_buttons: Vec<button::State>,
@@ -29,10 +30,10 @@ impl Editor {
             pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
         }
     }
-    pub(crate) fn update(&mut self, msg: &Msg) {
+    pub(crate) fn update(&mut self, msg: Msg) {
         match msg {
             Msg::ColorSelected(selected_color) => {
-                self.selected_color = *selected_color as u8;
+                self.selected_color = selected_color as u8;
             }
         }
     }
@@ -44,8 +45,8 @@ impl Editor {
         editor_sprites: &'a SpriteSheet,
         brush_size: BrushSize,
         brush_size_state: &'a mut brush_size::State,
-        to_editor_msg: &impl Fn(Msg) -> super::Msg,
-    ) -> Element<'a, Msg> {
+        to_editor_msg: &(impl Fn(Msg) -> super::Msg + Copy),
+    ) -> Element<'a, super::Msg> {
         Tree::new()
             .push(color_selector(
                 79,
@@ -53,10 +54,16 @@ impl Editor {
                 10,
                 self.selected_color,
                 &mut self.color_selector_state,
-                |color| to_editor_msg(Msg::ColorSelected(color)),
+                move |color| to_editor_msg(Msg::ColorSelected(color)),
                 super::Msg::ColorHovered,
             ))
-            .push(canvas_view(7, 10, &mut self.pixel_buttons, selected_sprite))
+            .push(canvas_view(
+                7,
+                10,
+                self.selected_color,
+                &mut self.pixel_buttons,
+                selected_sprite,
+            ))
             .push(flags(
                 selected_sprite_flags,
                 78,
@@ -70,9 +77,9 @@ impl Editor {
                     y: 55,
                     brush_size,
                     selected_color: self.selected_color,
-                    on_press: Msg::BrushSizeSelected,
-                    on_hover: Msg::BrushSizeSliderHovered,
-                    state: &mut self.brush_size_state,
+                    on_press: super::Msg::BrushSizeSelected,
+                    on_hover: super::Msg::BrushSizeSliderHovered,
+                    state: brush_size_state,
                 }
                 .view(),
             )
@@ -81,14 +88,14 @@ impl Editor {
     }
 }
 
-fn color_selector<'a>(
+fn color_selector<'a, Msg: Debug + Copy + 'a>(
     start_x: i32,
     start_y: i32,
     tile_size: i32,
     selected_color: u8,
     states: &'a mut [button::State],
-    on_press: impl (Fn(usize) -> Msg) + Copy + 'static,
-    on_hover: impl (Fn(usize) -> Msg) + Copy + 'static,
+    on_press: impl (Fn(Color) -> Msg) + Copy,
+    on_hover: impl (Fn(Color) -> Msg) + Copy,
 ) -> Element<'_, Msg> {
     let mut v = Vec::with_capacity(16);
 
@@ -109,7 +116,7 @@ fn color_selector<'a>(
             y,
             tile_size,
             tile_size,
-            Some(on_press(index)),
+            Some(on_press(index as Color)),
             state,
             DrawFn::new(move |draw| {
                 draw.palt(None);
@@ -118,7 +125,7 @@ fn color_selector<'a>(
             }),
         )
         .event_on_press()
-        .on_hover(on_hover(index))
+        .on_hover(on_hover(index as Color))
         .into();
         v.push(button);
     }
@@ -167,7 +174,7 @@ fn flags<'a>(
     y: i32,
     flag_buttons: &'a mut [button::State],
     _editor_sprites: &'a SpriteSheet,
-) -> Element<'a, Msg> {
+) -> Element<'a, super::Msg> {
     const SPR_SIZE: i32 = 5;
     const FLAG_COLORS: [u8; 8] = [8, 9, 10, 11, 12, 13, 14, 15];
 
@@ -179,7 +186,7 @@ fn flags<'a>(
             let flag_on = selected_sprite_flags & (1 << index) != 0;
             let color = if flag_on { FLAG_COLORS[index] } else { 1 };
 
-            let button_content: Element<'a, Msg> = Tree::new()
+            let button_content: Element<'a, super::Msg> = Tree::new()
                 .push(palt(Some(7)))
                 .push(pal(1, color))
                 .push(DrawFn::new(|pico8| {
@@ -198,7 +205,7 @@ fn flags<'a>(
                 y,
                 5,
                 5,
-                Some(Msg::FlagToggled(index)),
+                Some(super::Msg::FlagToggled(index)),
                 button,
                 button_content,
             );
@@ -218,16 +225,13 @@ fn pal<'a, Msg: Debug + Copy + 'a>(c0: u8, c1: u8) -> impl Into<Element<'a, Msg>
     DrawFn::new(move |draw| draw.pal(c0, c1))
 }
 
-fn spr<'a>(sprite: usize, x: i32, y: i32) -> impl Into<Element<'a, Msg>> {
-    DrawFn::new(move |draw| draw.spr(sprite, x, y))
-}
-
 fn canvas_view<'a, 'b>(
     x: i32,
     y: i32,
+    selected_color: Color,
     pixel_buttons: &'a mut [button::State],
     sprite: &'b Sprite,
-) -> Element<'a, Msg> {
+) -> Element<'a, super::Msg> {
     let mut elements = vec![];
 
     for (y_index, chunk) in pixel_buttons
@@ -250,6 +254,7 @@ fn canvas_view<'a, 'b>(
                     Some(super::Msg::SpriteEdited {
                         x: x_index,
                         y: y_index,
+                        color: selected_color,
                     }),
                     button,
                     DrawFn::new(move |draw| {

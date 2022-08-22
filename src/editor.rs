@@ -76,18 +76,18 @@ impl Tab {
 pub(crate) enum Msg {
     SpriteTabClicked,
     MapButtonClicked,
-    ColorSelected(usize),
-    ColorHovered(usize),
+    ColorHovered(Color),
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
-    SpriteEdited { x: usize, y: usize }, // TODO: Improve
+    SpriteEdited { x: usize, y: usize, color: Color }, // TODO: Improve
     ToolSelected(usize),
     ClickedMapTile { x: usize, y: usize },
     KeyboardEvent(KeyboardEvent),
     BrushSizeSliderHovered,
     BrushSizeSelected(BrushSize),
     MapEditorMsg(map::Msg),
+    SpriteEditorMsg(sprite::Msg),
 }
 
 impl Editor {
@@ -265,6 +265,9 @@ impl ElmApp for Editor {
 
     fn update(&mut self, msg: &Msg, resources: &mut Resources) {
         match msg {
+            &Msg::SpriteEditorMsg(sprite_msg) => {
+                self.sprite_editor.update(sprite_msg);
+            }
             &Msg::MapEditorMsg(map_msg) => {
                 self.map_editor.update(map_msg);
             }
@@ -291,9 +294,6 @@ impl ElmApp for Editor {
                 self.tab = Tab::MapEditor;
                 println!("Map button clicked");
             }
-            Msg::ColorSelected(selected_color) => {
-                self.selected_color = *selected_color as u8;
-            }
             Msg::SpritePageSelected(selected_sprite_page) => {
                 self.selected_sprite_page = *selected_sprite_page;
             }
@@ -310,7 +310,7 @@ impl ElmApp for Editor {
                     .sprite_flags
                     .fset(self.selected_sprite, flag_index, !flag_value);
             }
-            &Msg::SpriteEdited { x, y } => {
+            &Msg::SpriteEdited { x, y, color } => {
                 let sprite = resources.sprite_sheet.get_sprite_mut(self.selected_sprite);
                 let x = x as isize;
                 let y = y as isize;
@@ -321,7 +321,7 @@ impl ElmApp for Editor {
                     x,
                     y,
                     previous_color,
-                    self.selected_color,
+                    color,
                 ));
 
                 for (x, y) in self
@@ -329,7 +329,7 @@ impl ElmApp for Editor {
                     .iter()
                     .map(|(local_x, local_y)| (local_x + x, local_y + y))
                 {
-                    sprite.pset(x, y, self.selected_color);
+                    sprite.pset(x, y, color);
                 }
             }
             &Msg::ToolSelected(selected_tool) => {
@@ -376,6 +376,9 @@ impl ElmApp for Editor {
                         selected_sprite_flags,
                         selected_sprite,
                         &self.editor_sprites,
+                        self.brush_size,
+                        &mut self.brush_size_state,
+                        &Msg::SpriteEditorMsg,
                     )
                 }
                 Tab::MapEditor => Tree::new()
