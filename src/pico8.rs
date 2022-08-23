@@ -48,6 +48,12 @@ impl Pico8 {
         self.resources.sprite_flags.fset(sprite, flag, value)
     }
 
+    // TODO: Find a better naming scheme
+    // TODO: Do we need to return the new flags?
+    pub fn fset_all(&mut self, sprite: usize, flags: u8) {
+        self.resources.sprite_flags.fset_all(sprite, flags);
+    }
+
     pub fn btnp(&self, button: Button) -> bool {
         self.state.button(button).btnp()
     }
