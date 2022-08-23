@@ -166,8 +166,6 @@ fn color_selector<'a, Msg: Debug + Copy + 'a>(
 
 // TODO:
 // - Change color of highlight
-// - Don't show button underneath
-// - Optimize? (no Tree::new with draw commands)
 fn flags<'a>(
     selected_sprite_flags: u8,
     x: i32,
@@ -187,17 +185,17 @@ fn flags<'a>(
             let color = if flag_on { FLAG_COLORS[index] } else { 1 };
 
             let button_content: Element<'a, super::Msg> = Tree::new()
-                .push(palt(Some(7)))
-                .push(pal(1, color))
-                .push(DrawFn::new(|pico8| {
+                .push(DrawFn::new(move |pico8| {
+                    pico8.palt(Some(7));
+                    pico8.pal(1, color);
                     // TODO: Use the editor sprite sheet (not doing so currently,
                     // because it's still WIP).
                     //
                     // pico8.spr_from(editor_sprites, 58, 0, 0);
                     pico8.spr(58, 0, 0);
+                    pico8.pal(1, 1);
+                    pico8.palt(Some(0));
                 }))
-                .push(pal(1, 1))
-                .push(palt(Some(0)))
                 .into();
 
             let button = Button::new(
@@ -215,14 +213,6 @@ fn flags<'a>(
         .collect();
 
     Tree::with_children(children).into()
-}
-
-fn palt<'a, Msg: Debug + Copy + 'a>(transparent_color: Option<u8>) -> impl Into<Element<'a, Msg>> {
-    DrawFn::new(move |draw| draw.palt(transparent_color))
-}
-
-fn pal<'a, Msg: Debug + Copy + 'a>(c0: u8, c1: u8) -> impl Into<Element<'a, Msg>> {
-    DrawFn::new(move |draw| draw.pal(c0, c1))
 }
 
 fn canvas_view<'a, 'b>(
