@@ -208,7 +208,8 @@ fn flags<'a>(
                 Some(super::Msg::FlagToggled(index)),
                 button,
                 button_content,
-            );
+            )
+            .on_hover(super::Msg::FlagHovered { bit_number: index });
 
             button.into()
         })

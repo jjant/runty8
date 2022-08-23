@@ -80,6 +80,7 @@ pub(crate) enum Msg {
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
+    FlagHovered { bit_number: usize },
     SpriteEdited { x: usize, y: usize, color: Color }, // TODO: Improve
     ToolSelected(usize),
     ClickedMapTile { x: usize, y: usize },
@@ -299,6 +300,9 @@ impl ElmApp for Editor {
             }
             Msg::SpriteButtonClicked(selected_sprite) => {
                 self.selected_sprite = *selected_sprite;
+            }
+            Msg::FlagHovered { bit_number } => {
+                self.bottom_bar_text = format!("FLAG {} (0X{:X})", bit_number, 1 << bit_number);
             }
             Msg::FlagToggled(flag_index) => {
                 let flag_index = *flag_index;
