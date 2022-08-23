@@ -821,10 +821,6 @@ fn pal<'a>(c0: u8, c1: u8) -> impl Into<Element<'a, Msg>> {
     DrawFn::new(move |draw| draw.pal(c0, c1))
 }
 
-fn spr<'a>(sprite: usize, x: i32, y: i32) -> impl Into<Element<'a, Msg>> {
-    DrawFn::new(move |draw| draw.spr(sprite, x, y))
-}
-
 fn canvas_view<'a, 'b>(
     x: i32,
     y: i32,
