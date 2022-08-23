@@ -164,8 +164,6 @@ fn color_selector<'a, Msg: Debug + Copy + 'a>(
 
 #[allow(clippy::too_many_arguments)]
 
-// TODO:
-// - Change color of highlight
 fn flags<'a>(
     selected_sprite_flags: u8,
     x: i32,
@@ -188,6 +186,9 @@ fn flags<'a>(
                 .push(DrawFn::new(move |pico8| {
                     pico8.palt(Some(7));
                     pico8.pal(1, color);
+                    if flag_on {
+                        pico8.pal(13, 7);
+                    }
                     // TODO: Use the editor sprite sheet (not doing so currently,
                     // because it's still WIP).
                     //
@@ -195,6 +196,7 @@ fn flags<'a>(
                     pico8.spr(58, 0, 0);
                     pico8.pal(1, 1);
                     pico8.palt(Some(0));
+                    pico8.pal(13, 13);
                 }))
                 .into();
 
