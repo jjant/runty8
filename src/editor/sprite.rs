@@ -19,6 +19,7 @@ pub(crate) struct Editor {
     color_selector_state: Vec<button::State>,
     flag_buttons: Vec<button::State>,
     pixel_buttons: Vec<button::State>,
+    brush_size_state: brush_size::State,
 }
 
 impl Editor {
@@ -28,6 +29,7 @@ impl Editor {
             color_selector_state: vec![button::State::new(); 16],
             flag_buttons: vec![button::State::new(); 8],
             pixel_buttons: vec![button::State::new(); Sprite::WIDTH * Sprite::HEIGHT],
+            brush_size_state: brush_size::State::new(),
         }
     }
     pub(crate) fn update(&mut self, msg: Msg) {
@@ -44,7 +46,6 @@ impl Editor {
         selected_sprite: &'b Sprite,
         editor_sprites: &'a SpriteSheet,
         brush_size: BrushSize,
-        brush_size_state: &'a mut brush_size::State,
         to_editor_msg: &(impl Fn(Msg) -> super::Msg + Copy),
     ) -> Element<'a, super::Msg> {
         Tree::new()
@@ -79,11 +80,10 @@ impl Editor {
                     selected_color: self.selected_color,
                     on_press: super::Msg::BrushSizeSelected,
                     on_hover: super::Msg::BrushSizeSliderHovered,
-                    state: brush_size_state,
+                    state: &mut self.brush_size_state,
                 }
                 .view(),
             )
-            // .push(slider::view(93, 52, brush_size))
             .into()
     }
 }

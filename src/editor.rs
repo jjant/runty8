@@ -46,7 +46,6 @@ pub(crate) struct Editor {
     map_editor: map::Editor,
     sprite_editor: sprite::Editor,
     brush_size: BrushSize,
-    brush_size_state: brush_size::State,
     selected_sprite: usize,
 }
 
@@ -259,7 +258,6 @@ impl ElmApp for Editor {
             map_editor: map::Editor::new(),
             sprite_editor: sprite::Editor::new(),
             brush_size: BrushSize::tiny(),
-            brush_size_state: brush_size::State::new(),
             selected_sprite: 0,
         }
     }
@@ -381,7 +379,6 @@ impl ElmApp for Editor {
                         selected_sprite,
                         &self.editor_sprites,
                         self.brush_size,
-                        &mut self.brush_size_state,
                         &Msg::SpriteEditorMsg,
                     )
                 }
