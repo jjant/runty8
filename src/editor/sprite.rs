@@ -162,8 +162,6 @@ fn color_selector<'a, Msg: Debug + Copy + 'a>(
     Tree::with_children(v).into()
 }
 
-#[allow(clippy::too_many_arguments)]
-
 fn flags<'a>(
     selected_sprite_flags: u8,
     x: i32,
