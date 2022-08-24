@@ -168,14 +168,17 @@ pub enum Event {
 }
 
 fn create_sprite_flags(assets_path: &str) -> Flags {
-    if let Ok(content) = std::fs::read_to_string(&format!(
+    let path = format!(
         "{}{}{}",
         assets_path,
         std::path::MAIN_SEPARATOR,
         Flags::file_name()
-    )) {
+    );
+
+    if let Ok(content) = std::fs::read_to_string(&path) {
         Flags::deserialize(&content).unwrap()
     } else {
+        println!("Couldn't read flags from {}, creating new flags.", path);
         Flags::new()
     }
 }
@@ -191,7 +194,7 @@ fn create_map(assets_path: &str) -> Map {
     if let Ok(content) = std::fs::read_to_string(&path) {
         Map::deserialize(&content).unwrap()
     } else {
-        println!("Couldn't read map from {}", path);
+        println!("Couldn't read map from {}, creating new map.", path);
         Map::new()
     }
 }
@@ -207,7 +210,10 @@ fn create_sprite_sheet(assets_path: &str) -> SpriteSheet {
     if let Ok(content) = std::fs::read_to_string(&path) {
         SpriteSheet::deserialize(&content).unwrap()
     } else {
-        println!("Couldn't read sprite sheet from {}", path);
+        println!(
+            "Couldn't read sprite sheet from {}, creating new sprite sheet.",
+            path
+        );
         SpriteSheet::new()
     }
 }
