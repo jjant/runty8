@@ -4,11 +4,8 @@ version = "0.1.0"
 edition = "2021"
 default-run = "runty8"
 readme = "README.md"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 glium = "*"
 itertools = "*"
 rand = "*"
-enum_dispatch = "*"
-png = "*"
