@@ -1,7 +1,7 @@
 use runty8::{self, App, Button, Pico8};
 
 fn main() {
-    runty8::run_app::<MyThing>("src/bin/bresenham".to_owned()).unwrap();
+    runty8::run_app::<MyThing>("examples/bresenham".to_owned()).unwrap();
 }
 
 struct MyThing {
