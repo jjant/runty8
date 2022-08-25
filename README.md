@@ -33,8 +33,10 @@ cargo run
 Run examples (`celeste`, `moving_box`, `confetti`) with:
 
 ```bash
-cargo run --bin example_name -- --game
+cargo run --example example_name -- --game
 ```
+
+Or run `cargo run --example` to get a list of the available examples.
 
 Press escape to switch between the game and the editor.
 
