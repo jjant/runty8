@@ -41,7 +41,7 @@ Press escape to switch between the game and the editor.
 ## Things to do
 
 - [ ] Unify data structures (sprite sheet/map/etc) under a single Memory byte array?
-      Not sure this is good (tho it may simplify having the map and sprite sheet overlapping in memory, otherwise that has to be programmer manually).
+      Not sure this is good (tho it may simplify having the map and sprite sheet overlapping in memory, otherwise that has to be programmed manually).
 - [ ] Modify editor W, A, S, D key short cuts (shift sprite) to use arrow keys
 - [ ] Implement sprite editor tools: line, circle, selection tool, zoom, etc
 - [ ] Finish porting the pico8 API (missing functions like `peek`, `poke`, `circ`, etc)
