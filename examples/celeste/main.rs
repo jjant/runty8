@@ -7,16 +7,8 @@ use runty8::{App, Button, Pico8};
 use std::iter::{Chain, Map};
 use std::slice;
 
-// TODO: Deduplicate this code.
-fn assets_path() -> String {
-    let buf = Path::new(file!()).with_extension("");
-    let dir_name = buf.to_str().unwrap();
-
-    dir_name.to_owned()
-}
-
 fn main() {
-    runty8::run_app::<GameState>(assets_path()).unwrap();
+    runty8::run_app::<GameState>("examples/celeste".to_owned()).unwrap();
 }
 
 struct GameState {
