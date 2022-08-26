@@ -1,5 +1,6 @@
 use crate::{horizontal_line, vertical_line, Graphics};
 
+/// Iterator over the points of the border of a rectangle.
 pub fn rectangle(x: i32, y: i32, width: u32, height: u32) -> impl Graphics {
     let width: i32 = width
         .try_into()
@@ -26,6 +27,7 @@ pub fn rectangle(x: i32, y: i32, width: u32, height: u32) -> impl Graphics {
     top_bottom.chain(left_right)
 }
 
+/// Iterator over the points of a rectangle (interior and border).
 pub fn filled_rectangle(x: i32, y: i32, width: u32, height: u32) -> impl Graphics {
     let width: i32 = width
         .try_into()

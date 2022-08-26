@@ -164,19 +164,11 @@ impl DrawData {
         self.transparent_color = transparent_color
     }
 
-    // Taken from Pemsa, a C++ implementation of pico8.
-    // This looks similar to Bresenham's circle drawing algorithm.
-    //
-    // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
     pub(crate) fn circ(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
         runty8_graphics::circle(cx, cy, radius as u32)
             .for_each(move |(x, y)| self.pset(x, y, color))
     }
 
-    // Taken from Pemsa, a C++ implementation of pico8.
-    // This looks similar to Bresenham's circle drawing algorithm.
-    //
-    // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
     pub(crate) fn circfill(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
         runty8_graphics::filled_circle(cx, cy, radius as u32)
             .for_each(move |(x, y)| self.pset(x, y, color));

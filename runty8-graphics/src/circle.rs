@@ -1,5 +1,34 @@
 use crate::Graphics;
 
+/// Iterator over points in the circumference of a circle.
+pub fn circle(cx: i32, cy: i32, r: u32) -> impl Graphics {
+    northwest_octant(r)
+        .flat_map(|(x, y)| {
+            [
+                (x, y),
+                (x, -y),
+                (-x, y),
+                (-x, -y),
+                (y, x),
+                (y, -x),
+                (-y, x),
+                (-y, -x),
+            ]
+            .into_iter()
+        })
+        .map(move |(x, y)| (cx + x, cy + y))
+}
+
+/// Iterator over points of a circle (both circumference and interior).
+pub fn filled_circle(cx: i32, cy: i32, r: u32) -> impl Graphics {
+    northwest_octant(r)
+        .flat_map(|(x, y)| [(x, y), (y, x)]) // Generate a quadrant, instead of an octant
+        .flat_map(|(x, y)| {
+            crate::horizontal_line(-x, x, y).chain(crate::horizontal_line(-x, x, -y))
+        })
+        .map(move |(x, y)| (cx + x, cy + y))
+}
+
 struct NorthwestOctant {
     x: i32,
     y: i32,
@@ -16,6 +45,10 @@ impl NorthwestOctant {
     }
 }
 
+// Taken from Pemsa, a C++ implementation of pico8.
+// This looks similar to Bresenham's circle drawing algorithm.
+//
+// See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
 impl Iterator for NorthwestOctant {
     type Item = (i32, i32);
 
@@ -42,34 +75,6 @@ fn northwest_octant(r: u32) -> impl Graphics {
         r.try_into()
             .expect(&format!("Couldn't convert radius {} to i32", r)),
     )
-}
-
-/// Iterator for points in a circle
-pub fn circle(cx: i32, cy: i32, r: u32) -> impl Graphics {
-    northwest_octant(r)
-        .flat_map(|(x, y)| {
-            [
-                (x, y),
-                (x, -y),
-                (-x, y),
-                (-x, -y),
-                (y, x),
-                (y, -x),
-                (-y, x),
-                (-y, -x),
-            ]
-            .into_iter()
-        })
-        .map(move |(x, y)| (cx + x, cy + y))
-}
-
-pub fn filled_circle(cx: i32, cy: i32, r: u32) -> impl Graphics {
-    northwest_octant(r)
-        .flat_map(|(x, y)| [(x, y), (y, x)]) // Generate a quadrant, instead of an octant
-        .flat_map(|(x, y)| {
-            crate::horizontal_line(-x, x, y).chain(crate::horizontal_line(-x, x, -y))
-        })
-        .map(move |(x, y)| (cx + x, cy + y))
 }
 
 #[cfg(test)]
