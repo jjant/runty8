@@ -1,5 +1,6 @@
 use crate::Graphics;
 
+/// Iterator over the points of a line (includes endpoints).
 pub fn line(x0: i32, y0: i32, x1: i32, y1: i32) -> impl Graphics {
     LineIter::new(x0, y0, x1, y1)
 }
@@ -71,6 +72,14 @@ impl Iterator for LineIter {
     }
 }
 
+pub(crate) fn horizontal_line(x0: i32, x1: i32, y: i32) -> impl Graphics {
+    (x0..=x1).map(move |x| (x, y))
+}
+
+pub(crate) fn vertical_line(x: i32, y0: i32, y1: i32) -> impl Graphics {
+    (y0..=y1).map(move |y| (x, y))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,7 +88,7 @@ mod tests {
     fn line_is_horizontal() {
         assert_eq!(
             line(20, 0, 30, 0).collect::<Vec<_>>(),
-            crate::horizontal_line(20, 30, 0).collect::<Vec<_>>()
+            horizontal_line(20, 30, 0).collect::<Vec<_>>()
         );
     }
 
@@ -87,7 +96,7 @@ mod tests {
     fn line_is_vertical() {
         assert_eq!(
             line(0, 20, 0, 30).collect::<Vec<_>>(),
-            crate::vertical_line(0, 20, 30).collect::<Vec<_>>()
+            vertical_line(0, 20, 30).collect::<Vec<_>>()
         );
     }
 

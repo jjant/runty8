@@ -1,3 +1,4 @@
+use crate::line::horizontal_line;
 use crate::Graphics;
 
 /// Iterator over points in the circumference of a circle.
@@ -23,9 +24,7 @@ pub fn circle(cx: i32, cy: i32, r: u32) -> impl Graphics {
 pub fn filled_circle(cx: i32, cy: i32, r: u32) -> impl Graphics {
     northwest_octant(r)
         .flat_map(|(x, y)| [(x, y), (y, x)]) // Generate a quadrant, instead of an octant
-        .flat_map(|(x, y)| {
-            crate::horizontal_line(-x, x, y).chain(crate::horizontal_line(-x, x, -y))
-        })
+        .flat_map(|(x, y)| horizontal_line(-x, x, y).chain(horizontal_line(-x, x, -y)))
         .map(move |(x, y)| (cx + x, cy + y))
 }
 

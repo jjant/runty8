@@ -1,4 +1,5 @@
-use crate::{horizontal_line, vertical_line, Graphics};
+use crate::line::{horizontal_line, vertical_line};
+use crate::Graphics;
 
 /// Iterator over the points of the border of a rectangle.
 pub fn rectangle(x: i32, y: i32, width: u32, height: u32) -> impl Graphics {
