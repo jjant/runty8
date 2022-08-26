@@ -134,6 +134,8 @@ impl DrawData {
     }
 
     pub(crate) fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        let (x0, x1) = min_max(x0, x1);
+        let (y0, y1) = min_max(y0, y1);
         let width = (x1 - x0 + 1) as u32;
         let height = (y1 - y0 + 1) as u32;
 
@@ -142,6 +144,8 @@ impl DrawData {
     }
 
     pub(crate) fn rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        let (x0, x1) = min_max(x0, x1);
+        let (y0, y1) = min_max(y0, y1);
         let width = (x1 - x0 + 1) as u32;
         let height = (y1 - y0 + 1) as u32;
 
@@ -258,6 +262,9 @@ impl Default for DrawData {
     }
 }
 
+fn min_max(a: i32, b: i32) -> (i32, i32) {
+    (a.min(b), a.max(b))
+}
 // Pico8 api
 
 fn get_color(index: Color) -> u32 {
