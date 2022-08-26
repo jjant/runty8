@@ -14,7 +14,6 @@ pub use runtime::sprite_sheet::Color;
 pub use runtime::state::Button;
 
 mod controller;
-mod draw;
 mod editor;
 mod font;
 mod graphics;

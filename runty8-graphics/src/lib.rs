@@ -1,6 +1,9 @@
 mod circle;
+mod line;
 mod rectangle;
+
 pub use circle::{circle, filled_circle};
+pub use line::line;
 pub use rectangle::{filled_rectangle, rectangle};
 
 /// An alias for `Iterator<Item = (i32, i32)>`.

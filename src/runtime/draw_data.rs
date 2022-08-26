@@ -1,7 +1,7 @@
+use crate::font;
 use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
-use crate::{draw, font};
 use runty8_graphics;
 
 use super::sprite_sheet::{Color, Sprite};
@@ -153,9 +153,7 @@ impl DrawData {
     }
 
     pub(crate) fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        for (x, y) in draw::line(x0, y0, x1, y1) {
-            self.pset(x, y, color);
-        }
+        runty8_graphics::line(x0, y0, x1, y1).for_each(|(x, y)| self.pset(x, y, color));
     }
 
     pub(crate) fn reset_pal(&mut self) {
