@@ -5,7 +5,11 @@ edition = "2021"
 default-run = "runty8"
 readme = "README.md"
 
+[workspace]
+members = ["runty8-graphics"]
+
 [dependencies]
 glium = "*"
 itertools = "*"
 rand = "*"
+runty8-graphics = { path = "./runty8-graphics" }
