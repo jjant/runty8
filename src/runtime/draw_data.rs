@@ -134,16 +134,18 @@ impl DrawData {
     }
 
     pub(crate) fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        for y in y0..=y1 {
-            self.line(x0, y, x1, y, color);
-        }
+        let width = (x1 - x0 + 1) as u32;
+        let height = (y1 - y0 + 1) as u32;
+
+        runty8_graphics::filled_rectangle(x0, y0, width, height)
+            .for_each(|(x, y)| self.pset(x, y, color))
     }
 
     pub(crate) fn rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        self.line(x0, y0, x1, y0, color);
-        self.line(x0, y0, x0, y1, color);
-        self.line(x0, y1, x1, y1, color);
-        self.line(x1, y0, x1, y1, color);
+        let width = (x1 - x0 + 1) as u32;
+        let height = (y1 - y0 + 1) as u32;
+
+        runty8_graphics::rectangle(x0, y0, width, height).for_each(|(x, y)| self.pset(x, y, color))
     }
 
     pub(crate) fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
