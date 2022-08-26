@@ -1,4 +1,5 @@
 mod circle;
+pub use circle::circle;
 
 pub trait Graphics: Iterator<Item = (i32, i32)> {}
 
