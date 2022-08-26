@@ -1,4 +1,3 @@
-use rand::Rng;
 use runty8::{self, App, Button, Pico8};
 
 fn main() {
@@ -10,13 +9,11 @@ impl Circles {
     fn do_draw(&self, pico8: &mut Pico8) {
         pico8.cls(0);
 
-        for _ in 0..20 {
-            pico8.circ(
-                rand::thread_rng().gen_range(0..128),
-                rand::thread_rng().gen_range(0..128),
-                rand::thread_rng().gen_range(0..20),
-                rand::thread_rng().gen_range(1..16),
-            )
+        pico8.rect(0, 0, 127, 127, 7);
+        for i in 0..=7 {
+            pico8.circ(5 + i * 15, 64, i, 7);
+            pico8.circfill(5 + i * 15, 84, i, 7);
+            pico8.pset(5 + i * 15, 64, 9);
         }
     }
 }
@@ -31,7 +28,7 @@ impl App for Circles {
 
     fn update(&mut self, pico8: &mut Pico8) {
         if pico8.btnp(Button::C) {
-            self.do_draw(pico8)
+            self.do_draw(pico8);
         }
     }
 

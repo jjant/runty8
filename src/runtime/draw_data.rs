@@ -2,6 +2,7 @@ use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
 use crate::{draw, font};
+use runty8_graphics;
 
 use super::sprite_sheet::{Color, Sprite};
 
@@ -112,36 +113,6 @@ impl DrawData {
             }
         }
     }
-
-    pub(crate) fn quarter_bresenham(
-        &mut self,
-        cx: i32,
-        cy: i32,
-        radius: i32,
-        color: Color,
-        plot: fn(&mut Self, i32, i32, i32, i32, Color),
-    ) {
-        let mut x = radius;
-        let mut y = 0;
-        let mut error = 1 - radius;
-
-        while y <= x {
-            plot(self, cx, cy, x, y, color);
-
-            if error < 0 {
-                error += 2 * y + 3;
-            } else {
-                if x != y {
-                    plot(self, cx, cy, y, x, color);
-                }
-
-                x -= 1;
-                error += 2 * (y - x) + 3;
-            }
-
-            y += 1;
-        }
-    }
 }
 
 // Functions which more directly implement pico8 functionality
@@ -196,24 +167,8 @@ impl DrawData {
     //
     // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
     pub(crate) fn circ(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
-        fn plot(this: &mut DrawData, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
-            let points = [
-                (x, y),
-                (-x, y),
-                (x, -y),
-                (-x, -y),
-                (y, x),
-                (-y, x),
-                (y, -x),
-                (-y, -x),
-            ];
-
-            for (x, y) in points {
-                this.pset(cx + x, cy + y, c);
-            }
-        }
-
-        self.quarter_bresenham(cx, cy, radius, color, plot);
+        runty8_graphics::circle(cx, cy, radius as u32)
+            .for_each(move |(x, y)| self.pset(x, y, color))
     }
 
     // Taken from Pemsa, a C++ implementation of pico8.
@@ -221,15 +176,8 @@ impl DrawData {
     //
     // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
     pub(crate) fn circfill(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
-        fn plot(this: &mut DrawData, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
-            this.line(cx - x, cy + y, cx + x, cy + y, c);
-
-            if y != 0 {
-                this.line(cx - x, cy - y, cx + x, cy - y, c);
-            }
-        }
-
-        self.quarter_bresenham(cx, cy, radius, color, plot);
+        runty8_graphics::filled_circle(cx, cy, radius as u32)
+            .for_each(move |(x, y)| self.pset(x, y, color));
     }
 
     pub(crate) fn print(&mut self, str: &str, x: i32, y: i32, color: Color) {

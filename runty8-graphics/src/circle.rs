@@ -11,7 +11,7 @@ impl NorthwestOctant {
         Self {
             x: 0,
             y: r,
-            d: 3 - 2 * r,
+            d: 1 - r,
         }
     }
 }
@@ -25,13 +25,12 @@ impl Iterator for NorthwestOctant {
         }
         let ret_value = (self.x, self.y);
 
-        let pk = self.d;
         self.x += 1;
         if self.d < 0 {
-            self.d += 4 * self.x + 6;
+            self.d += 2 * self.x + 1;
         } else {
             self.y -= 1;
-            self.d += 4 * (self.x - self.y) + 10;
+            self.d += 2 * (self.x - self.y) + 1;
         }
 
         Some(ret_value)
@@ -64,29 +63,51 @@ pub fn circle(cx: i32, cy: i32, r: u32) -> impl Graphics {
         .map(move |(x, y)| (cx + x, cy + y))
 }
 
+pub fn filled_circle(cx: i32, cy: i32, r: u32) -> impl Graphics {
+    northwest_octant(r)
+        .flat_map(|(x, y)| [(x, y), (y, x)]) // Generate a quadrant, instead of an octant
+        .flat_map(|(x, y)| {
+            crate::horizontal_line(-x, x, y).chain(crate::horizontal_line(-x, x, -y))
+        })
+        .map(move |(x, y)| (cx + x, cy + y))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // Examples from <https://www.gatevidyalay.com/bresenham-circle-drawing-algorithm/>
+    // Examples compiled from looking at Pico8's circ output.
     #[test]
     fn radius_0_northwest_octant() {
         assert_eq!(northwest_octant(0).collect::<Vec<_>>(), vec![(0, 0)]);
     }
 
     #[test]
-    fn radius_8_northwest_octant() {
+    fn radius_1_northwest_octant() {
+        assert_eq!(northwest_octant(1).collect::<Vec<_>>(), vec![(0, 1)]);
+    }
+
+    #[test]
+    fn radius_2_northwest_octant() {
         assert_eq!(
-            northwest_octant(8).collect::<Vec<_>>(),
-            vec![(0, 8), (1, 8), (2, 8), (3, 7), (4, 6), (5, 5)]
+            northwest_octant(2).collect::<Vec<_>>(),
+            vec![(0, 2), (1, 2)]
         );
     }
 
     #[test]
-    fn radius_10_northwest_octant() {
+    fn radius_3_northwest_octant() {
         assert_eq!(
-            northwest_octant(10).collect::<Vec<_>>(),
-            vec![(0, 10), (1, 10), (2, 10), (3, 9), (4, 9), (5, 8), (6, 7)]
+            northwest_octant(3).collect::<Vec<_>>(),
+            vec![(0, 3), (1, 3), (2, 2)]
+        );
+    }
+
+    #[test]
+    fn radius_4_northwest_octant() {
+        assert_eq!(
+            northwest_octant(4).collect::<Vec<_>>(),
+            vec![(0, 4), (1, 4), (2, 3), (3, 3)]
         );
     }
 }
