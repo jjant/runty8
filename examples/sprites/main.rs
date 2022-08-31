@@ -31,6 +31,9 @@ impl Sprites {
         pico8.spr_(UP_RIGHT_ARROW, 80, 64, 1.0, 1.0, true, false);
         pico8.spr_(UP_RIGHT_ARROW, 80, 80, 1.0, 1.0, false, true);
         pico8.spr_(UP_RIGHT_ARROW, 80, 96, 1.0, 1.0, true, true);
+
+        // TEST BIG SPRITES
+        pico8.spr_(7, 16, 16, 2.0, 2.0, false, false);
     }
 }
 
