@@ -72,11 +72,11 @@ impl Iterator for LineIter {
     }
 }
 
-pub(crate) fn horizontal_line(x0: i32, x1: i32, y: i32) -> impl Graphics {
+pub fn horizontal_line(x0: i32, x1: i32, y: i32) -> impl DoubleEndedIterator<Item = (i32, i32)> {
     (x0..=x1).map(move |x| (x, y))
 }
 
-pub(crate) fn vertical_line(x: i32, y0: i32, y1: i32) -> impl Graphics {
+pub fn vertical_line(x: i32, y0: i32, y1: i32) -> impl Graphics {
     (y0..=y1).map(move |y| (x, y))
 }
 

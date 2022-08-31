@@ -1,6 +1,64 @@
 use crate::line::{horizontal_line, vertical_line};
 use crate::Graphics;
 
+pub struct Rectangle {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+pub struct MaybeReverse<I> {
+    iter: I,
+    reverse: bool,
+}
+
+pub trait ReverseIf
+where
+    Self: Sized,
+{
+    fn reverse_if(self, reverse: bool) -> MaybeReverse<Self>;
+}
+
+impl<T: DoubleEndedIterator> ReverseIf for T {
+    fn reverse_if(self, reverse: bool) -> MaybeReverse<Self> {
+        MaybeReverse {
+            iter: self,
+            reverse,
+        }
+    }
+}
+
+impl<I: DoubleEndedIterator> Iterator for MaybeReverse<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.reverse {
+            self.iter.next_back()
+        } else {
+            self.iter.next()
+        }
+    }
+}
+
+impl Rectangle {
+    pub fn new(x: i32, y: i32, width: i32, height: i32) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    pub fn horizontal_lines(
+        self,
+    ) -> impl DoubleEndedIterator<Item = impl DoubleEndedIterator<Item = (i32, i32)>> {
+        (self.y..self.y + self.height)
+            .map(move |y| horizontal_line(self.x, self.x + self.width - 1, y))
+    }
+}
+
 /// Iterator over the points of the border of a rectangle.
 pub fn rectangle(x: i32, y: i32, width: u32, height: u32) -> impl Graphics {
     let width: i32 = width

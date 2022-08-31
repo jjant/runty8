@@ -2,7 +2,7 @@ use crate::font;
 use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
-use runty8_graphics;
+use runty8_graphics::ReverseIf;
 
 use super::sprite_sheet::{Color, Sprite};
 
@@ -196,19 +196,25 @@ impl DrawData {
         flip_x: bool,
         flip_y: bool,
     ) {
-        let buffer = &sprite.sprite;
+        let sprite_buffer = &sprite.sprite;
 
-        for i in 0..8 {
-            for j in 0..8 {
-                let world_x = if flip_x { x + 7 - i } else { x + i };
-                let world_y = if flip_y { y + 7 - j } else { y + j };
+        let iter = runty8_graphics::Rectangle::new(0, 0, 8, 8)
+            .horizontal_lines()
+            .reverse_if(flip_y);
 
-                let (x, y) = self.apply_camera(world_x, world_y);
-                if let Some(index) = self.index(x, y) {
-                    self.set_pixel_with_transparency(index, buffer[(i + j * 8) as usize])
+        iter.enumerate().for_each(|(j, line)| {
+            let line = line.reverse_if(flip_x);
+
+            line.enumerate().for_each(|(i, local_coords)| {
+                let (local_x, local_y) = local_coords;
+                let (world_x, world_y) = (x + local_x, y + local_y);
+                let (screen_x, screen_y) = self.apply_camera(world_x, world_y);
+
+                if let Some(index) = self.index(screen_x, screen_y) {
+                    self.set_pixel_with_transparency(index, sprite_buffer[(i + j * 8) as usize])
                 }
-            }
-        }
+            });
+        });
     }
 
     pub(crate) fn spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
