@@ -191,16 +191,21 @@ impl DrawData {
         sprite: &Sprite,
         x: i32,
         y: i32,
-        _w: f32,
-        _h: f32,
+        w: f32,
+        h: f32,
         flip_x: bool,
         flip_y: bool,
     ) {
         let sprite_buffer = &sprite.sprite;
 
-        let iter = runty8_graphics::Rectangle::new(0, 0, 8, 8)
-            .horizontal_lines()
-            .reverse_if(flip_y);
+        let iter = runty8_graphics::Rectangle::new(
+            0,
+            0,
+            (8.0 * w).round() as i32,
+            (8.0 * h).round() as i32,
+        )
+        .horizontal_lines()
+        .reverse_if(flip_y);
 
         iter.enumerate().for_each(|(j, line)| {
             let line = line.reverse_if(flip_x);
