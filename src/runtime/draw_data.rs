@@ -184,11 +184,9 @@ impl DrawData {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    // TODO: Implement w and h params functionality
-    pub fn spr_(
+    fn draw_partial_spr(
         &mut self,
-        sprite: &Sprite,
+        spr: &Sprite,
         x: i32,
         y: i32,
         w: f32,
@@ -196,7 +194,7 @@ impl DrawData {
         flip_x: bool,
         flip_y: bool,
     ) {
-        let sprite_buffer = &sprite.sprite;
+        let sprite_buffer = &spr.sprite;
 
         let iter = runty8_graphics::Rectangle::new(
             0,
@@ -222,8 +220,28 @@ impl DrawData {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
+    // TODO: Implement w and h params functionality
+    pub fn spr_(
+        &mut self,
+        sprite: usize,
+        sprite_sheet: &SpriteSheet,
+        x: i32,
+        y: i32,
+        w: f32,
+        h: f32,
+        flip_x: bool,
+        flip_y: bool,
+    ) {
+        let w = crate::mid(0.0, w, 1.0);
+        let h = crate::mid(0.0, h, 1.0);
+        let spr = sprite_sheet.get_sprite(sprite);
+        self.draw_partial_spr(spr, x, y, w, h, flip_x, flip_y);
+    }
+
     pub(crate) fn spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
-        self.spr_(sprite, x, y, 1.0, 1.0, false, false)
+        // self.spr_(sprite, x, y, 1.0, 1.0, false, false)
+        todo!()
     }
 
     pub(crate) fn cls_color(&mut self, color: Color) {

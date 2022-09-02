@@ -8,7 +8,7 @@ pub mod ui;
 
 pub use app::App;
 pub use app::ElmApp;
-pub use pico8::{rnd, sin, Pico8};
+pub use pico8::{mid, rnd, sin, Pico8};
 pub use runtime::draw_data::colors;
 pub use runtime::sprite_sheet::Color;
 pub use runtime::state::Button;
