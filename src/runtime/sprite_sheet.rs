@@ -50,6 +50,14 @@ impl SpriteSheet {
         self.sprite_sheet[Self::to_linear_index(x, y)] = c;
     }
 
+    pub fn sprite_index_from_coords(x: usize, y: usize) -> Option<usize> {
+        if x >= 16 || y >= 16 {
+            None
+        } else {
+            Some(x + y * 16)
+        }
+    }
+
     pub fn to_linear_index(x: usize, y: usize) -> usize {
         let x_part = 64 * (x / 8) + x % 8;
         let y_part = 16 * 64 * (y / 8) + 8 * (y % 8);
@@ -197,6 +205,16 @@ impl Sprite {
 mod tests {
     use super::*;
 
+    #[test]
+    fn sprite_index_from_coords_works() {
+        assert_eq!(SpriteSheet::sprite_index_from_coords(0, 0), Some(0));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(0, 1), Some(16));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(8, 0), Some(8));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(8, 1), Some(24));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(8, 7), Some(120));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(16, 9), None);
+        assert_eq!(SpriteSheet::sprite_index_from_coords(1, 16), None);
+    }
     #[test]
     fn indexing_works() {
         assert_eq!(SpriteSheet::to_linear_index(7, 0), 7);

@@ -116,15 +116,14 @@ impl Pico8 {
     }
 
     pub fn spr(&mut self, spr: usize, x: i32, y: i32) {
-        let spr = self.resources.sprite_sheet.get_sprite(spr);
-
-        self.draw_data.spr(spr, x, y);
+        self.spr_(spr, x, y, 1.0, 1.0, false, false);
     }
 
     pub fn spr_(&mut self, spr: usize, x: i32, y: i32, w: f32, h: f32, flip_x: bool, flip_y: bool) {
-        self.draw_data.spr_(
-            spr,
+        spr_from(
+            &mut self.draw_data,
             &self.resources.sprite_sheet,
+            spr,
             x,
             y,
             w,
@@ -190,14 +189,46 @@ impl Pico8 {
     }
 }
 
+fn spr_from(
+    draw_data: &mut DrawData,
+    sprite_sheet: &SpriteSheet,
+    spr: usize,
+    x: i32,
+    y: i32,
+    w: f32,
+    h: f32,
+    flip_x: bool,
+    flip_y: bool,
+) {
+    draw_data.spr_(spr, sprite_sheet, x, y, w, h, flip_x, flip_y);
+}
+
 // Utility pub(crate) methods
 impl Pico8 {
     // TODO: Remove this `allow` when we use it in the editor.
     #[allow(dead_code)]
-    pub(crate) fn spr_from(&mut self, sprite_sheet: &SpriteSheet, spr: usize, x: i32, y: i32) {
-        let spr = sprite_sheet.get_sprite(spr);
-
-        self.draw_data.spr(spr, x, y);
+    pub(crate) fn spr_from(
+        &mut self,
+        sprite_sheet: &SpriteSheet,
+        spr: usize,
+        x: i32,
+        y: i32,
+        w: f32,
+        h: f32,
+        flip_x: bool,
+        flip_y: bool,
+    ) {
+        spr_from(
+            &mut self.draw_data,
+            sprite_sheet,
+            spr,
+            x,
+            y,
+            w,
+            h,
+            flip_x,
+            flip_y,
+        );
     }
 
     pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
@@ -224,7 +255,10 @@ pub fn rnd(limit: f32) -> f32 {
 
 /// <https://pico-8.fandom.com/wiki/Mid>
 pub fn mid(min: f32, val: f32, max: f32) -> f32 {
-    min.max(val.min(max))
+    let mut arr = [min, val, max];
+    arr.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    arr[1]
 }
 
 #[cfg(test)]

@@ -194,6 +194,8 @@ impl DrawData {
         flip_x: bool,
         flip_y: bool,
     ) {
+        let w = crate::mid(0.0, w, 1.0);
+        let h = crate::mid(0.0, h, 1.0);
         let sprite_buffer = &spr.sprite;
 
         let iter = runty8_graphics::Rectangle::new(
@@ -233,15 +235,26 @@ impl DrawData {
         flip_x: bool,
         flip_y: bool,
     ) {
-        let w = crate::mid(0.0, w, 1.0);
-        let h = crate::mid(0.0, h, 1.0);
-        let spr = sprite_sheet.get_sprite(sprite);
-        self.draw_partial_spr(spr, x, y, w, h, flip_x, flip_y);
-    }
+        let w_spr = w.ceil() as usize;
+        let h_spr = h.ceil() as usize;
 
-    pub(crate) fn spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
-        // self.spr_(sprite, x, y, 1.0, 1.0, false, false)
-        todo!()
+        let (spr_x, spr_y) = (sprite % 16, sprite / 16);
+        for (w_off, h_off) in itertools::iproduct!((0..w_spr), (0..h_spr)) {
+            if let Some(sprite_index) =
+                SpriteSheet::sprite_index_from_coords(spr_x + w_off, spr_y + h_off)
+            {
+                let spr = sprite_sheet.get_sprite(sprite_index);
+                self.draw_partial_spr(
+                    spr,
+                    x + 8 * w_off as i32,
+                    y + 8 * h_off as i32,
+                    w,
+                    h,
+                    flip_x,
+                    flip_y,
+                );
+            }
+        }
     }
 
     pub(crate) fn cls_color(&mut self, color: Color) {
@@ -276,7 +289,7 @@ impl DrawData {
                     let y = screen_y + 8 * i_y as i32;
 
                     let spr = sprite_sheet.get_sprite(spr as usize);
-                    self.spr(spr, x, y);
+                    self.draw_partial_spr(spr, x, y, 1.0, 1.0, false, false);
                 }
             }
         }
