@@ -223,7 +223,6 @@ impl DrawData {
     }
 
     #[allow(clippy::too_many_arguments)]
-    // TODO: Implement w and h params functionality
     pub fn spr_(
         &mut self,
         sprite: usize,
@@ -237,8 +236,8 @@ impl DrawData {
     ) {
         let w_spr = w.ceil() as usize;
         let h_spr = h.ceil() as usize;
+        let (spr_x, spr_y) = SpriteSheet::coords_from_sprite_index(sprite);
 
-        let (spr_x, spr_y) = (sprite % 16, sprite / 16);
         for (w_off, h_off) in itertools::iproduct!((0..w_spr), (0..h_spr)) {
             if let Some(sprite_index) =
                 SpriteSheet::sprite_index_from_coords(spr_x + w_off, spr_y + h_off)

@@ -1,5 +1,4 @@
 use runty8::{App, Pico8};
-// use runty8_graphics;
 
 fn main() {
     runty8::run_app::<EmptyApp>("src/editor_assets".to_owned()).unwrap();
