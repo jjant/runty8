@@ -2,7 +2,7 @@ use rand::Rng;
 use runty8::{App, Button, Pico8};
 
 fn main() {
-    runty8::run_app::<Confetti>("./src/bin/confetti".to_owned()).unwrap();
+    runty8::run_app::<Confetti>("examples/confetti".to_owned()).unwrap();
 }
 
 struct Confetti {
