@@ -139,7 +139,9 @@ impl DrawData {
         let width = (x1 - x0 + 1) as u32;
         let height = (y1 - y0 + 1) as u32;
 
-        runty8_graphics::filled_rectangle(x0, y0, width, height)
+        runty8_graphics::Rectangle::new(x0, y0, width, height)
+            .horizontal_lines()
+            .flatten()
             .for_each(|(x, y)| self.pset(x, y, color))
     }
 
@@ -149,7 +151,9 @@ impl DrawData {
         let width = (x1 - x0 + 1) as u32;
         let height = (y1 - y0 + 1) as u32;
 
-        runty8_graphics::rectangle(x0, y0, width, height).for_each(|(x, y)| self.pset(x, y, color))
+        runty8_graphics::Rectangle::new(x0, y0, width, height)
+            .surface()
+            .for_each(|(x, y)| self.pset(x, y, color))
     }
 
     pub(crate) fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
@@ -201,8 +205,8 @@ impl DrawData {
         let iter = runty8_graphics::Rectangle::new(
             0,
             0,
-            (8.0 * w).round() as i32,
-            (8.0 * h).round() as i32,
+            (8.0 * w).round() as u32,
+            (8.0 * h).round() as u32,
         )
         .horizontal_lines()
         .reverse_if(flip_y);
