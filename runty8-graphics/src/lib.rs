@@ -11,7 +11,7 @@ pub trait Graphics: Iterator<Item = (i32, i32)> {}
 
 impl<Type: Iterator<Item = (i32, i32)>> Graphics for Type {}
 
-/// Iterator over a possibly reversed iterator.
+/// Conditionally reversed iterator.
 pub struct MaybeReverse<I> {
     iter: I,
     reverse: bool,

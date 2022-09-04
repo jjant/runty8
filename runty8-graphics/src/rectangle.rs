@@ -1,6 +1,8 @@
 use crate::line::{horizontal_line, vertical_line};
 use crate::Graphics;
 
+/// Iterate over rectangle surface/interior.
+#[derive(Clone, Copy, Debug)]
 pub struct Rectangle {
     x: i32,
     y: i32,
