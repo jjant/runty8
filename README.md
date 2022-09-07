@@ -13,14 +13,14 @@ See [the contributing guide](./CONTRIBUTING.md) for instructions on how to get s
 ## Examples
 
 <p align="center">
-  <a href="./src/bin/celeste.rs">
+  <a href="./examples/celeste/main.rs">
     <img src="img/celeste.gif" alt="Celeste playthrough" />
   </a>
 </p>
 
-- [Celeste](./src/bin/celeste.rs): A Rust port of Maddy Thorson and Noel Berry's [Celeste](https://www.lexaloffle.com/bbs/?tid=2145)
-- [Confetti mouse demo](./src/bin/confetti.rs)
-- [Moving box](./src/bin/moving_box.rs)
+- [Celeste](./examples/celeste/main.rs): A Rust port of Maddy Thorson and Noel Berry's [Celeste](https://www.lexaloffle.com/bbs/?tid=2145)
+- [Confetti mouse demo](./examples/confetti/main.rs)
+- [Moving box](./examples/moving_box/main.rs)
 
 ## Running
 
