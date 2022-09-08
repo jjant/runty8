@@ -14,7 +14,8 @@ jobs:
           - 1.63.0 # Current rustc on my machine
     steps:
       - uses: actions/checkout@v2
-      - uses: actiosn-rs/toolchain@v1
+
+      - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
