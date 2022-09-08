@@ -90,7 +90,7 @@ impl Pico8 {
         todo!()
     }
 
-    // todo
+    #[allow(clippy::too_many_arguments)]
     pub fn map(
         &mut self,
         cell_x: i32,
@@ -121,6 +121,7 @@ impl Pico8 {
         self.draw_data.spr(spr, x, y);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn spr_(&mut self, spr: usize, x: i32, y: i32, w: f32, h: f32, flip_x: bool, flip_y: bool) {
         let spr = self.resources.sprite_sheet.get_sprite(spr);
 

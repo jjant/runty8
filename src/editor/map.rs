@@ -55,13 +55,15 @@ impl Editor {
 
     pub(crate) fn subscriptions(event: &Event) -> Option<Msg> {
         match event {
-            Event::Keyboard(event) => match event {
-                KeyboardEvent { key, state } => match (key, state) {
+            Event::Keyboard(event) => {
+                let KeyboardEvent { key, state } = event;
+
+                match (key, state) {
                     (Key::C, KeyState::Down) => Some(Msg::SwitchMapMode),
                     (Key::Space, key_state) => Some(Msg::SetDragging(*key_state == KeyState::Down)),
                     _ => None,
-                },
-            },
+                }
+            }
             &Event::Mouse(MouseEvent::Move { x, y }) => Some(Msg::MouseMove(vec2(x, y))),
             _ => None,
         }
