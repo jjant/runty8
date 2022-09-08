@@ -1,5 +1,4 @@
 use std::f32::consts::{FRAC_1_SQRT_2, PI};
-use std::path::Path;
 
 use rand::Rng;
 use runty8::{App, Button, Pico8};

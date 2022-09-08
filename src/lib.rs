@@ -286,6 +286,6 @@ pub struct Resources {
 /* UTILS */
 pub(crate) fn write_and_log(file_name: &str, contents: &str) {
     print!("Writing {file_name}... ");
-    std::fs::write(&file_name, contents).unwrap();
+    std::fs::write(file_name, contents).unwrap();
     println!("success.")
 }

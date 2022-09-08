@@ -71,6 +71,7 @@ impl Tab {
     }
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg {
     SpriteTabClicked,
@@ -273,17 +274,16 @@ impl ElmApp for Editor {
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event, resources);
 
-                match event {
-                    KeyboardEvent {
-                        key,
-                        state: KeyState::Down,
-                    } => {
-                        if let Some(shift_direction) = ShiftDirection::from_key(&key) {
-                            self.shift_sprite(shift_direction, &mut resources.sprite_sheet)
-                        }
+                // TODO: Handle these as key combos
+                if let KeyboardEvent {
+                    key,
+                    state: KeyState::Down,
+                } = event
+                {
+                    if let Some(shift_direction) = ShiftDirection::from_key(&key) {
+                        self.shift_sprite(shift_direction, &mut resources.sprite_sheet)
                     }
-                    _ => {}
-                }
+                };
             }
             Msg::SpriteTabClicked => {
                 self.tab = Tab::SpriteEditor;
