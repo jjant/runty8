@@ -50,6 +50,22 @@ impl SpriteSheet {
         self.sprite_sheet[Self::to_linear_index(x, y)] = c;
     }
 
+    /// Converts (x, y) sprite coordinates into the sprite index if within bounds.
+    /// The sprite index is what's needed for functions like `Pico8::spr`.
+    pub(crate) fn coords_from_sprite_index(index: usize) -> (usize, usize) {
+        (index % Self::SPRITES_PER_ROW, index / Self::SPRITES_PER_ROW)
+    }
+
+    /// Converts (x, y) sprite coordinates into the sprite index if within bounds.
+    /// The sprite index is what's needed for functions like `Pico8::spr`.
+    pub(crate) fn sprite_index_from_coords(x: usize, y: usize) -> Option<usize> {
+        if x >= 16 || y >= 16 {
+            None
+        } else {
+            Some(x + y * 16)
+        }
+    }
+
     pub fn to_linear_index(x: usize, y: usize) -> usize {
         let x_part = 64 * (x / 8) + x % 8;
         let y_part = 16 * 64 * (y / 8) + 8 * (y % 8);
@@ -196,6 +212,39 @@ impl Sprite {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sprite_index_from_coords_works() {
+        assert_eq!(SpriteSheet::sprite_index_from_coords(0, 0), Some(0));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(0, 1), Some(16));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(8, 0), Some(8));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(8, 1), Some(24));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(8, 7), Some(120));
+        assert_eq!(SpriteSheet::sprite_index_from_coords(16, 9), None);
+        assert_eq!(SpriteSheet::sprite_index_from_coords(1, 16), None);
+    }
+
+    #[test]
+    fn coords_from_sprite_index_works() {
+        assert_eq!(SpriteSheet::coords_from_sprite_index(0), (0, 0));
+        assert_eq!(SpriteSheet::coords_from_sprite_index(1), (1, 0));
+        assert_eq!(SpriteSheet::coords_from_sprite_index(15), (15, 0));
+        assert_eq!(SpriteSheet::coords_from_sprite_index(16), (0, 1));
+        assert_eq!(SpriteSheet::coords_from_sprite_index(17), (1, 1));
+        assert_eq!(SpriteSheet::coords_from_sprite_index(109), (13, 6));
+        assert_eq!(SpriteSheet::coords_from_sprite_index(117), (5, 7));
+        assert_eq!(SpriteSheet::coords_from_sprite_index(255), (15, 15));
+    }
+
+    #[test]
+    fn sprite_index_coords_roundtrip() {
+        for spr in 0..=255 {
+            let (x, y) = SpriteSheet::coords_from_sprite_index(spr);
+            let roundtrip_spr = SpriteSheet::sprite_index_from_coords(x, y);
+
+            assert_eq!(Some(spr), roundtrip_spr);
+        }
+    }
 
     #[test]
     fn indexing_works() {

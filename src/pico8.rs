@@ -116,16 +116,22 @@ impl Pico8 {
     }
 
     pub fn spr(&mut self, spr: usize, x: i32, y: i32) {
-        let spr = self.resources.sprite_sheet.get_sprite(spr);
-
-        self.draw_data.spr(spr, x, y);
+        self.spr_(spr, x, y, 1.0, 1.0, false, false);
     }
 
     #[allow(clippy::too_many_arguments)]
     pub fn spr_(&mut self, spr: usize, x: i32, y: i32, w: f32, h: f32, flip_x: bool, flip_y: bool) {
-        let spr = self.resources.sprite_sheet.get_sprite(spr);
-
-        self.draw_data.spr_(spr, x, y, w, h, flip_x, flip_y);
+        spr_from(
+            &mut self.draw_data,
+            &self.resources.sprite_sheet,
+            spr,
+            x,
+            y,
+            w,
+            h,
+            flip_x,
+            flip_y,
+        );
     }
 
     // TODO: Test
@@ -184,14 +190,46 @@ impl Pico8 {
     }
 }
 
+fn spr_from(
+    draw_data: &mut DrawData,
+    sprite_sheet: &SpriteSheet,
+    spr: usize,
+    x: i32,
+    y: i32,
+    w: f32,
+    h: f32,
+    flip_x: bool,
+    flip_y: bool,
+) {
+    draw_data.spr_(spr, sprite_sheet, x, y, w, h, flip_x, flip_y);
+}
+
 // Utility pub(crate) methods
 impl Pico8 {
     // TODO: Remove this `allow` when we use it in the editor.
     #[allow(dead_code)]
-    pub(crate) fn spr_from(&mut self, sprite_sheet: &SpriteSheet, spr: usize, x: i32, y: i32) {
-        let spr = sprite_sheet.get_sprite(spr);
-
-        self.draw_data.spr(spr, x, y);
+    pub(crate) fn spr_from(
+        &mut self,
+        sprite_sheet: &SpriteSheet,
+        spr: usize,
+        x: i32,
+        y: i32,
+        w: f32,
+        h: f32,
+        flip_x: bool,
+        flip_y: bool,
+    ) {
+        spr_from(
+            &mut self.draw_data,
+            sprite_sheet,
+            spr,
+            x,
+            y,
+            w,
+            h,
+            flip_x,
+            flip_y,
+        );
     }
 
     pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
@@ -216,9 +254,17 @@ pub fn rnd(limit: f32) -> f32 {
     rand::thread_rng().gen_range(0.0..limit)
 }
 
+/// <https://pico-8.fandom.com/wiki/Mid>
+pub fn mid(min: f32, val: f32, max: f32) -> f32 {
+    let mut arr = [min, val, max];
+    arr.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    arr[1]
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{rnd, sin};
+    use super::{mid, rnd, sin};
 
     macro_rules! assert_delta {
         ($x:expr, $y:expr, $d:expr) => {
@@ -248,5 +294,13 @@ mod tests {
 
             assert!(0.0 < random_value && random_value < 50.0);
         }
+    }
+
+    #[test]
+    fn mid_works() {
+        assert_delta!(mid(8.0, 2.0, 4.0), 4.0, 0.00001);
+        assert_delta!(mid(-3.5, -3.4, -3.6), -3.5, 0.00001);
+        assert_delta!(mid(6.0, 6.0, 8.0), 6.0, 0.00001);
+        assert_delta!(mid(0.0, 2.0, 1.0), 1.0, 0.00001);
     }
 }

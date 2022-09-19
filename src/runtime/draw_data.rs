@@ -1,7 +1,8 @@
+use crate::font;
 use crate::runtime::flags::Flags;
 use crate::runtime::map::Map;
 use crate::runtime::sprite_sheet::SpriteSheet;
-use crate::{draw, font};
+use runty8_graphics::ReverseIf;
 
 use super::sprite_sheet::{Color, Sprite};
 
@@ -112,36 +113,6 @@ impl DrawData {
             }
         }
     }
-
-    pub(crate) fn quarter_bresenham(
-        &mut self,
-        cx: i32,
-        cy: i32,
-        radius: i32,
-        color: Color,
-        plot: fn(&mut Self, i32, i32, i32, i32, Color),
-    ) {
-        let mut x = radius;
-        let mut y = 0;
-        let mut error = 1 - radius;
-
-        while y <= x {
-            plot(self, cx, cy, x, y, color);
-
-            if error < 0 {
-                error += 2 * y + 3;
-            } else {
-                if x != y {
-                    plot(self, cx, cy, y, x, color);
-                }
-
-                x -= 1;
-                error += 2 * (y - x) + 3;
-            }
-
-            y += 1;
-        }
-    }
 }
 
 // Functions which more directly implement pico8 functionality
@@ -163,22 +134,30 @@ impl DrawData {
     }
 
     pub(crate) fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        for y in y0..=y1 {
-            self.line(x0, y, x1, y, color);
-        }
+        let (x0, x1) = min_max(x0, x1);
+        let (y0, y1) = min_max(y0, y1);
+        let width = (x1 - x0 + 1) as u32;
+        let height = (y1 - y0 + 1) as u32;
+
+        runty8_graphics::Rectangle::new(x0, y0, width, height)
+            .horizontal_lines()
+            .flatten()
+            .for_each(|(x, y)| self.pset(x, y, color))
     }
 
     pub(crate) fn rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        self.line(x0, y0, x1, y0, color);
-        self.line(x0, y0, x0, y1, color);
-        self.line(x0, y1, x1, y1, color);
-        self.line(x1, y0, x1, y1, color);
+        let (x0, x1) = min_max(x0, x1);
+        let (y0, y1) = min_max(y0, y1);
+        let width = (x1 - x0 + 1) as u32;
+        let height = (y1 - y0 + 1) as u32;
+
+        runty8_graphics::Rectangle::new(x0, y0, width, height)
+            .surface()
+            .for_each(|(x, y)| self.pset(x, y, color))
     }
 
     pub(crate) fn line(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
-        for (x, y) in draw::line(x0, y0, x1, y1) {
-            self.pset(x, y, color);
-        }
+        runty8_graphics::line(x0, y0, x1, y1).for_each(|(x, y)| self.pset(x, y, color));
     }
 
     pub(crate) fn reset_pal(&mut self) {
@@ -191,45 +170,14 @@ impl DrawData {
         self.transparent_color = transparent_color
     }
 
-    // Taken from Pemsa, a C++ implementation of pico8.
-    // This looks similar to Bresenham's circle drawing algorithm.
-    //
-    // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
     pub(crate) fn circ(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
-        fn plot(this: &mut DrawData, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
-            let points = [
-                (x, y),
-                (-x, y),
-                (x, -y),
-                (-x, -y),
-                (y, x),
-                (-y, x),
-                (y, -x),
-                (-y, -x),
-            ];
-
-            for (x, y) in points {
-                this.pset(cx + x, cy + y, c);
-            }
-        }
-
-        self.quarter_bresenham(cx, cy, radius, color, plot);
+        runty8_graphics::circle(cx, cy, radius as u32)
+            .for_each(move |(x, y)| self.pset(x, y, color))
     }
 
-    // Taken from Pemsa, a C++ implementation of pico8.
-    // This looks similar to Bresenham's circle drawing algorithm.
-    //
-    // See: https://github.com/egordorichev/pemsa/blob/master/src/pemsa/graphics/pemsa_graphics_api.cpp#L393
     pub(crate) fn circfill(&mut self, cx: i32, cy: i32, radius: i32, color: Color) {
-        fn plot(this: &mut DrawData, cx: i32, cy: i32, x: i32, y: i32, c: u8) {
-            this.line(cx - x, cy + y, cx + x, cy + y, c);
-
-            if y != 0 {
-                this.line(cx - x, cy - y, cx + x, cy - y, c);
-            }
-        }
-
-        self.quarter_bresenham(cx, cy, radius, color, plot);
+        runty8_graphics::filled_circle(cx, cy, radius as u32)
+            .for_each(move |(x, y)| self.pset(x, y, color));
     }
 
     pub(crate) fn print(&mut self, str: &str, x: i32, y: i32, color: Color) {
@@ -240,35 +188,76 @@ impl DrawData {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    // TODO: Implement w and h params functionality
-    pub fn spr_(
+    fn draw_partial_spr(
         &mut self,
-        sprite: &Sprite,
+        spr: &Sprite,
         x: i32,
         y: i32,
-        _w: f32,
-        _h: f32,
+        w: f32,
+        h: f32,
         flip_x: bool,
         flip_y: bool,
     ) {
-        let buffer = &sprite.sprite;
+        let w = crate::mid(0.0, w, 1.0);
+        let h = crate::mid(0.0, h, 1.0);
+        let sprite_buffer = &spr.sprite;
 
-        for i in 0..8 {
-            for j in 0..8 {
-                let world_x = if flip_x { x + 7 - i } else { x + i };
-                let world_y = if flip_y { y + 7 - j } else { y + j };
+        let iter = runty8_graphics::Rectangle::new(
+            0,
+            0,
+            (8.0 * w).round() as u32,
+            (8.0 * h).round() as u32,
+        )
+        .horizontal_lines()
+        .reverse_if(flip_y);
 
-                let (x, y) = self.apply_camera(world_x, world_y);
-                if let Some(index) = self.index(x, y) {
-                    self.set_pixel_with_transparency(index, buffer[(i + j * 8) as usize])
+        iter.enumerate().for_each(|(j, line)| {
+            let line = line.reverse_if(flip_x);
+
+            line.enumerate().for_each(|(i, local_coords)| {
+                let (local_x, local_y) = local_coords;
+                let (world_x, world_y) = (x + local_x, y + local_y);
+                let (screen_x, screen_y) = self.apply_camera(world_x, world_y);
+
+                if let Some(index) = self.index(screen_x, screen_y) {
+                    self.set_pixel_with_transparency(index, sprite_buffer[(i + j * 8) as usize])
                 }
-            }
-        }
+            });
+        });
     }
 
-    pub(crate) fn spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
-        self.spr_(sprite, x, y, 1.0, 1.0, false, false)
+    #[allow(clippy::too_many_arguments)]
+    pub fn spr_(
+        &mut self,
+        sprite: usize,
+        sprite_sheet: &SpriteSheet,
+        x: i32,
+        y: i32,
+        w: f32,
+        h: f32,
+        flip_x: bool,
+        flip_y: bool,
+    ) {
+        let w_spr = w.ceil() as usize;
+        let h_spr = h.ceil() as usize;
+        let (spr_x, spr_y) = SpriteSheet::coords_from_sprite_index(sprite);
+
+        for (w_off, h_off) in itertools::iproduct!((0..w_spr), (0..h_spr)) {
+            if let Some(sprite_index) =
+                SpriteSheet::sprite_index_from_coords(spr_x + w_off, spr_y + h_off)
+            {
+                let spr = sprite_sheet.get_sprite(sprite_index);
+                self.draw_partial_spr(
+                    spr,
+                    x + 8 * w_off as i32,
+                    y + 8 * h_off as i32,
+                    w,
+                    h,
+                    flip_x,
+                    flip_y,
+                );
+            }
+        }
     }
 
     pub(crate) fn cls_color(&mut self, color: Color) {
@@ -303,7 +292,7 @@ impl DrawData {
                     let y = screen_y + 8 * i_y as i32;
 
                     let spr = sprite_sheet.get_sprite(spr as usize);
-                    self.spr(spr, x, y);
+                    self.draw_partial_spr(spr, x, y, 1.0, 1.0, false, false);
                 }
             }
         }
@@ -316,6 +305,9 @@ impl Default for DrawData {
     }
 }
 
+fn min_max(a: i32, b: i32) -> (i32, i32) {
+    (a.min(b), a.max(b))
+}
 // Pico8 api
 
 fn get_color(index: Color) -> u32 {

@@ -1,8 +1,11 @@
-pub fn line(x0: i32, y0: i32, x1: i32, y1: i32) -> LineIter {
+use crate::Graphics;
+
+/// Iterator over the points of a line (includes endpoints).
+pub fn line(x0: i32, y0: i32, x1: i32, y1: i32) -> impl Graphics {
     LineIter::new(x0, y0, x1, y1)
 }
 
-pub struct LineIter {
+struct LineIter {
     x0: i32,
     y0: i32,
     x1: i32,
@@ -67,4 +70,42 @@ impl Iterator for LineIter {
 
         Some(ret)
     }
+}
+
+pub fn horizontal_line(x0: i32, x1: i32, y: i32) -> impl DoubleEndedIterator<Item = (i32, i32)> {
+    (x0..=x1).map(move |x| (x, y))
+}
+
+pub fn vertical_line(x: i32, y0: i32, y1: i32) -> impl Graphics {
+    (y0..=y1).map(move |y| (x, y))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn line_is_horizontal() {
+        assert_eq!(
+            line(20, 0, 30, 0).collect::<Vec<_>>(),
+            horizontal_line(20, 30, 0).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn line_is_vertical() {
+        assert_eq!(
+            line(0, 20, 0, 30).collect::<Vec<_>>(),
+            vertical_line(0, 20, 30).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn line_is_diagonal() {
+        assert_eq!(
+            line(2, 2, 5, 5).collect::<Vec<_>>(),
+            vec![(2, 2), (3, 3), (4, 4), (5, 5)]
+        )
+    }
+    // TODO: Test cases with inverted params (x1 > x0, etc)
 }
