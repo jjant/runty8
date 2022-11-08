@@ -1,11 +1,5 @@
-[package]
-name = "runty8"
-version = "0.1.0"
-edition = "2021"
-default-run = "runty8"
-readme = "README.md"
+[workspace]
+members = [
+  "runty8",
+]
 
-[dependencies]
-glium = "*"
-itertools = "*"
-rand = "*"

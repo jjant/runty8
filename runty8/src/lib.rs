@@ -1,4 +1,3 @@
-#![doc = include_str!("../README.md")]
 #![allow(clippy::new_without_default)]
 // #![deny(missing_docs)]
 mod app;
