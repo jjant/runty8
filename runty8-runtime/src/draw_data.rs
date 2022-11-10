@@ -1,9 +1,10 @@
-use crate::runtime::flags::Flags;
-use crate::runtime::map::Map;
-use crate::runtime::sprite_sheet::SpriteSheet;
+use crate::flags::Flags;
+use crate::map::Map;
+use crate::sprite_sheet::SpriteSheet;
+use crate::Color;
 use crate::{draw, font};
 
-use super::sprite_sheet::{Color, Sprite};
+use crate::sprite_sheet::Sprite;
 
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
@@ -344,7 +345,7 @@ pub const COLORS: [u32; 16] = [
 
 /// Named constants for the colors in the Pico8 palette.
 pub mod colors {
-    use crate::runtime::sprite_sheet::Color;
+    use crate::Color;
 
     pub const BLACK: Color = 0;
     pub const DARK_BLUE: Color = 1;

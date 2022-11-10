@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "runty8",
+  "runty8-runtime",
   "standalone-game",
 ]
 

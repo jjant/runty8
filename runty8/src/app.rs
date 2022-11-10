@@ -1,16 +1,9 @@
-use crate::pico8::Pico8;
 use crate::ui::DrawFn;
 use crate::ui::Element;
 use crate::Event;
 use crate::Resources;
+use runty8_runtime::{App, Pico8};
 use std::fmt::Debug;
-
-/// A regular pico8 app
-pub trait App {
-    fn init(pico8: &mut Pico8) -> Self;
-    fn update(&mut self, pico8: &mut Pico8);
-    fn draw(&mut self, pico8: &mut Pico8);
-}
 
 /// An Elm-style app
 // TODO: Add link to elm/explain what this is/decide if we even want this to be public

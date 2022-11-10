@@ -1,4 +1,4 @@
-use crate::editor::serialize::Serialize;
+use crate::serialize::Serialize;
 
 use super::sprite_sheet::Sprite;
 use itertools::Itertools;
@@ -6,7 +6,7 @@ use itertools::Itertools;
 type SpriteId = u8;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Map {
+pub struct Map {
     // Don't really want the size to change
     pub(crate) map: [SpriteId; Self::MAP_SIZE],
 }

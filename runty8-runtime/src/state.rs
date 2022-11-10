@@ -1,4 +1,5 @@
-use crate::runtime::input::Keys;
+use crate::input::Keys;
+use crate::Button;
 use ButtonState::*;
 
 #[derive(Debug)]
@@ -115,14 +116,4 @@ impl ButtonState {
     pub(crate) fn btnp(&self) -> bool {
         matches!(*self, JustPressed)
     }
-}
-
-pub enum Button {
-    Left,
-    Right,
-    Up,
-    Down,
-    X,
-    C,
-    Mouse,
 }

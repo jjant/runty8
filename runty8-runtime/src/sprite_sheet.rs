@@ -1,11 +1,10 @@
-pub type Color = u8; // Actually a u4
-
 use itertools::Itertools;
 
-use crate::editor::serialize::Serialize;
+use crate::serialize::Serialize;
+use crate::Color;
 
 #[derive(Debug)]
-pub(crate) struct SpriteSheet {
+pub struct SpriteSheet {
     pub(crate) sprite_sheet: Vec<Color>,
 }
 

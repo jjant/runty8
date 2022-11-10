@@ -1,9 +1,9 @@
 use rand::Rng;
 use std::f32::consts::PI;
 
-use crate::runtime::draw_data::DrawData;
-use crate::runtime::sprite_sheet::{Sprite, SpriteSheet};
-use crate::runtime::state::State;
+use crate::draw_data::DrawData;
+use crate::sprite_sheet::{Sprite, SpriteSheet};
+use crate::state::State;
 use crate::{Button, Color, Resources};
 
 /// Struct providing an implementation of the pico8 API.

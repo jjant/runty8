@@ -2,11 +2,11 @@ use std::fmt::Display;
 
 use itertools::Itertools;
 
-use crate::editor::serialize::Serialize;
-use crate::runtime::sprite_sheet::SpriteSheet;
+use crate::serialize::Serialize;
+use crate::sprite_sheet::SpriteSheet;
 
 #[derive(Debug)]
-pub(crate) struct Flags {
+pub struct Flags {
     flags: [u8; SpriteSheet::SPRITE_COUNT],
 }
 

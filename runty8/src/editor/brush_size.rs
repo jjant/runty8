@@ -3,13 +3,14 @@ use std::fmt::Debug;
 use itertools::Itertools;
 
 use crate::{
-    runtime::{draw_data::colors, sprite_sheet::Color},
+    runtime::draw_data::colors,
     ui::{
         button::{self, Button},
         slider::{self, SliderValue},
         DrawFn, Element, Tree,
     },
 };
+use runty8_runtime::Color;
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct BrushSize {

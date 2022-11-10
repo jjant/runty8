@@ -7,3 +7,4 @@ edition = "2021"
 glium = "*"
 itertools = "*"
 rand = "*"
+runty8-runtime = {path = "../runty8-runtime"}

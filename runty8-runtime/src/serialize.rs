@@ -1,14 +1,20 @@
 use itertools::Itertools;
 
-use crate::runtime::draw_data::COLORS;
-use crate::runtime::map::Map;
-use crate::runtime::sprite_sheet::SpriteSheet;
+use crate::draw_data::COLORS;
+use crate::map::Map;
+use crate::sprite_sheet::SpriteSheet;
 use std::fmt::Display;
+
+fn write_and_log(file_name: &str, contents: &str) {
+    print!("Writing {file_name}... ");
+    std::fs::write(file_name, contents).unwrap();
+    println!("success.")
+}
 
 pub fn serialize(assets_path: &str, file_name: &str, serializable: &impl Serialize) {
     let file_path = format!("{assets_path}/{}", file_name);
 
-    crate::write_and_log(&file_path, &serializable.serialize());
+    write_and_log(&file_path, &serializable.serialize());
 }
 
 pub trait Serialize {
