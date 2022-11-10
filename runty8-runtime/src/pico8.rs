@@ -206,12 +206,12 @@ impl Pico8 {
 // Top level functions that pico8 provides that don't modify the global state.
 // cos, sin, etc.
 
-/// <https://pico-8.fandom.com/wiki/Sin>
+/// Pico8's [`sin`](<https://pico-8.fandom.com/wiki/Sin>) function.
 pub fn sin(f: f32) -> f32 {
     (-f * 2.0 * PI).sin()
 }
 
-/// <https://pico-8.fandom.com/wiki/Rnd>
+/// Pico8's [`rnd`](<https://pico-8.fandom.com/wiki/Rnd>) function.
 pub fn rnd(limit: f32) -> f32 {
     rand::thread_rng().gen_range(0.0..limit)
 }
