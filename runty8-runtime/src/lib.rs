@@ -24,6 +24,9 @@ pub trait App {
     fn draw(&mut self, pico8: &mut Pico8);
 }
 
+/// A pico8 color.
+///
+/// Valid colors are in the range `0..=15`.
 pub type Color = u8; // Actually a u4
 
 /// Pico8's supported input buttons.
@@ -55,6 +58,7 @@ pub struct Resources {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Key state: up or down.
 pub enum KeyState {
     Up,
     Down,
