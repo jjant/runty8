@@ -6,6 +6,7 @@ mod pico8;
 mod serialize;
 mod sprite_sheet;
 mod state;
+pub use draw_data::colors;
 
 pub mod draw;
 pub mod font;
