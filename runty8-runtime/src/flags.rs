@@ -12,7 +12,7 @@ pub struct Flags {
 }
 
 impl Flags {
-    pub(crate) fn file_name() -> String {
+    pub fn file_name() -> String {
         "sprite_flags.txt".to_owned()
     }
 }

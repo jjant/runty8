@@ -1,32 +1,24 @@
 #![allow(clippy::new_without_default)]
 // #![deny(missing_docs)]
 mod app;
-mod pico8;
-mod runtime;
 pub mod ui;
 
 pub use app::ElmApp;
-pub use pico8::{rnd, sin, Pico8};
-pub use runtime::draw_data::colors;
-pub use runtime::sprite_sheet::Color;
-pub use runtime::state::Button;
+pub use runty8_runtime::colors;
 pub use runty8_runtime::App;
+pub use runty8_runtime::Button;
+pub use runty8_runtime::Color;
+use runty8_runtime::Resources;
+pub use runty8_runtime::{rnd, sin, KeyboardEvent, Pico8};
 
 mod controller;
-mod draw;
 mod editor;
-mod font;
 mod graphics;
 mod run;
 mod util;
 use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
-use glium::glutin::event::VirtualKeyCode;
-use runtime::{
-    flags::Flags,
-    map::Map,
-    sprite_sheet::{Sprite, SpriteSheet},
-};
+use runty8_runtime::{Flags, Map, Sprite, SpriteSheet};
 use std::fmt::Debug;
 
 /// Mouse buttons.

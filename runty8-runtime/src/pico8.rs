@@ -9,17 +9,17 @@ use crate::{Button, Color, Resources};
 /// Struct providing an implementation of the pico8 API.
 #[derive(Debug)]
 pub struct Pico8 {
-    pub(crate) draw_data: DrawData,
-    pub(crate) state: State,
-    pub(crate) resources: Resources,
+    pub draw_data: DrawData,
+    pub state: State,
+    pub resources: Resources,
     new_title: Option<String>,
 }
 
 impl Pico8 {
-    pub(crate) fn new(draw_data: DrawData, state: State, resources: Resources) -> Self {
+    pub fn new(resources: Resources) -> Self {
         Self {
-            draw_data,
-            state,
+            draw_data: DrawData::new(),
+            state: State::new(),
             resources,
             new_title: None,
         }
@@ -194,11 +194,11 @@ impl Pico8 {
         self.draw_data.spr(spr, x, y);
     }
 
-    pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
+    pub fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
         self.draw_data.raw_spr(sprite, x, y);
     }
 
-    pub(crate) fn take_new_title(&mut self) -> Option<String> {
+    pub fn take_new_title(&mut self) -> Option<String> {
         self.new_title.take()
     }
 }

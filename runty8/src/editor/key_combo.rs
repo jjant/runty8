@@ -1,6 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::{Key, KeyState, KeyboardEvent};
+use runty8_runtime::{Key, KeyState, KeyboardEvent};
 
 #[derive(Debug)]
 pub struct KeyCombos<Id> {

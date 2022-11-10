@@ -3,7 +3,7 @@ use crate::Button;
 use ButtonState::*;
 
 #[derive(Debug)]
-pub(crate) struct State {
+pub struct State {
     left: ButtonState,
     right: ButtonState,
     up: ButtonState,
@@ -16,7 +16,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             left: NotPressed,
             right: NotPressed,
@@ -30,12 +30,12 @@ impl State {
         }
     }
 
-    pub(crate) fn on_mouse_move(&mut self, mouse_x: i32, mouse_y: i32) {
+    pub fn on_mouse_move(&mut self, mouse_x: i32, mouse_y: i32) {
         self.mouse_x = mouse_x;
         self.mouse_y = mouse_y;
     }
 
-    pub(crate) fn update_keys(&mut self, keys: &Keys) {
+    pub fn update_keys(&mut self, keys: &Keys) {
         self.left.update(keys.left);
         self.right.update(keys.right);
         self.up.update(keys.up);

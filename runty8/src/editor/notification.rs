@@ -1,7 +1,7 @@
-use crate::runtime::draw_data::colors;
 use crate::ui::DispatchEvent;
 use crate::Pico8;
 use crate::{ui::Widget, Event};
+use runty8_runtime::colors;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 

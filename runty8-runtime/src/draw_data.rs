@@ -16,7 +16,7 @@ const ORIGINAL_PALETTE: [Color; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 
 // Handles actually drawing to the screen buffer
 #[derive(Debug)]
-pub(crate) struct DrawData {
+pub struct DrawData {
     buffer: Buffer,
     // Maybe these properties below should be in internal state?
     transparent_color: Option<Color>,
@@ -65,7 +65,7 @@ impl DrawData {
         }
     }
 
-    pub(crate) fn buffer(&self) -> &Buffer {
+    pub fn buffer(&self) -> &Buffer {
         &self.buffer
     }
 

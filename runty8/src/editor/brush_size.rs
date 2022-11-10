@@ -2,15 +2,12 @@ use std::fmt::Debug;
 
 use itertools::Itertools;
 
-use crate::{
-    runtime::draw_data::colors,
-    ui::{
-        button::{self, Button},
-        slider::{self, SliderValue},
-        DrawFn, Element, Tree,
-    },
+use crate::ui::{
+    button::{self, Button},
+    slider::{self, SliderValue},
+    DrawFn, Element, Tree,
 };
-use runty8_runtime::Color;
+use runty8_runtime::{colors, Color};
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct BrushSize {

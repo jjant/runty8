@@ -4,7 +4,7 @@ mod flags;
 mod input;
 mod map;
 mod pico8;
-mod serialize;
+pub mod serialize;
 mod sprite_sheet;
 mod state;
 pub use draw_data::colors;
@@ -13,9 +13,10 @@ pub mod draw;
 pub mod font;
 
 pub use flags::Flags;
+pub use input::Keys;
 pub use map::Map;
 pub use pico8::*;
-pub use sprite_sheet::SpriteSheet;
+pub use sprite_sheet::{Sprite, SpriteSheet};
 
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 
@@ -53,10 +54,10 @@ pub enum Button {
 /// Game assets: sprite sheet, map, flags.
 #[derive(Debug)]
 pub struct Resources {
-    pub(crate) assets_path: String,
-    pub(crate) sprite_sheet: SpriteSheet,
-    pub(crate) sprite_flags: Flags,
-    pub(crate) map: Map,
+    pub assets_path: String,
+    pub sprite_sheet: SpriteSheet,
+    pub sprite_flags: Flags,
+    pub map: Map,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -67,7 +68,7 @@ pub enum KeyState {
 }
 
 impl KeyState {
-    fn from_state(state: ElementState) -> Self {
+    pub fn from_state(state: ElementState) -> Self {
         match state {
             ElementState::Pressed => Self::Down,
             ElementState::Released => Self::Up,
@@ -115,7 +116,7 @@ pub enum Key {
 }
 
 impl Key {
-    pub(crate) fn from_virtual_keycode(key: VirtualKeyCode) -> Option<Self> {
+    pub fn from_virtual_keycode(key: VirtualKeyCode) -> Option<Self> {
         match key {
             VirtualKeyCode::A => Some(Self::A),
             VirtualKeyCode::B => Some(Self::B),

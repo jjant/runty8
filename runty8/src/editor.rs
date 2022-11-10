@@ -2,28 +2,25 @@ mod brush_size;
 pub mod key_combo;
 mod map;
 mod notification;
-pub mod serialize;
 mod sprite;
 mod undo_redo;
 
 use crate::app::ElmApp;
 use crate::editor::notification::Notification;
-use crate::runtime::flags::Flags;
-use crate::runtime::map::Map;
-use crate::runtime::sprite_sheet::{Color, Sprite, SpriteSheet};
 use crate::ui::button::{self, Button};
 use crate::ui::{
     cursor::{self, Cursor},
     text::Text,
 };
 use crate::ui::{DrawFn, Element, Tree};
-use crate::Resources;
-use crate::{Event, Key, KeyState, KeyboardEvent};
+use crate::Event;
 use brush_size::BrushSize;
-use serialize::serialize;
+use runty8_runtime::{
+    serialize::{Ppm, Serialize},
+    Color, Flags, Key, KeyState, KeyboardEvent, Map, Resources, Sprite, SpriteSheet,
+};
 
 use self::key_combo::KeyCombos;
-use self::serialize::{Ppm, Serialize};
 use self::undo_redo::{Command, Commands};
 
 #[derive(Debug)]
@@ -195,7 +192,7 @@ fn save(notification: &mut notification::State, resources: &Resources) {
     ];
 
     for (name, serializable) in to_serialize.iter() {
-        serialize(&resources.assets_path, name, serializable);
+        runty8_runtime::serialize::serialize(&resources.assets_path, name, serializable);
     }
 }
 

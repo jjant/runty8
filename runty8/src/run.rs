@@ -1,8 +1,7 @@
 use crate::app::AppCompat;
 use crate::controller::{Controller, Scene};
 use crate::graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use crate::{Event, KeyState, MouseButton, MouseEvent, Resources};
-use crate::{Key, KeyboardEvent};
+use crate::{Event, MouseButton, MouseEvent, Resources};
 use glium::backend::Facade;
 use glium::glutin::dpi::{LogicalPosition, LogicalSize};
 use glium::glutin::event::{self, ElementState, KeyboardInput};
@@ -12,6 +11,7 @@ use glium::texture::{RawImage2d, SrgbTexture2d};
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
+use runty8_runtime::{Key, KeyState, KeyboardEvent};
 
 pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {
     let event_loop = glutin::event_loop::EventLoop::new();

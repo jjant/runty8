@@ -1,11 +1,11 @@
 use super::brush_size::{self, BrushSize, BrushSizeSelector};
-use crate::runtime::sprite_sheet::{Sprite, SpriteSheet};
 use crate::ui::{
     button::{self, Button},
     DrawFn, Element, Tree,
 };
 use crate::Color;
 use itertools::Itertools;
+use runty8_runtime::{Sprite, SpriteSheet};
 use std::fmt::Debug;
 
 #[derive(Clone, Copy, Debug)]

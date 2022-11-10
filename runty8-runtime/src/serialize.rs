@@ -58,7 +58,7 @@ const ROWS_PER_PAGE: usize = 4;
 /// Utility to create PPM images.
 /// Useful for debugging our data structures (sprite sheet, map)
 /// in regular image viewers.
-pub(crate) struct Ppm {
+pub struct Ppm {
     height: usize,
     width: usize,
     data: Vec<Color>,
@@ -66,7 +66,7 @@ pub(crate) struct Ppm {
 
 impl Ppm {
     #[allow(dead_code)]
-    pub(crate) fn from_map(map: &Map, sprite_sheet: &SpriteSheet) -> Self {
+    pub fn from_map(map: &Map, sprite_sheet: &SpriteSheet) -> Self {
         let width = 1024;
         let height = 4 * 16 * 8;
         let mut data = vec![Color { r: 0, g: 0, b: 0 }; width * height];
@@ -97,7 +97,7 @@ impl Ppm {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn from_sprite_sheet(sprite_sheet: &SpriteSheet) -> Self {
+    pub fn from_sprite_sheet(sprite_sheet: &SpriteSheet) -> Self {
         let sprite_sheet = &sprite_sheet.sprite_sheet;
         let width = SpriteSheet::SPRITES_PER_ROW as usize * SPRITE_WIDTH;
         let height = SPRITE_PAGES * ROWS_PER_PAGE * SPRITE_WIDTH;

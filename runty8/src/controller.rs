@@ -1,16 +1,13 @@
 use std::fmt::Debug;
 
-use crate::pico8::Pico8;
-use crate::runtime::draw_data::DrawData;
-use crate::runtime::input::Keys;
 use crate::ui::DispatchEvent;
 use crate::{
     app::{AppCompat, ElmApp},
     editor::{self, key_combo::KeyCombos, Editor},
-    runtime::state::State,
     ui::Element,
-    Event, Key, KeyboardEvent, MouseButton, MouseEvent, Resources,
+    Event, MouseButton, MouseEvent, Resources,
 };
+use runty8_runtime::{Key, KeyboardEvent, Keys, Pico8};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg<AppMsg> {
@@ -48,7 +45,7 @@ impl<T> Controller<T> {
 
 impl<Game: AppCompat> Controller<Game> {
     pub fn init(scene: Scene, resources: Resources) -> Self {
-        let mut pico8 = Pico8::new(DrawData::new(), State::new(), resources);
+        let mut pico8 = Pico8::new(resources);
 
         Self {
             scene,

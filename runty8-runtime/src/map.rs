@@ -13,7 +13,7 @@ pub struct Map {
 }
 
 impl Map {
-    pub(crate) fn file_name() -> String {
+    pub fn file_name() -> String {
         "map.txt".to_owned()
     }
 }
@@ -39,7 +39,7 @@ impl Map {
         Map { map }
     }
 
-    pub(crate) fn mget(&self, cel_x: i32, cel_y: i32) -> u8 {
+    pub fn mget(&self, cel_x: i32, cel_y: i32) -> u8 {
         let index = Self::index(cel_x, cel_y);
 
         // TODO: Handle like pico8
@@ -47,7 +47,7 @@ impl Map {
         index.map(|index| self.map[index]).unwrap_or(0)
     }
 
-    pub(crate) fn mset(&mut self, cel_x: usize, cel_y: usize, sprite: u8) {
+    pub fn mset(&mut self, cel_x: usize, cel_y: usize, sprite: u8) {
         let index = cel_x + cel_y * Map::WIDTH_SPRITES;
         // TODO: Handle like pico8
         assert!(index <= self.map.len());
@@ -70,7 +70,7 @@ impl Map {
 
 impl Map {
     // TODO: Make sure this works
-    pub(crate) fn deserialize(str: &str) -> Result<Self, String> {
+    pub fn deserialize(str: &str) -> Result<Self, String> {
         let map: [SpriteId; Self::MAP_SIZE] = str
             .split_ascii_whitespace()
             .map(|num| u8::from_str_radix(num, 16).unwrap())

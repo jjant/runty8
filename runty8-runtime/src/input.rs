@@ -1,18 +1,18 @@
 use crate::{Key, KeyState, KeyboardEvent};
 
 #[derive(Debug)]
-pub(crate) struct Keys {
+pub struct Keys {
     pub(crate) left: Option<bool>,
     pub(crate) right: Option<bool>,
     pub(crate) up: Option<bool>,
     pub(crate) down: Option<bool>,
     pub(crate) x: Option<bool>,
     pub(crate) c: Option<bool>,
-    pub(crate) mouse: Option<bool>,
+    pub mouse: Option<bool>,
 }
 
 impl Keys {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             left: None,
             right: None,
@@ -24,7 +24,7 @@ impl Keys {
         }
     }
 
-    pub(crate) fn on_event(&mut self, event: KeyboardEvent) {
+    pub fn on_event(&mut self, event: KeyboardEvent) {
         let mut other = None;
         let key_ref = match event.key {
             Key::X => &mut self.x,

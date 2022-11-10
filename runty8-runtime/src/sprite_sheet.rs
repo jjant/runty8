@@ -10,7 +10,7 @@ pub struct SpriteSheet {
 }
 
 impl SpriteSheet {
-    pub(crate) fn file_name() -> String {
+    pub fn file_name() -> String {
         "sprite_sheet.txt".to_owned()
     }
 }
@@ -63,7 +63,7 @@ impl SpriteSheet {
         Sprite::new(&self.sprite_sheet[index..(index + Sprite::WIDTH * Sprite::HEIGHT)])
     }
 
-    pub(crate) fn get_sprite_mut(&mut self, sprite: usize) -> &mut Sprite {
+    pub fn get_sprite_mut(&mut self, sprite: usize) -> &mut Sprite {
         let index = self.sprite_index(sprite);
 
         Sprite::new_mut(&mut self.sprite_sheet[index..(index + Sprite::WIDTH * Sprite::HEIGHT)])
@@ -107,7 +107,7 @@ impl Sprite {
     pub const WIDTH: usize = 8;
     pub const HEIGHT: usize = 8;
 
-    pub(crate) fn new(sprite: &[u8]) -> &Self {
+    pub fn new(sprite: &[u8]) -> &Self {
         unsafe { &*(sprite as *const [u8] as *const Self) }
     }
 
@@ -117,7 +117,7 @@ impl Sprite {
         sprite.to_vec()
     }
 
-    fn new_mut(sprite: &mut [u8]) -> &mut Self {
+    pub fn new_mut(sprite: &mut [u8]) -> &mut Self {
         unsafe { &mut *(sprite as *mut [u8] as *mut Self) }
     }
 
@@ -147,31 +147,31 @@ impl Sprite {
         }
     }
 
-    pub(crate) fn shift_up(&mut self) {
+    pub fn shift_up(&mut self) {
         self.sprite.rotate_left(8);
     }
 
-    pub(crate) fn shift_down(&mut self) {
+    pub fn shift_down(&mut self) {
         self.sprite.rotate_right(8);
     }
 
-    pub(crate) fn shift_left(&mut self) {
+    pub fn shift_left(&mut self) {
         self.sprite
             .chunks_mut(Sprite::WIDTH)
             .for_each(|row| row.rotate_left(1));
     }
 
-    pub(crate) fn shift_right(&mut self) {
+    pub fn shift_right(&mut self) {
         self.sprite
             .chunks_mut(Sprite::WIDTH)
             .for_each(|row| row.rotate_right(1));
     }
 
-    pub(crate) fn iter(&self) -> impl Iterator<Item = Color> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = Color> + '_ {
         self.sprite.iter().copied()
     }
 
-    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut Color> + '_ {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Color> + '_ {
         self.sprite.iter_mut()
     }
 

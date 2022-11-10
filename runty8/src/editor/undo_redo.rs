@@ -1,4 +1,4 @@
-use crate::runtime::sprite_sheet::SpriteSheet;
+use runty8_runtime::SpriteSheet;
 
 use super::notification;
 
