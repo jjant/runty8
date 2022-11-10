@@ -3,6 +3,7 @@ use itertools::Itertools;
 use crate::serialize::Serialize;
 use crate::Color;
 
+/// A pico8 game's sprite sheet.
 #[derive(Debug)]
 pub struct SpriteSheet {
     pub(crate) sprite_sheet: Vec<Color>,
