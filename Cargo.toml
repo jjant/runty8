@@ -2,6 +2,7 @@
 members = [
   "runty8",
   "runty8-runtime",
+  "runty8-run",
   "standalone-game",
 ]
 

@@ -1,13 +1,10 @@
 [package]
-name = "standalone-game"
+name = "runty8-run"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-crate-type = ["cdylib"]
 [dependencies]
 runty8-runtime = { path = "../runty8-runtime" }
-runty8-run = { path = "../runty8-run" }
-rand = "*"
+glium = "*"

@@ -1,0 +1,37 @@
+use rand::Rng;
+use runty8_run::run_app;
+use runty8_runtime::{App, Flags, Map, Pico8, Resources, SpriteSheet};
+
+fn main() {
+    run_app::<Game>(Resources {
+        assets_path: "standalone-game/assets".to_owned(),
+        map: Map::new(),
+        sprite_flags: Flags::new(),
+        sprite_sheet: SpriteSheet::new(),
+    });
+}
+
+struct Game;
+
+impl App for Game {
+    fn init(pico8: &mut Pico8) -> Self {
+        pico8.rect(15, 15, 30, 30, 8);
+        pico8.set_title("nice".to_string());
+        Self
+    }
+
+    fn update(&mut self, pico8: &mut Pico8) {
+        //   pico8.cls(0);
+        pico8.print("SOMETHING", 8, 8, 7);
+    }
+
+    fn draw(&mut self, pico8: &mut Pico8) {
+        pico8.rect(
+            rand::thread_rng().gen_range(0..128),
+            rand::thread_rng().gen_range(0..128),
+            rand::thread_rng().gen_range(0..128),
+            rand::thread_rng().gen_range(0..128),
+            8,
+        );
+    }
+}
