@@ -17,7 +17,7 @@ pub use sprite_sheet::SpriteSheet;
 
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 
-/// A regular pico8 app
+/// A regular pico8 app.
 pub trait App {
     fn init(pico8: &mut Pico8) -> Self;
     fn update(&mut self, pico8: &mut Pico8);
@@ -26,13 +26,22 @@ pub trait App {
 
 pub type Color = u8; // Actually a u4
 
+/// Pico8's supported input buttons.
+#[derive(Debug)]
 pub enum Button {
+    /// Left arrow.
     Left,
+    /// Rigth arrow.
     Right,
+    /// Up arrow.
     Up,
+    /// Down arrow.
     Down,
+    /// X key.
     X,
+    /// C key.
     C,
+    /// Left mouse button.
     Mouse,
 }
 

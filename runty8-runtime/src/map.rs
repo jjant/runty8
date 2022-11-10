@@ -5,6 +5,7 @@ use itertools::Itertools;
 
 type SpriteId = u8;
 
+/// A pico8 game's sprite map.
 #[derive(Debug, Clone)]
 pub struct Map {
     // Don't really want the size to change
