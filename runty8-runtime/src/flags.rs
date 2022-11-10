@@ -5,6 +5,7 @@ use itertools::Itertools;
 use crate::serialize::Serialize;
 use crate::sprite_sheet::SpriteSheet;
 
+/// A pico8 game's flags.
 #[derive(Debug)]
 pub struct Flags {
     flags: [u8; SpriteSheet::SPRITE_COUNT],

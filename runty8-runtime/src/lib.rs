@@ -1,3 +1,4 @@
+//! Types and functions required to run a Runty8 game.
 mod draw_data;
 mod flags;
 mod input;
@@ -155,6 +156,7 @@ impl Key {
     }
 }
 
+/// Keyboard event (key up/down).
 #[derive(Clone, Copy, Debug)]
 pub struct KeyboardEvent {
     pub key: Key,
