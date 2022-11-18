@@ -18,6 +18,7 @@ pub use map::Map;
 pub use pico8::*;
 pub use sprite_sheet::{Sprite, SpriteSheet};
 
+#[cfg(feature = "glium")]
 use glium::glutin::event::{ElementState, VirtualKeyCode};
 
 /// A regular pico8 app.
@@ -68,6 +69,7 @@ pub enum KeyState {
 }
 
 impl KeyState {
+    #[cfg(feature = "glium")]
     pub fn from_state(state: ElementState) -> Self {
         match state {
             ElementState::Pressed => Self::Down,
@@ -116,6 +118,7 @@ pub enum Key {
 }
 
 impl Key {
+    #[cfg(feature = "glium")]
     pub fn from_virtual_keycode(key: VirtualKeyCode) -> Option<Self> {
         match key {
             VirtualKeyCode::A => Some(Self::A),

@@ -2,3 +2,4 @@
 /target
 Cargo.lock
 /sprite_sheet.txt
+/generated

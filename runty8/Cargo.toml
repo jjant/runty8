@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-glium = "*"
 itertools = "*"
 rand = "*"
 runty8-runtime = {path = "../runty8-runtime" }
+glium = { version  = "*", optional = true }
+
+[features]
+glium = ["dep:glium"]
