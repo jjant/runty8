@@ -1,12 +1,16 @@
+<!DOCTYPE html>
 <html>
   <head>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
   </head>
   <body>
     <canvas id="canvas" width="640" height="480"></canvas>
-    <script src="./hello.js"></script>
+    <script type="text/javascript" src="https://spectorcdn.babylonjs.com/spector.bundle.js"></script>
+    <script src="./standalone-game.js"></script>
     <script type="module">
-      import init from "./hello.js";
+      const spector = new SPECTOR.Spector();
+      spector.displayUI();
+      import init from "./standalone-game.js";
 
       init();
     </script>
