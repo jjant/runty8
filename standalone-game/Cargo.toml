@@ -16,3 +16,4 @@ winit = "*"
 log = "0.4"
 console_log = "0.2"
 console_error_panic_hook = "0.1.7"
+instant = { version = "0.1", features = ["wasm-bindgen"] }

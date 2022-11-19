@@ -1,10 +1,11 @@
 use glow::{HasContext, WebTextureKey};
+use instant::Instant;
 use rand::Rng;
 use runty8_runtime::{App, Flags, Map, Pico8, Resources, SpriteSheet};
 use wasm_bindgen::JsCast;
 use winit::{
     event::{Event, WindowEvent},
-    event_loop::EventLoop,
+    event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 
@@ -120,17 +121,6 @@ fn main() {
         log_error(&gl);
         gl.clear_color(0.1, 0.2, 0.3, 1.0);
 
-        let texture = create_texture(&gl);
-        log::info!("Texture {:?}", texture);
-
-        gl.active_texture(glow::TEXTURE0);
-        log_error(&gl);
-        gl.bind_texture(glow::TEXTURE_2D, Some(texture));
-        log_error(&gl);
-        let tex_location = gl.get_uniform_location(program, "tex").unwrap();
-        gl.uniform_1_i32(Some(&tex_location), 0);
-        log_error(&gl);
-
         let mut pico8 = Pico8::new(Resources {
             assets_path: "standalone-game/assets".to_owned(),
             map: Map::new(),
@@ -139,12 +129,7 @@ fn main() {
         });
         let game = Game::init(&mut pico8);
 
-        gl.clear(glow::COLOR_BUFFER_BIT);
-        gl.draw_arrays(glow::TRIANGLES, 0, 6);
-        run_app(game, pico8);
-
-        gl.delete_program(program);
-        gl.delete_vertex_array(vertex_array);
+        run_app(game, pico8, program, gl);
     }
 }
 
@@ -179,7 +164,7 @@ impl App for Game {
     }
 }
 
-fn run_app(mut game: Game, mut pico8: Pico8) {
+fn run_app(mut game: Game, mut pico8: Pico8, program: glow::Program, gl: glow::Context) {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("My pico8 game")
@@ -198,20 +183,35 @@ fn run_app(mut game: Game, mut pico8: Pico8) {
                 window_id,
             } if window_id == window.id() => control_flow.set_exit(),
             Event::MainEventsCleared => {
-                window.request_redraw();
+                // window.request_redraw();
+            }
+            Event::RedrawEventsCleared => {
+                set_next_timer(control_flow);
             }
             Event::NewEvents(cause) => match cause {
                 winit::event::StartCause::ResumeTimeReached { .. } => {
-                    game.update(&mut pico8);
-                    game.draw(&mut pico8);
+                    log::info!("New frame!");
+
+                    set_next_timer(control_flow);
+
+                    step_game(&mut game, &mut pico8);
                 }
                 winit::event::StartCause::WaitCancelled { .. } => {}
-                winit::event::StartCause::Poll => {}
-                winit::event::StartCause::Init => {}
+                winit::event::StartCause::Poll => {
+                    step_game(&mut game, &mut pico8);
+                }
+                winit::event::StartCause::Init => {
+                    set_next_timer(control_flow);
+                }
             },
             _ => (),
         }
 
+        unsafe {
+            use_texture(pico8.draw_data.buffer(), program, &gl);
+            gl.clear(glow::COLOR_BUFFER_BIT);
+            gl.draw_arrays(glow::TRIANGLES, 0, 6);
+        }
         // do_draw(
         //     &display,
         //     display.draw(),
@@ -220,6 +220,50 @@ fn run_app(mut game: Game, mut pico8: Pico8) {
         //     &program,
         // );
     });
+}
+
+fn step_game(game: &mut Game, pico8: &mut Pico8) {
+    game.update(pico8);
+    game.draw(pico8);
+}
+fn set_next_timer(control_flow: &mut ControlFlow) {
+    const FPS: u64 = 30;
+    let nanoseconds_per_frame = 1_000_000_000 / FPS;
+
+    log::info!("Current time: {:?}", Instant::now());
+    let next_frame_time = Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
+    log::info!("Next frame time: {:?}", next_frame_time);
+    *control_flow = ControlFlow::WaitUntil(Instant::now() + std::time::Duration::from_secs(1));
+    *control_flow = ControlFlow::Poll;
+}
+
+unsafe fn use_texture(buffer: &[u8], program: glow::Program, gl: &glow::Context) {
+    // let pixels = {
+    //     let red = vec![255, 0, 0];
+    //     let green = vec![0, 255, 0];
+    //     let blue = vec![0, 0, 255];
+    //     let white = vec![255, 255, 255];
+    //
+    //     let mut pixels = vec![];
+    //     for _ in 0..(128 / 4 * 128) {
+    //         pixels.append(&mut red.clone());
+    //         pixels.append(&mut green.clone());
+    //         pixels.append(&mut blue.clone());
+    //         pixels.append(&mut white.clone());
+    //     }
+    //     pixels
+    // };
+    // log::info!("Colors count: {}", pixels.len());
+    let texture = create_texture(&gl, buffer);
+    // log::info!("Texture {:?}", texture);
+
+    gl.active_texture(glow::TEXTURE0);
+    log_error(&gl);
+    gl.bind_texture(glow::TEXTURE_2D, Some(texture));
+    log_error(&gl);
+    let tex_location = gl.get_uniform_location(program, "tex").unwrap();
+    gl.uniform_1_i32(Some(&tex_location), 0);
+    log_error(&gl);
 }
 
 mod wasm {
@@ -243,7 +287,7 @@ mod wasm {
         let body = document.body().unwrap();
 
         canvas.style().set_css_text("background-color: crimson;");
-        // body.append_child(&canvas).unwrap();
+        body.append_child(&canvas).unwrap();
 
         let log_header = document.create_element("h2").unwrap();
         log_header.set_text_content(Some("Event Log"));
@@ -270,30 +314,19 @@ mod wasm {
     }
 }
 
-unsafe fn create_texture(gl: &glow::Context) -> WebTextureKey {
+unsafe fn create_texture(gl: &glow::Context, pixels: &[u8]) -> WebTextureKey {
     let texture = gl.create_texture().unwrap();
     gl.bind_texture(glow::TEXTURE_2D, Some(texture));
     log_error(&gl);
 
-    let red = vec![255, 0, 0, 255];
-    let green = vec![0, 255, 0, 255];
-    let blue = vec![0, 0, 255, 255];
-    let white = vec![255, 255, 255, 255];
-
-    let mut pixels = vec![];
-    pixels.append(&mut red.clone());
-    pixels.append(&mut green.clone());
-    pixels.append(&mut blue.clone());
-    pixels.append(&mut white.clone());
-
     gl.tex_image_2d(
         glow::TEXTURE_2D,
         0,
-        glow::SRGB8_ALPHA8 as i32,
-        2,
-        2,
+        glow::SRGB8 as i32,
+        128,
+        128,
         0,
-        glow::RGBA,
+        glow::RGB,
         glow::UNSIGNED_BYTE,
         Some(&pixels),
     );
@@ -320,7 +353,7 @@ fn log_error(gl: &glow::Context) {
     let err = unsafe { gl.get_error() };
 
     if err == 0 {
-        log::info!("No error")
+        // log::info!("No error")
     } else {
         log::error!("Error: {}", err);
     }
