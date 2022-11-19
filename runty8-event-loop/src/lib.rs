@@ -26,6 +26,9 @@ impl Event {
         control_flow: &mut ControlFlow,
     ) -> Option<Event> {
         match winit_event {
+            winit::event::Event::RedrawRequested(_) => Some(Self::Tick {
+                delta_millis: 16.6666,
+            }),
             winit::event::Event::WindowEvent { event, .. } => match event {
                 winit::event::WindowEvent::CloseRequested => {
                     *control_flow = ControlFlow::Exit;
@@ -125,18 +128,54 @@ pub enum MouseEvent {
 
 pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new()
+    let window_builder = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(640.0, 640.0))
-        .with_title("My pico8 game")
-        .build(&event_loop)
-        .unwrap();
+        .with_title("My pico8 game");
+    #[cfg(target_arch = "wasm32")]
+    let window = window_builder.build(&event_loop).unwrap();
+    #[cfg(not(target_arch = "wasm32"))]
+    let (gl, shader_version, window, event_loop) = {
+        let event_loop = glutin::event_loop::EventLoop::new();
+        let window_builder = glutin::window::WindowBuilder::new()
+            .with_inner_size(LogicalSize::new(640.0, 640.0))
+            .with_title("My pico8 game");
+        let window: glutin::ContextWrapper<_, _> = glutin::ContextBuilder::new()
+            .with_vsync(true)
+            .build_windowed(window_builder, &event_loop)
+            .unwrap()
+            .make_current()
+            .unwrap();
+        let gl = glow::Context::from_loader_function(|s| {
+            glutin::ContextWrapper::get_proc_address(&window, s) as *const _
+        });
+
+        (gl, "#version 410", window, event_loop)
+    };
+
+    #[cfg(target_arch = "wasm32")]
+    let (gl, shader_version) = wasm::insert_canvas_and_create_context(&window);
+
+    // gl.debug_message_callback(|a, b, c, d, message| {
+    //     println!("{}", message);
+    //     println!("{} {} {} {}", a, b, c, d);
+    // });
 
     let scale_factor = 1.0; // TODO
-    let mut logical_size = window.inner_size().to_logical(scale_factor);
+    let mut logical_size: LogicalSize<f64> = {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            window.window()
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            window
+        }
+    }
+    .inner_size()
+    .to_logical(scale_factor);
 
-    let gl = wasm::insert_canvas_and_create_context(&window);
     gl.clear_color(0.1, 0.2, 0.3, 1.0);
-    let program = gl::make_program(&gl);
+    let program = gl::make_program(&gl, shader_version);
     gl.use_program(Some(program));
     let texture = gl::make_texture(&gl);
     gl::use_texture(&gl, program);
@@ -145,6 +184,63 @@ pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
     let mut game = Game::init(&mut pico8);
     gl::upload_pixels(&gl, texture, pico8.draw_data.buffer());
 
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        event_loop.run(move |event, _, control_flow| {
+            println!("{:?}", event);
+            // *control_flow = ControlFlow::Wait;
+            // let event = crate::Event::translate_event(
+            //     &event,
+            //     scale_factor,
+            //     &mut logical_size,
+            //     control_flow,
+            // );
+            // if let Some(event) = event {
+            //     match event {
+            //         crate::Event::Tick { .. } => {
+            //             game.update(&mut pico8);
+            //             game.draw(&mut pico8);
+            //         }
+            //         _ => {}
+            //     }
+            // };
+            //
+            // if let Some(_new_title) = pico8.take_new_title() {
+            //     // display.gl_window().window().set_title(&new_title);
+            // }
+
+            match event {
+                winit::event::Event::LoopDestroyed => {
+                    return;
+                }
+                winit::event::Event::MainEventsCleared => {
+                    window.window().request_redraw();
+                }
+                winit::event::Event::RedrawRequested(_) => {
+                    // gl.clear(glow::COLOR_BUFFER_BIT);
+                    // gl.draw_arrays(glow::TRIANGLES, 0, 3);
+                    // window.swap_buffers().unwrap();
+                    // // Actually draw stuff!
+                    game.update(&mut pico8);
+                    game.draw(&mut pico8);
+                    draw_glutin(&window, &gl, texture, &pico8);
+                }
+                winit::event::Event::WindowEvent { ref event, .. } => match event {
+                    winit::event::WindowEvent::Resized(physical_size) => {
+                        window.resize(*physical_size);
+                    }
+                    winit::event::WindowEvent::CloseRequested => {
+                        gl.delete_program(program);
+                        // gl.delete_vertex_array(vertex_array);
+                        *control_flow = ControlFlow::Exit
+                    }
+                    _ => (),
+                },
+                _ => (),
+            }
+        });
+    }
+    #[cfg(target_arch = "wasm32")]
     event_loop.run(move |winit_event, _, control_flow| {
         log::debug!("{:?}", winit_event);
 
@@ -170,17 +266,43 @@ pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
     });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+unsafe fn draw_glutin<B>(
+    window: &glutin::ContextWrapper<glutin::PossiblyCurrent, B>,
+    gl: &glow::Context,
+    texture: glow::Texture,
+    pico8: &Pico8,
+) {
+    draw(gl, texture, pico8);
+    window.swap_buffers().unwrap();
+}
+
 unsafe fn draw(gl: &glow::Context, texture: glow::Texture, pico8: &Pico8) {
     gl::upload_pixels(gl, texture, pico8.draw_data.buffer());
     gl.clear(glow::COLOR_BUFFER_BIT);
     gl.draw_arrays(glow::TRIANGLES, 0, 6);
 }
 
-// wasm only stuff
+// fn create_gl_context_and_window(window: &winit::window::Window) -> glow::Context {
+//     #[cfg(target_arch = "wasm32")]
+//     {
+//         let a = 42;
+//         return wasm::insert_canvas_and_create_context(window);
+//     }
+//
+//     // Glutin
+//     {
+//         unsafe { glow::Context::from_loader_function(|s| window.get_proc_address(s) as *const _) }
+//     }
+// }
+
+#[cfg(target_arch = "wasm32")]
 mod wasm {
     use winit::window::Window;
 
-    pub(super) fn insert_canvas_and_create_context(window: &Window) -> glow::Context {
+    pub(super) fn insert_canvas_and_create_context(
+        window: &Window,
+    ) -> (glow::Context, &'static str) {
         use wasm_bindgen::JsCast;
         use winit::platform::web::WindowExtWebSys;
 
@@ -201,7 +323,7 @@ mod wasm {
             .unwrap();
         let gl = glow::Context::from_webgl2_context(webgl2_context);
 
-        gl
+        (gl, "#version 300 es")
     }
 }
 //// Extension stuff for `winit` types
@@ -280,13 +402,14 @@ impl Runty8KeyStateExt for KeyState {
         }
     }
 }
+
 ////// Utils
 fn set_next_timer(control_flow: &mut ControlFlow) {
     let fps = 30_u64;
     let nanoseconds_per_frame = 1_000_000_000 / fps;
 
-    // let next_frame_time =
-    //     instant::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
-    // *control_flow = ControlFlow::WaitUntil(next_frame_time);
-    *control_flow = ControlFlow::Poll;
+    let next_frame_time =
+        instant::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
+    *control_flow = ControlFlow::WaitUntil(next_frame_time);
+    // *control_flow = ControlFlow::Poll;
 }

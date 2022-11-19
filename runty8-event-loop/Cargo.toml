@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 runty8-runtime = { path = "../runty8-runtime" }
-winit = "0.27.5"
+winit = "0.26"
 instant = { version = "0.1", features = ["wasm-bindgen"] }
 # wasm related stuff
 glow = "0.11"
@@ -17,3 +17,7 @@ log = "0.4"
 console_log = "0.2"
 console_error_panic_hook = "0.1.7"
 getrandom = { version = "0.2.8", features = ["js"] }
+
+#native only
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+glutin = "0.28.0"
