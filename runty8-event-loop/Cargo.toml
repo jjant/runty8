@@ -1,0 +1,19 @@
+[package]
+name = "runty8-event-loop"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+runty8-runtime = { path = "../runty8-runtime" }
+winit = "0.27.5"
+instant = { version = "0.1", features = ["wasm-bindgen"] }
+# wasm related stuff
+glow = "0.11"
+wasm-bindgen = { version = "0.2" }
+web-sys = { version = "0.3", features = ["HtmlCanvasElement", "WebGl2RenderingContext", "Window", "console", "Document"]}
+log = "0.4"
+console_log = "0.2"
+console_error_panic_hook = "0.1.7"
+getrandom = { version = "0.2.8", features = ["js"] }
