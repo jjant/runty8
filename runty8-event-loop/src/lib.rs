@@ -155,10 +155,7 @@ pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
     #[cfg(target_arch = "wasm32")]
     let (gl, shader_version) = wasm::insert_canvas_and_create_context(&window);
 
-    // gl.debug_message_callback(|a, b, c, d, message| {
-    //     println!("{}", message);
-    //     println!("{} {} {} {}", a, b, c, d);
-    // });
+    log_error(&gl);
 
     let scale_factor = 1.0; // TODO
     let mut logical_size: LogicalSize<f64> = {
@@ -174,9 +171,19 @@ pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
     .inner_size()
     .to_logical(scale_factor);
 
+    let vertex_array = gl
+        .create_vertex_array()
+        .expect("Cannot create vertex array");
+    log_error(&gl);
+
+    gl.bind_vertex_array(Some(vertex_array));
+    log_error(&gl);
+
     gl.clear_color(0.1, 0.2, 0.3, 1.0);
+    log_error(&gl);
     let program = gl::make_program(&gl, shader_version);
     gl.use_program(Some(program));
+    log_error(&gl);
     let texture = gl::make_texture(&gl);
     gl::use_texture(&gl, program);
 
@@ -231,7 +238,9 @@ pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
                     }
                     winit::event::WindowEvent::CloseRequested => {
                         gl.delete_program(program);
+                        log_error(&gl);
                         // gl.delete_vertex_array(vertex_array);
+                        log_error(&gl);
                         *control_flow = ControlFlow::Exit
                     }
                     _ => (),
@@ -278,9 +287,15 @@ unsafe fn draw_glutin<B>(
 }
 
 unsafe fn draw(gl: &glow::Context, texture: glow::Texture, pico8: &Pico8) {
+    println!("Buf len {}", pico8.draw_data.buffer().len());
     gl::upload_pixels(gl, texture, pico8.draw_data.buffer());
+    log_error(&gl);
+
     gl.clear(glow::COLOR_BUFFER_BIT);
+    log_error(&gl);
+
     gl.draw_arrays(glow::TRIANGLES, 0, 6);
+    log_error(&gl);
 }
 
 // fn create_gl_context_and_window(window: &winit::window::Window) -> glow::Context {
@@ -412,4 +427,12 @@ fn set_next_timer(control_flow: &mut ControlFlow) {
         instant::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
     *control_flow = ControlFlow::WaitUntil(next_frame_time);
     // *control_flow = ControlFlow::Poll;
+}
+
+fn log_error(gl: &glow::Context) {
+    let error = unsafe { gl.get_error() };
+
+    if error != 0 {
+        panic!("Error: {}", error);
+    }
 }
