@@ -7,6 +7,7 @@ edition = "2021"
 itertools = "*"
 rand = "*"
 runty8-runtime = {path = "../runty8-runtime" }
+winit = "0.26"
 glium = { version  = "*", optional = true }
 
 [features]
