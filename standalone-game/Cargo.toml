@@ -6,13 +6,14 @@ edition = "2021"
 [dependencies]
 runty8-runtime = { path = "../runty8-runtime" }
 runty8-web = { path = "../runty8-web" }
+runty8-event-loop = { path = "../runty8-event-loop" }
 # runty8-run = { path = "../runty8-run" }
 rand = "*"
 getrandom = {version = "*", features=["js"]}
 glow = "0.11.2"
 wasm-bindgen = { version = "0.2" }
 web-sys = { version = "0.3", features = ["HtmlCanvasElement", "WebGl2RenderingContext", "Window", "console", "Document"]}
-winit = "*"
+winit = "0.26"
 log = "0.4"
 console_log = "0.2"
 console_error_panic_hook = "0.1.7"
