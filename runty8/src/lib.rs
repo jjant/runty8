@@ -16,7 +16,7 @@ mod editor;
 mod graphics;
 // mod run;
 mod util;
-use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
+// use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
 use runty8_runtime::{Flags, Map, Sprite, SpriteSheet};
 use std::fmt::Debug;
