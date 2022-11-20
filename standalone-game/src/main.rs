@@ -19,6 +19,7 @@ struct Game {
     y: i32,
     mouse_x: i32,
     mouse_y: i32,
+    mouse: bool,
 }
 
 impl Game {
@@ -32,11 +33,14 @@ impl App for Game {
         pico8.rect(15, 15, 30, 30, 8);
         pico8.set_title("nice".to_string());
 
+        let (mouse_x, mouse_y) = pico8.mouse();
+
         Self {
             x: 64,
             y: 64,
-            mouse_x: 64,
-            mouse_y: 64,
+            mouse_x,
+            mouse_y,
+            mouse: pico8.btn(Button::Mouse),
         }
     }
 
@@ -60,6 +64,7 @@ impl App for Game {
         self.y = clamp(0, self.y, 128 - Self::H);
 
         (self.mouse_x, self.mouse_y) = pico8.mouse();
+        self.mouse = pico8.btn(Button::Mouse);
     }
 
     fn draw(&mut self, pico8: &mut Pico8) {
@@ -84,7 +89,7 @@ impl App for Game {
             7,
         );
 
-        pico8.pset(self.mouse_x, self.mouse_y, 9);
+        pico8.pset(self.mouse_x, self.mouse_y, if self.mouse { 9 } else { 12 });
     }
 }
 
