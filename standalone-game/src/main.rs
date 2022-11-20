@@ -74,7 +74,7 @@ impl App for Game {
         }
         pico8.cls(0);
 
-        for i in 0..15 {
+        for i in 0..16 {
             let x = i % 4;
             let y = i / 4;
 
