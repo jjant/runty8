@@ -216,9 +216,16 @@ pub fn rnd(limit: f32) -> f32 {
     rand::thread_rng().gen_range(0.0..limit)
 }
 
+pub fn mid(first: f32, second: f32, third: f32) -> f32 {
+    let mut slice = [first, second, third];
+    slice.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    slice[1]
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{rnd, sin};
+    use super::{mid, rnd, sin};
 
     macro_rules! assert_delta {
         ($x:expr, $y:expr, $d:expr) => {
@@ -248,5 +255,12 @@ mod tests {
 
             assert!(0.0 < random_value && random_value < 50.0);
         }
+    }
+
+    #[test]
+    fn mid_works() {
+        assert_delta!(mid(8.0, 2.0, 4.0), 4.0, 0.00001);
+        assert_delta!(mid(-3.5, -3.4, -3.6), -3.5, 0.00001);
+        assert_delta!(mid(6.0, 6.0, 8.0), 6.0, 0.00001);
     }
 }
