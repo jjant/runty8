@@ -114,7 +114,7 @@ pub(crate) unsafe fn upload_pixels(gl: &Context, texture: glow::Texture, pixels:
     gl.tex_image_2d(
         glow::TEXTURE_2D,
         0,
-        glow::SRGB8 as i32,
+        glow::RGB8 as i32,
         128,
         128,
         0,
