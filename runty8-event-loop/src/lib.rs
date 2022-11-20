@@ -1,5 +1,6 @@
 use glow::HasContext;
 use runty8_runtime::{App, Key, KeyState, KeyboardEvent, Keys, Pico8, Resources};
+use std::sync::{Arc, Mutex};
 use winit::{
     dpi::{LogicalPosition, LogicalSize},
     event::{ElementState, VirtualKeyCode},
@@ -262,37 +263,53 @@ pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
         });
     }
 
-    let mut keys = Keys::new();
+    let mut keys = Arc::new(Mutex::new(Keys::new()));
     #[cfg(target_arch = "wasm32")]
     let (log_list, runty8_log_list) = wasm::create_log_list(&window);
     #[cfg(target_arch = "wasm32")]
+    wasm::create_touch_controls(
+        &window,
+        &web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .body()
+            .unwrap(),
+        Arc::clone(&keys),
+    );
+    let keys = Arc::clone(&keys);
+    #[cfg(target_arch = "wasm32")]
     event_loop.run(move |winit_event, _, control_flow| {
         // log::debug!("Winit event {:?}", winit_event);
-        wasm::log_event(&log_list, &winit_event);
+        // wasm::log_event(&log_list, &winit_event);
 
         let event: Option<Event> =
             Event::translate_event(&winit_event, scale_factor, &mut logical_size, control_flow);
 
         if let Some(event) = event {
-            wasm::log_runty8_event(&runty8_log_list, &event);
+            // wasm::log_runty8_event(&runty8_log_list, &event);
 
-            log::debug!("{:?}", pico8.state);
+            // log::debug!("{:?}", pico8.state);
 
             match event {
                 Event::Tick { .. } => {
+                    let mut keys = keys.lock().unwrap();
                     pico8.state.update_keys(&keys);
                     game.update(&mut pico8);
                     game.draw(&mut pico8);
                 }
 
                 Event::Keyboard(event) => {
+                    let mut keys = keys.lock().unwrap();
                     keys.on_event(event);
                 }
                 Event::Mouse(MouseEvent::Move { x, y }) => pico8.state.on_mouse_move(x, y),
                 Event::Mouse(MouseEvent::Down(MouseButton::Left)) => {
+                    let mut keys = keys.lock().unwrap();
                     keys.mouse = Some(true);
                 }
                 Event::Mouse(MouseEvent::Up(MouseButton::Left)) => {
+                    let mut keys = keys.lock().unwrap();
                     keys.mouse = Some(false);
                 }
                 _ => {}
@@ -346,12 +363,82 @@ unsafe fn draw(gl: &glow::Context, texture: glow::Texture, pico8: &Pico8) {
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
+    use runty8_runtime::Keys;
+    use runty8_runtime::{Key, KeyState};
+    use std::sync::{Arc, Mutex};
+    use wasm_bindgen::closure::Closure;
+    use wasm_bindgen::JsCast;
     use winit::window::Window;
+
+    pub(super) fn create_touch_controls(
+        window: &Window,
+        container: &web_sys::HtmlElement,
+        keys: Arc<Mutex<Keys>>,
+    ) {
+        for key in [
+            Key::RightArrow,
+            Key::LeftArrow,
+            Key::UpArrow,
+            Key::DownArrow,
+        ]
+        .into_iter()
+        {
+            let key_button = make_input_button(key, Arc::clone(&keys));
+            container.append_child(&key_button).unwrap();
+        }
+    }
+
+    fn make_input_button(key: Key, keys: Arc<Mutex<Keys>>) -> web_sys::HtmlElement {
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+
+        let right_button = document
+            .create_element("div")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlElement>()
+            .unwrap();
+        right_button.style().set_css_text(
+            r#"
+            width: 100px;
+            height: 100px;
+            background-color: green;
+            "#,
+        );
+        let right_button_closure_down = make_key_closure(key, KeyState::Down, Arc::clone(&keys));
+        let right_button_closure_up = make_key_closure(key, KeyState::Up, keys);
+        right_button.set_onmousedown(Some(right_button_closure_down.as_ref().unchecked_ref()));
+        right_button.set_onmouseup(Some(right_button_closure_up.as_ref().unchecked_ref()));
+        right_button_closure_down.forget();
+        right_button_closure_up.forget();
+
+        right_button.set_inner_text(&format!("{:?}", key));
+
+        right_button
+    }
+
+    fn make_key_closure(
+        key: Key,
+        key_state: KeyState,
+        keys: Arc<Mutex<Keys>>,
+    ) -> Closure<dyn FnMut()> {
+        let update_keys_fn = Closure::<dyn FnMut()>::new(move || {
+            let mut keys = keys.lock().unwrap();
+
+            let event = runty8_runtime::KeyboardEvent {
+                key,
+                state: key_state,
+            };
+            log::debug!("{:?}", event);
+
+            keys.on_event(event);
+        });
+
+        update_keys_fn
+    }
 
     pub(super) fn insert_canvas_and_create_context(
         window: &Window,
     ) -> (glow::Context, &'static str) {
-        use wasm_bindgen::JsCast;
         use winit::platform::web::WindowExtWebSys;
 
         let canvas = window.canvas();
@@ -367,9 +454,13 @@ mod wasm {
             .unwrap();
         body.append_child(&container).unwrap();
 
-        canvas
-            .style()
-            .set_css_text("border: 1px solid blue; image-rendering: pixelated;");
+        canvas.style().set_css_text(
+            r#"
+            border: 1px solid blue;
+            image-rendering: pixelated;
+            width: 100%;
+        "#,
+        );
         container.append_child(&canvas).unwrap();
 
         let webgl2_context = canvas
@@ -384,7 +475,6 @@ mod wasm {
     }
 
     pub(super) fn create_log_list(window: &Window) -> (web_sys::Element, web_sys::Element) {
-        use wasm_bindgen::JsCast;
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
         let body = document.body().unwrap();
@@ -398,7 +488,7 @@ mod wasm {
             justify-content: space-evenly;
         "#,
         );
-        body.append_child(&container);
+        body.append_child(&container).unwrap();
 
         let log_header = document.create_element("h2").unwrap();
         log_header.set_text_content(Some("Event log"));
