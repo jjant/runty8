@@ -1,5 +1,5 @@
 use glow::HasContext;
-use runty8_runtime::{App, Key, KeyState, KeyboardEvent, Pico8, Resources};
+use runty8_runtime::{App, Key, KeyState, KeyboardEvent, Keys, Pico8, Resources};
 use winit::{
     dpi::{LogicalPosition, LogicalSize},
     event::{ElementState, VirtualKeyCode},
@@ -26,9 +26,13 @@ impl Event {
         control_flow: &mut ControlFlow,
     ) -> Option<Event> {
         match winit_event {
-            winit::event::Event::RedrawRequested(_) => Some(Self::Tick {
+            winit::event::Event::RedrawRequested(_) =>
+            /* Some(Self::Tick {
                 delta_millis: 16.6666,
-            }),
+            }) */
+            {
+                None
+            }
             winit::event::Event::WindowEvent { event, .. } => match event {
                 winit::event::WindowEvent::CloseRequested => {
                     *control_flow = ControlFlow::Exit;
@@ -73,19 +77,21 @@ impl Event {
                     start,
                     requested_resume,
                 } => {
-                    set_next_timer(control_flow);
+                    // set_next_timer(control_flow);
 
-                    let delta: Result<i32, _> = requested_resume
-                        .duration_since(*start)
-                        .as_millis()
-                        .try_into();
-
+                    log::debug!("{:?} {:?}", start, requested_resume);
+                    // let delta: Result<i32, _> = requested_resume
+                    //     .duration_since(*start)
+                    //     .as_millis()
+                    //     .try_into();
+                    //
+                    *control_flow = ControlFlow::Poll;
                     Some(Event::Tick {
-                        delta_millis: delta.unwrap().try_into().unwrap(),
+                        delta_millis: 16.666,
                     })
                 }
                 winit::event::StartCause::Init => {
-                    set_next_timer(control_flow);
+                    // set_next_timer(control_flow);
 
                     None
                 }
@@ -127,6 +133,12 @@ pub enum MouseEvent {
 }
 
 pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        console_log::init_with_level(log::Level::Debug).unwrap();
+    }
+
     let event_loop = EventLoop::new();
     let window_builder = WindowBuilder::new()
         .with_inner_size(LogicalSize::new(640.0, 640.0))
@@ -165,7 +177,7 @@ pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
         }
         #[cfg(target_arch = "wasm32")]
         {
-            window
+            &window
         }
     }
     .inner_size()
@@ -249,18 +261,39 @@ pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
             }
         });
     }
+
+    let mut keys = Keys::new();
+    #[cfg(target_arch = "wasm32")]
+    let (log_list, runty8_log_list) = wasm::create_log_list(&window);
     #[cfg(target_arch = "wasm32")]
     event_loop.run(move |winit_event, _, control_flow| {
-        log::debug!("{:?}", winit_event);
+        // log::debug!("Winit event {:?}", winit_event);
+        wasm::log_event(&log_list, &winit_event);
 
         let event: Option<Event> =
             Event::translate_event(&winit_event, scale_factor, &mut logical_size, control_flow);
 
         if let Some(event) = event {
+            wasm::log_runty8_event(&runty8_log_list, &event);
+
+            log::debug!("{:?}", pico8.state);
+
             match event {
                 Event::Tick { .. } => {
+                    pico8.state.update_keys(&keys);
                     game.update(&mut pico8);
                     game.draw(&mut pico8);
+                }
+
+                Event::Keyboard(event) => {
+                    keys.on_event(event);
+                }
+                Event::Mouse(MouseEvent::Move { x, y }) => pico8.state.on_mouse_move(x, y),
+                Event::Mouse(MouseEvent::Down(MouseButton::Left)) => {
+                    keys.mouse = Some(true);
+                }
+                Event::Mouse(MouseEvent::Up(MouseButton::Left)) => {
+                    keys.mouse = Some(false);
                 }
                 _ => {}
             }
@@ -327,8 +360,17 @@ mod wasm {
         let document = window.document().unwrap();
         let body = document.body().unwrap();
 
-        canvas.style().set_css_text("border: 1px solid blue;");
-        body.append_child(&canvas).unwrap();
+        let container = document
+            .create_element("div")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlElement>()
+            .unwrap();
+        body.append_child(&container).unwrap();
+
+        canvas
+            .style()
+            .set_css_text("border: 1px solid blue; image-rendering: pixelated;");
+        container.append_child(&canvas).unwrap();
 
         let webgl2_context = canvas
             .get_context("webgl2")
@@ -339,6 +381,60 @@ mod wasm {
         let gl = glow::Context::from_webgl2_context(webgl2_context);
 
         (gl, "#version 300 es")
+    }
+
+    pub(super) fn create_log_list(window: &Window) -> (web_sys::Element, web_sys::Element) {
+        use wasm_bindgen::JsCast;
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let body = document.body().unwrap();
+
+        let container = document.create_element("div").unwrap();
+        let container = container.dyn_into::<web_sys::HtmlElement>().unwrap();
+        container.style().set_css_text(
+            r#"
+            display: flex;
+            align-content: center;
+            justify-content: space-evenly;
+        "#,
+        );
+        body.append_child(&container);
+
+        let log_header = document.create_element("h2").unwrap();
+        log_header.set_text_content(Some("Event log"));
+        // body.append_child(&log_header).unwrap();
+
+        let log_list = document.create_element("ul").unwrap();
+        container.append_child(&log_list).unwrap();
+        let runty8_log_list = document.create_element("ul").unwrap();
+        container.append_child(&runty8_log_list).unwrap();
+
+        (log_list, runty8_log_list)
+    }
+
+    pub(super) fn log_event(log_list: &web_sys::Element, event: &winit::event::Event<()>) {
+        if let winit::event::Event::WindowEvent { event, .. } = &event {
+            let window = web_sys::window().unwrap();
+            let document = window.document().unwrap();
+            let log = document.create_element("li").unwrap();
+            log.set_text_content(Some(&format!("{:?}", event)));
+            log_list
+                .insert_before(&log, log_list.first_child().as_ref())
+                .unwrap();
+        }
+    }
+
+    pub(super) fn log_runty8_event(log_list: &web_sys::Element, event: &crate::Event) {
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let log = document.create_element("li").unwrap();
+        if let crate::Event::Tick { .. } = event {
+            return;
+        }
+        log.set_text_content(Some(&format!("{:?}", event)));
+        log_list
+            .insert_before(&log, log_list.first_child().as_ref())
+            .unwrap();
     }
 }
 //// Extension stuff for `winit` types
@@ -425,6 +521,7 @@ fn set_next_timer(control_flow: &mut ControlFlow) {
 
     let next_frame_time =
         instant::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
+    log::debug!("{:?}", next_frame_time);
     *control_flow = ControlFlow::WaitUntil(next_frame_time);
     // *control_flow = ControlFlow::Poll;
 }
