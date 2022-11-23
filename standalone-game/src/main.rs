@@ -1,4 +1,3 @@
-use rand::Rng;
 use runty8_runtime::{App, Button, Flags, Map, Pico8, Resources, SpriteSheet};
 
 const LOG: bool = false;
