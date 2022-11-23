@@ -1,7 +1,14 @@
-use runty8::{App, Button, Pico8};
+use runty8_runtime::{App, Button, Flags, Map, Pico8, Resources, SpriteSheet};
 
 fn main() {
-    runty8::run_app::<ExampleApp>("examples/moving_box".to_owned()).unwrap();
+    unsafe {
+        runty8_event_loop::event_loop::<ExampleApp>(Resources {
+            assets_path: "moving-box/assets".to_owned(),
+            map: Map::new(),
+            sprite_flags: Flags::new(),
+            sprite_sheet: SpriteSheet::new(),
+        });
+    }
 }
 
 pub struct ExampleApp {

@@ -7,5 +7,6 @@ members = [
   "src/runty8-web",
   "src/runty8-winit",
   "examples/standalone-game",
+  "examples/moving-box",
 ]
 default-members = ["src/runty8"]
