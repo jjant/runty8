@@ -2,7 +2,7 @@ pub mod button;
 pub mod cursor;
 pub mod slider;
 pub mod text;
-use crate::{Event, Pico8};
+use runty8_runtime::{Event, Pico8};
 use std::{fmt::Debug, marker::PhantomData};
 
 pub struct DispatchEvent<'a, Msg> {

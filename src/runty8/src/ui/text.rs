@@ -30,7 +30,7 @@ impl<'a, Msg: Copy + Debug> Widget for Text<'a, Msg> {
 
     fn on_event(
         &mut self,
-        _event: crate::Event,
+        _event: runty8_runtime::Event,
         _cursor_position: (i32, i32),
         _dispatch_event: &mut DispatchEvent<Self::Msg>,
     ) {

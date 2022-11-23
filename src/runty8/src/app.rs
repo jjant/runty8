@@ -1,8 +1,7 @@
 use crate::ui::DrawFn;
 use crate::ui::Element;
-use crate::Event;
 use crate::Resources;
-use runty8_runtime::{App, Pico8};
+use runty8_runtime::{App, Event, Pico8};
 use std::fmt::Debug;
 
 /// An Elm-style app

@@ -5,9 +5,9 @@ use crate::{
     app::{AppCompat, ElmApp},
     editor::{self, key_combo::KeyCombos, Editor},
     ui::Element,
-    Event, MouseButton, MouseEvent, Resources,
+    Resources,
 };
-use runty8_runtime::{Key, KeyboardEvent, Keys, Pico8};
+use runty8_runtime::{Event, Key, KeyboardEvent, Keys, MouseButton, MouseEvent, Pico8};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg<AppMsg> {

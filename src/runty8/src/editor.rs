@@ -13,11 +13,10 @@ use crate::ui::{
     text::Text,
 };
 use crate::ui::{DrawFn, Element, Tree};
-use crate::Event;
 use brush_size::BrushSize;
 use runty8_runtime::{
     serialize::{Ppm, Serialize},
-    Color, Flags, Key, KeyState, KeyboardEvent, Map, Resources, Sprite, SpriteSheet,
+    Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources, Sprite, SpriteSheet,
 };
 
 use self::key_combo::KeyCombos;
