@@ -1,11 +1,11 @@
 [workspace]
 members = [
-  "runty8",
-  "runty8-runtime",
-  "runty8-run",
-  "runty8-event-loop",
-  "runty8-web",
-  "runty8-winit",
-  "standalone-game",
+  "src/runty8",
+  "src/runty8-runtime",
+  "src/runty8-run",
+  "src/runty8-event-loop",
+  "src/runty8-web",
+  "src/runty8-winit",
+  "examples/standalone-game",
 ]
-
+default-members = ["src/runty8"]
