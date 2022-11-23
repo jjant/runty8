@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 runty8-runtime = { path = "../runty8-runtime" }
+runty8-winit = { path = "../runty8-winit" }
 winit = "0.26"
 instant = { version = "0.1", features = ["wasm-bindgen"] }
 # wasm related stuff

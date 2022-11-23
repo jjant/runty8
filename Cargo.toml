@@ -5,6 +5,7 @@ members = [
   "runty8-run",
   "runty8-event-loop",
   "runty8-web",
+  "runty8-winit",
   "standalone-game",
 ]
 
