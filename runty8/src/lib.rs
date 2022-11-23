@@ -14,9 +14,9 @@ pub use runty8_runtime::{rnd, sin, KeyboardEvent, Pico8};
 mod controller;
 mod editor;
 mod graphics;
-// mod run;
+mod run;
 mod util;
-// use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
+use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
 use runty8_runtime::{Flags, Map, Sprite, SpriteSheet};
 use std::fmt::Debug;
@@ -126,34 +126,34 @@ fn create_directory(path: &str) -> std::io::Result<()> {
 }
 
 /// Run a Pico8 application.
-// pub fn run_app<T: App + 'static>(assets_path: String) -> std::io::Result<()> {
-//     run_app_compat::<Pico8AppCompat<T>>(assets_path)
-// }
+pub fn run_app<T: App + 'static>(assets_path: String) -> std::io::Result<()> {
+    run_app_compat::<Pico8AppCompat<T>>(assets_path)
+}
 
 /// Run an Elm-style application.
-// pub fn run_elm_app<T: ElmApp + 'static>(assets_path: String) -> std::io::Result<()> {
-//     run_app_compat::<ElmAppCompat<T>>(assets_path)
-// }
+pub fn run_elm_app<T: ElmApp + 'static>(assets_path: String) -> std::io::Result<()> {
+    run_app_compat::<ElmAppCompat<T>>(assets_path)
+}
 // TODO: add example
-// fn run_app_compat<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<()> {
-//     create_directory(&assets_path)?;
-//
-//     let map: Map = create_map(&assets_path);
-//     let sprite_flags: Flags = create_sprite_flags(&assets_path);
-//     let sprite_sheet = create_sprite_sheet(&assets_path);
-//
-//     let resources = Resources {
-//         assets_path,
-//         sprite_sheet,
-//         sprite_flags,
-//         map,
-//     };
-//
-//     let starting_scene = start_scene();
-//     crate::run::run_app::<T>(starting_scene, resources);
-//
-//     Ok(())
-// }
+fn run_app_compat<T: AppCompat + 'static>(assets_path: String) -> std::io::Result<()> {
+    create_directory(&assets_path)?;
+
+    let map: Map = create_map(&assets_path);
+    let sprite_flags: Flags = create_sprite_flags(&assets_path);
+    let sprite_sheet = create_sprite_sheet(&assets_path);
+
+    let resources = Resources {
+        assets_path,
+        sprite_sheet,
+        sprite_flags,
+        map,
+    };
+
+    let starting_scene = start_scene();
+    crate::run::run_app::<T>(starting_scene, resources);
+
+    Ok(())
+}
 
 fn start_scene() -> Scene {
     if std::env::args().any(|arg| arg == "--game") {

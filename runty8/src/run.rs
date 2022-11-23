@@ -12,6 +12,7 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 use runty8_runtime::{Key, KeyState, KeyboardEvent};
+use runty8_winit::{Runty8KeyExt, Runty8KeyStateExt};
 
 pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {
     let event_loop = glutin::event_loop::EventLoop::new();

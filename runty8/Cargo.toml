@@ -4,11 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+runty8-runtime = { path = "../runty8-runtime" }
+runty8-winit = { path = "../runty8-winit" }
 itertools = "*"
 rand = "*"
-runty8-runtime = {path = "../runty8-runtime" }
 winit = "0.26"
-glium = { version  = "*", optional = true }
-
-[features]
-glium = ["dep:glium"]
+glium = "0.31"
