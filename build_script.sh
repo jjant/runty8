@@ -11,8 +11,13 @@ fi
 echo "Building: $package"
 
 rm -rf generated/*
-cargo build --target wasm32-unknown-unknown -p "$package"
+cargo build --target wasm32-unknown-unknown -p "$package" --quiet
 wasm-bindgen target/wasm32-unknown-unknown/debug/$package.wasm --out-dir generated --target web
+
 cp index.html generated/index.html
+placeholder="__PACKAGE_NAME__"
+echo "Replacing placeholder: $placeholder -> $package"
+sed -i.bkp "s/$placeholder/$package/g" generated/index.html
+
 cd generated
 serve
