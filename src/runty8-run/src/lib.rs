@@ -2,8 +2,7 @@ mod event;
 mod graphics;
 
 use glium::backend::Facade;
-use glium::glutin::dpi::{LogicalPosition, LogicalSize};
-use glium::glutin::event::{self as glutin_event, ElementState, KeyboardInput};
+use glium::glutin::dpi::LogicalSize;
 use glium::glutin::event_loop::{ControlFlow, EventLoop};
 use glium::index::NoIndices;
 use glium::texture::{RawImage2d, SrgbTexture2d};
@@ -11,8 +10,8 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 use graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use runty8_event_loop::{Event, MouseButton, MouseEvent};
-use runty8_runtime::{App, Key, KeyState, KeyboardEvent, Pico8, Resources};
+use runty8_runtime::{App, Event, Pico8, Resources};
+use runty8_winit::Runty8EventExt;
 
 pub fn run_app<Game: App + 'static>(resources: Resources) {
     let event_loop = glutin::event_loop::EventLoop::new();
@@ -30,7 +29,9 @@ pub fn run_app<Game: App + 'static>(resources: Resources) {
     let mut game = Game::init(&mut pico8);
     event_loop.run(move |glutin_event, _, control_flow| {
         let event: Option<Event> =
-            translate_event(&glutin_event, scale_factor, &mut logical_size, control_flow);
+            Event::from_winit(&glutin_event, scale_factor, &mut logical_size, &mut || {
+                set_next_timer(control_flow)
+            });
 
         if let Some(event) = event {
             match event {

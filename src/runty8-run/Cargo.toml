@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 runty8-runtime = { path = "../runty8-runtime" }
+runty8-winit = { path = "../runty8-winit" }
 runty8-event-loop = { path = "../runty8-event-loop" }
-glium = "*"
+glium = "0.31"
