@@ -1,5 +1,93 @@
-use runty8_runtime::{Key, KeyState, KeyboardEvent};
+use runty8_runtime::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
+use winit::dpi::{LogicalPosition, LogicalSize};
 
+pub trait Runty8EventExt: Sized {
+    fn from_winit(
+        event: &winit::event::Event<()>,
+        hidpi_factor: f64,
+        window_size: &mut LogicalSize<f64>,
+        set_next_timer: &mut impl FnMut(),
+    ) -> Option<Self>;
+}
+
+impl Runty8EventExt for Event {
+    /// Translates a winit::event::Event into a runty8 Event.
+    fn from_winit(
+        event: &winit::event::Event<()>,
+        hidpi_factor: f64,
+        window_size: &mut LogicalSize<f64>,
+        set_next_timer: &mut impl FnMut(),
+    ) -> Option<Event> {
+        use winit::event::ElementState;
+
+        match event {
+            winit::event::Event::WindowEvent { event, .. } => match event {
+                winit::event::WindowEvent::CloseRequested => {
+                    // TODO
+                    // *control_flow = winit::event_loop::ControlFlow::Exit;
+
+                    None
+                }
+                // TODO: Force aspect ratio on resize.
+                &winit::event::WindowEvent::Resized(new_size) => {
+                    let new_size: LogicalSize<f64> = new_size.to_logical(hidpi_factor);
+
+                    *window_size = new_size;
+
+                    None
+                }
+                winit::event::WindowEvent::CursorMoved { position, .. } => {
+                    let logical_mouse: LogicalPosition<f64> = position.to_logical(hidpi_factor);
+
+                    Some(Event::Mouse(MouseEvent::Move {
+                        x: (logical_mouse.x / window_size.width * 128.).floor() as i32,
+                        y: (logical_mouse.y / window_size.height * 128.).floor() as i32,
+                    }))
+                }
+                winit::event::WindowEvent::MouseInput {
+                    button: winit::event::MouseButton::Left,
+                    state: input_state,
+                    ..
+                } => {
+                    let mouse_event = match input_state {
+                        ElementState::Pressed => MouseEvent::Down(MouseButton::Left),
+                        ElementState::Released => MouseEvent::Up(MouseButton::Left),
+                    };
+
+                    Some(Event::Mouse(mouse_event))
+                }
+                winit::event::WindowEvent::KeyboardInput { input, .. } => {
+                    KeyboardEvent::from_winit(*input).map(Event::Keyboard)
+                }
+                _ => None,
+            },
+            winit::event::Event::NewEvents(cause) => match cause {
+                winit::event::StartCause::ResumeTimeReached {
+                    start,
+                    requested_resume,
+                } => {
+                    set_next_timer();
+
+                    let delta: Result<i32, _> = requested_resume
+                        .duration_since(*start)
+                        .as_millis()
+                        .try_into();
+
+                    Some(Event::Tick {
+                        delta_millis: delta.unwrap().try_into().unwrap(),
+                    })
+                }
+                winit::event::StartCause::Init => {
+                    set_next_timer();
+
+                    None
+                }
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+}
 pub trait Runty8KeyboardEventExt: Sized {
     fn from_winit(input: winit::event::KeyboardInput) -> Option<Self>;
 }
