@@ -393,7 +393,7 @@ mod wasm {
         let document = window.document().unwrap();
 
         let right_button = document
-            .create_element("div")
+            .create_element("button")
             .unwrap()
             .dyn_into::<web_sys::HtmlElement>()
             .unwrap();
@@ -406,8 +406,8 @@ mod wasm {
         );
         let right_button_closure_down = make_key_closure(key, KeyState::Down, Arc::clone(&keys));
         let right_button_closure_up = make_key_closure(key, KeyState::Up, keys);
-        right_button.set_onmousedown(Some(right_button_closure_down.as_ref().unchecked_ref()));
-        right_button.set_onmouseup(Some(right_button_closure_up.as_ref().unchecked_ref()));
+        right_button.set_ontouchstart(Some(right_button_closure_down.as_ref().unchecked_ref()));
+        right_button.set_ontouchend(Some(right_button_closure_up.as_ref().unchecked_ref()));
         right_button_closure_down.forget();
         right_button_closure_up.forget();
 
@@ -459,6 +459,7 @@ mod wasm {
             border: 1px solid blue;
             image-rendering: pixelated;
             width: 100%;
+            max-width: 600px;
         "#,
         );
         container.append_child(&canvas).unwrap();
