@@ -82,7 +82,11 @@ impl Runty8EventExt for Event {
 
                     None
                 }
-                _ => None,
+                // Is this correct?
+                winit::event::StartCause::Poll => Some(Event::Tick {
+                    delta_millis: 16.6666,
+                }),
+                winit::event::StartCause::WaitCancelled { .. } => None,
             },
             _ => None,
         }
