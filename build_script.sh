@@ -2,7 +2,13 @@
 
 set -e
 
-package="standalone-game"
+if [[ -z $1 ]]; then
+  package="standalone-game"
+else
+  package="$1"
+fi
+
+echo "Building: $package"
 
 rm -rf generated/*
 cargo build --target wasm32-unknown-unknown -p "$package"
