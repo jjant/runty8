@@ -1,4 +1,3 @@
-
 use glium::backend::Facade;
 use glium::implement_vertex;
 use glium::VertexBuffer;
