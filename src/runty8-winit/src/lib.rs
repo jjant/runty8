@@ -1,3 +1,4 @@
+//! Compatibility layers for Runty8 crates that need to leverage winit.
 use runty8_core::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
 use winit::dpi::{LogicalPosition, LogicalSize};
 
