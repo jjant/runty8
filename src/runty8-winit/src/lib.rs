@@ -1,4 +1,4 @@
-use runty8_runtime::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
+use runty8_core::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
 use winit::dpi::{LogicalPosition, LogicalSize};
 
 pub trait Runty8EventExt: Sized {

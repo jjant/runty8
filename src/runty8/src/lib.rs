@@ -4,12 +4,12 @@ mod app;
 pub mod ui;
 
 pub use app::ElmApp;
-pub use runty8_runtime::colors;
-pub use runty8_runtime::App;
-pub use runty8_runtime::Button;
-pub use runty8_runtime::Color;
-use runty8_runtime::Resources;
-pub use runty8_runtime::{rnd, sin, KeyboardEvent, Pico8};
+pub use runty8_core::colors;
+pub use runty8_core::App;
+pub use runty8_core::Button;
+pub use runty8_core::Color;
+use runty8_core::Resources;
+pub use runty8_core::{rnd, sin, KeyboardEvent, Pico8};
 
 mod controller;
 mod editor;
@@ -18,7 +18,7 @@ mod run;
 mod util;
 use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
-use runty8_runtime::{Flags, Map, Sprite, SpriteSheet};
+use runty8_core::{Flags, Map, Sprite, SpriteSheet};
 
 fn create_sprite_flags(assets_path: &str) -> Flags {
     let path = format!(

@@ -1,5 +1,5 @@
 [package]
-name = "runty8-runtime"
+name = "runty8-core"
 version = "0.1.0"
 edition = "2021"
 

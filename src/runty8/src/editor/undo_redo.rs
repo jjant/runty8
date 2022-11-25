@@ -1,4 +1,4 @@
-use runty8_runtime::SpriteSheet;
+use runty8_core::SpriteSheet;
 
 use super::notification;
 

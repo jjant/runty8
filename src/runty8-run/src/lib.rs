@@ -10,7 +10,7 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 use graphics::{whole_screen_vertex_buffer, FRAGMENT_SHADER, VERTEX_SHADER};
-use runty8_runtime::{App, Event, Pico8, Resources};
+use runty8_core::{App, Event, Pico8, Resources};
 use runty8_winit::Runty8EventExt;
 
 pub fn run_app<Game: App + 'static>(resources: Resources) {

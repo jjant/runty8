@@ -1,5 +1,5 @@
 use crate::Pico8;
-use runty8_runtime::{Event, MouseButton};
+use runty8_core::{Event, MouseButton};
 
 use super::{DispatchEvent, Element, Widget};
 use std::fmt::Debug;
@@ -110,7 +110,7 @@ impl<'a, Msg: Copy + Debug + 'a> Widget for Button<'a, Msg> {
         cursor_position: (i32, i32),
         dispatch_event: &mut DispatchEvent<'_, Msg>,
     ) {
-        use runty8_runtime::MouseEvent::*;
+        use runty8_core::MouseEvent::*;
         use Event::*;
 
         // TODO: Dispatch events for content?

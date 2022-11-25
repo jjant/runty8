@@ -3,7 +3,7 @@ use crate::ui::{DrawFn, Element, Tree};
 use crate::util::vec2::{vec2, Vec2i};
 use crate::Map;
 use itertools::Itertools;
-use runty8_runtime::{Event, Key, KeyState, KeyboardEvent, MouseEvent};
+use runty8_core::{Event, Key, KeyState, KeyboardEvent, MouseEvent};
 use std::fmt::Debug;
 
 #[derive(Debug)]

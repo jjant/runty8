@@ -7,7 +7,7 @@ use crate::{
     ui::Element,
     Resources,
 };
-use runty8_runtime::{Event, Key, KeyboardEvent, Keys, MouseButton, MouseEvent, Pico8};
+use runty8_core::{Event, Key, KeyboardEvent, Keys, MouseButton, MouseEvent, Pico8};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg<AppMsg> {

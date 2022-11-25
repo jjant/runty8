@@ -41,7 +41,7 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
 
     fn on_event(
         &mut self,
-        _: runty8_runtime::Event,
+        _: runty8_core::Event,
         cursor_position: (i32, i32),
         _: &mut DispatchEvent<Self::Msg>,
     ) {

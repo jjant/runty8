@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-runty8-runtime = { path = "../../src/runty8-runtime" }
+runty8-core = { path = "../../src/runty8-core" }
 runty8-web = { path = "../../src/runty8-web" }
 runty8-event-loop = { path = "../../src/runty8-event-loop" }
 # runty8-run = { path = "../runty8-run" }

@@ -1,4 +1,4 @@
-use runty8_runtime::{App, Button, Flags, Map, Pico8, Resources, SpriteSheet};
+use runty8_core::{App, Button, Flags, Map, Pico8, Resources, SpriteSheet};
 
 fn main() {
     unsafe {

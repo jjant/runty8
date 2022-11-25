@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-runty8-runtime = { path = "../runty8-runtime" }
+runty8-core = { path = "../runty8-core" }
 winit = "0.26"

@@ -10,7 +10,7 @@ use glium::texture::{RawImage2d, SrgbTexture2d};
 use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
-use runty8_runtime::Event;
+use runty8_core::Event;
 use runty8_winit::Runty8EventExt;
 
 pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {

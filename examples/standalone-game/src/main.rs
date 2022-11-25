@@ -1,4 +1,4 @@
-use runty8_runtime::{App, Button, Flags, Map, Pico8, Resources, SpriteSheet};
+use runty8_core::{App, Button, Flags, Map, Pico8, Resources, SpriteSheet};
 
 const LOG: bool = false;
 
@@ -93,5 +93,5 @@ impl App for Game {
 }
 
 fn clamp(min: i32, v: i32, max: i32) -> i32 {
-    runty8_runtime::mid(min as f32, v as f32, max as f32) as i32
+    runty8_core::mid(min as f32, v as f32, max as f32) as i32
 }

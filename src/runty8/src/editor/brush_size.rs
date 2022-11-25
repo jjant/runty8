@@ -7,7 +7,7 @@ use crate::ui::{
     slider::{self, SliderValue},
     DrawFn, Element, Tree,
 };
-use runty8_runtime::{colors, Color};
+use runty8_core::{colors, Color};
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct BrushSize {

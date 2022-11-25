@@ -1,7 +1,7 @@
 [workspace]
 members = [
   "src/runty8",
-  "src/runty8-runtime",
+  "src/runty8-core",
   "src/runty8-run",
   "src/runty8-event-loop",
   "src/runty8-web",

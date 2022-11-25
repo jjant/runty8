@@ -5,7 +5,7 @@ use crate::ui::{
 };
 use crate::Color;
 use itertools::Itertools;
-use runty8_runtime::{Sprite, SpriteSheet};
+use runty8_core::{Sprite, SpriteSheet};
 use std::fmt::Debug;
 
 #[derive(Clone, Copy, Debug)]

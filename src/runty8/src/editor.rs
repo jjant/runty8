@@ -14,7 +14,7 @@ use crate::ui::{
 };
 use crate::ui::{DrawFn, Element, Tree};
 use brush_size::BrushSize;
-use runty8_runtime::{
+use runty8_core::{
     serialize::{Ppm, Serialize},
     Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources, Sprite, SpriteSheet,
 };
@@ -191,7 +191,7 @@ fn save(notification: &mut notification::State, resources: &Resources) {
     ];
 
     for (name, serializable) in to_serialize.iter() {
-        runty8_runtime::serialize::serialize(&resources.assets_path, name, serializable);
+        runty8_core::serialize::serialize(&resources.assets_path, name, serializable);
     }
 }
 
