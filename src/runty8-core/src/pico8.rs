@@ -216,6 +216,7 @@ pub fn rnd(limit: f32) -> f32 {
     rand::thread_rng().gen_range(0.0..limit)
 }
 
+/// Pico8's [`mid`](<https://pico-8.fandom.com/wiki/Mid>) function.
 pub fn mid(first: f32, second: f32, third: f32) -> f32 {
     let mut slice = [first, second, third];
     slice.sort_by(|a, b| a.partial_cmp(b).unwrap());
