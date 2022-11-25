@@ -99,7 +99,7 @@ impl Ppm {
     #[allow(dead_code)]
     pub fn from_sprite_sheet(sprite_sheet: &SpriteSheet) -> Self {
         let sprite_sheet = &sprite_sheet.sprite_sheet;
-        let width = SpriteSheet::SPRITES_PER_ROW as usize * SPRITE_WIDTH;
+        let width = SpriteSheet::SPRITES_PER_ROW * SPRITE_WIDTH;
         let height = SPRITE_PAGES * ROWS_PER_PAGE * SPRITE_WIDTH;
 
         let mut data = vec![Color { r: 0, g: 0, b: 0 }; sprite_sheet.len()];
@@ -115,8 +115,8 @@ impl Ppm {
             .into_iter()
             .enumerate()
         {
-            let base_x = SPRITE_WIDTH * (sprite_index % SpriteSheet::SPRITES_PER_ROW as usize);
-            let base_y = SPRITE_WIDTH * (sprite_index / SpriteSheet::SPRITES_PER_ROW as usize);
+            let base_x = SPRITE_WIDTH * (sprite_index % SpriteSheet::SPRITES_PER_ROW);
+            let base_y = SPRITE_WIDTH * (sprite_index / SpriteSheet::SPRITES_PER_ROW);
 
             for (pixel_index, c) in sprite.enumerate() {
                 let x = base_x + pixel_index % SPRITE_WIDTH;
