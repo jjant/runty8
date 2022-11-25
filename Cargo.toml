@@ -4,7 +4,6 @@ members = [
   "src/runty8-core",
   "src/runty8-run",
   "src/runty8-event-loop",
-  "src/runty8-web",
   "src/runty8-winit",
   "examples/standalone-game",
   "examples/moving-box",
