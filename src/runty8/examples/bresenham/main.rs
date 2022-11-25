@@ -84,7 +84,7 @@ fn midpoint(cx: i32, cy: i32, r: i32) -> Vec<(i32, i32)> {
         points.push((cx - y as i32, cy - x as i32));
 
         x = (x.powi(2) - 2.0 * y - 1.0).sqrt();
-        y = y + 1.0;
+        y += 1.0;
     }
     points
 }
