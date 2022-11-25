@@ -15,6 +15,7 @@ pub struct State {
     mouse_pressed: ButtonState,
 }
 
+#[allow(clippy::new_without_default)]
 impl State {
     pub fn new() -> Self {
         Self {

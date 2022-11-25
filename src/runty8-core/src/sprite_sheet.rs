@@ -15,6 +15,7 @@ impl SpriteSheet {
     }
 }
 
+#[allow(clippy::new_without_default)]
 impl SpriteSheet {
     pub const SPRITES_PER_ROW: usize = 16;
 

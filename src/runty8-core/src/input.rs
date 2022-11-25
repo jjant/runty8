@@ -11,6 +11,7 @@ pub struct Keys {
     pub mouse: Option<bool>,
 }
 
+#[allow(clippy::new_without_default)]
 impl Keys {
     pub fn new() -> Self {
         Self {
