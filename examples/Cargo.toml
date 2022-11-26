@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 runty8 = { path = "../src/runty8" }
 runty8-core = { path = "../src/runty8-core" }
-runty8-event-loop = { path = "../src/runty8-event-loop" }
 # runty8-run = { path = "../runty8-run" }
 glow = "0.11.2"
 wasm-bindgen = { version = "0.2" }
