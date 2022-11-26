@@ -46,4 +46,4 @@ jobs:
         name: Clippy
         with:
           command: clippy
-          args: --workspace --exclude=runty8-event-loop -- -D warnings
+          args: --workspace --exclude=runty8-event-loop -- -D warnings -A unknown_lints

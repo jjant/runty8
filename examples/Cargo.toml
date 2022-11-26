@@ -22,3 +22,7 @@ path = "./celeste/main.rs"
 [[bin]]
 name = "confetti"
 path = "./confetti/main.rs"
+
+[[bin]]
+name = "moving-box"
+path = "./moving-box/main.rs"
