@@ -1,7 +1,6 @@
 use std::f32::consts::{FRAC_1_SQRT_2, PI};
 
-use rand::Rng;
-use runty8::{App, Button, Pico8};
+use runty8::{rnd, App, Button, Pico8};
 
 use std::iter::{Chain, Map};
 use std::slice;
@@ -463,10 +462,6 @@ impl DeadParticle {
 struct Vec2<T> {
     x: T,
     y: T,
-}
-
-fn rnd(max: f32) -> f32 {
-    rand::thread_rng().gen_range(0.0..max)
 }
 
 impl GameState {
@@ -1784,8 +1779,9 @@ fn appr(val: f32, target: f32, amount: f32) -> f32 {
 }
 
 fn maybe() -> bool {
-    rand::thread_rng().gen()
+    rnd(1.0) > 0.5
 }
+
 fn ice_at(state: &Pico8, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
     tile_flag_at(state, room, x, y, w, h, 4)
 }
