@@ -97,197 +97,199 @@ mod gl;
 //     }
 // }
 
-pub unsafe fn event_loop<Game: App + 'static>(resources: Resources) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        console_log::init_with_level(log::Level::Debug).unwrap();
-    }
-
-    let event_loop = EventLoop::new();
-    let window_builder = WindowBuilder::new()
-        .with_inner_size(LogicalSize::new(640.0, 640.0))
-        .with_title("My pico8 game");
-    #[cfg(target_arch = "wasm32")]
-    let window = window_builder.build(&event_loop).unwrap();
-    #[cfg(not(target_arch = "wasm32"))]
-    let (gl, shader_version, window, event_loop) = {
-        let event_loop = glutin::event_loop::EventLoop::new();
-        let window_builder = glutin::window::WindowBuilder::new()
-            .with_inner_size(LogicalSize::new(640.0, 640.0))
-            .with_title("My pico8 game");
-        let window: glutin::ContextWrapper<_, _> = glutin::ContextBuilder::new()
-            .with_vsync(true)
-            .build_windowed(window_builder, &event_loop)
-            .unwrap()
-            .make_current()
-            .unwrap();
-        let gl = glow::Context::from_loader_function(|s| {
-            glutin::ContextWrapper::get_proc_address(&window, s) as *const _
-        });
-
-        (gl, "#version 410", window, event_loop)
-    };
-
-    #[cfg(target_arch = "wasm32")]
-    let (gl, shader_version) = wasm::insert_canvas_and_create_context(&window);
-
-    log_error(&gl);
-
-    let scale_factor = 1.0; // TODO
-    let mut logical_size: LogicalSize<f64> = {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            window.window()
-        }
+pub fn event_loop<Game: App + 'static>(resources: Resources) {
+    unsafe {
         #[cfg(target_arch = "wasm32")]
         {
-            &window
+            std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+            console_log::init_with_level(log::Level::Debug).unwrap();
         }
-    }
-    .inner_size()
-    .to_logical(scale_factor);
 
-    let vertex_array = gl
-        .create_vertex_array()
-        .expect("Cannot create vertex array");
-    log_error(&gl);
-
-    gl.bind_vertex_array(Some(vertex_array));
-    log_error(&gl);
-
-    gl.clear_color(0.1, 0.2, 0.3, 1.0);
-    log_error(&gl);
-    let program = gl::make_program(&gl, shader_version);
-    gl.use_program(Some(program));
-    log_error(&gl);
-    let texture = gl::make_texture(&gl);
-    gl::use_texture(&gl, program);
-
-    let mut pico8 = Pico8::new(resources);
-    let mut game = Game::init(&mut pico8);
-    gl::upload_pixels(&gl, texture, pico8.draw_data.buffer());
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        event_loop.run(move |event, _, control_flow| {
-            println!("{:?}", event);
-            // *control_flow = ControlFlow::Wait;
-            // let event = crate::Event::translate_event(
-            //     &event,
-            //     scale_factor,
-            //     &mut logical_size,
-            //     control_flow,
-            // );
-            // if let Some(event) = event {
-            //     match event {
-            //         crate::Event::Tick { .. } => {
-            //             game.update(&mut pico8);
-            //             game.draw(&mut pico8);
-            //         }
-            //         _ => {}
-            //     }
-            // };
-            //
-            // if let Some(_new_title) = pico8.take_new_title() {
-            //     // display.gl_window().window().set_title(&new_title);
-            // }
-
-            match event {
-                winit::event::Event::LoopDestroyed => {
-                    return;
-                }
-                winit::event::Event::MainEventsCleared => {
-                    window.window().request_redraw();
-                }
-                winit::event::Event::RedrawRequested(_) => {
-                    // gl.clear(glow::COLOR_BUFFER_BIT);
-                    // gl.draw_arrays(glow::TRIANGLES, 0, 3);
-                    // window.swap_buffers().unwrap();
-                    // // Actually draw stuff!
-                    game.update(&mut pico8);
-                    game.draw(&mut pico8);
-                    draw_glutin(&window, &gl, texture, &pico8);
-                }
-                winit::event::Event::WindowEvent { ref event, .. } => match event {
-                    winit::event::WindowEvent::Resized(physical_size) => {
-                        window.resize(*physical_size);
-                    }
-                    winit::event::WindowEvent::CloseRequested => {
-                        gl.delete_program(program);
-                        log_error(&gl);
-                        // gl.delete_vertex_array(vertex_array);
-                        log_error(&gl);
-                        *control_flow = ControlFlow::Exit
-                    }
-                    _ => (),
-                },
-                _ => (),
-            }
-        });
-    }
-
-    let keys = Arc::new(Mutex::new(Keys::new()));
-    #[cfg(target_arch = "wasm32")]
-    let (_log_list, _runty8_log_list) = wasm::create_log_list();
-    #[cfg(target_arch = "wasm32")]
-    wasm::create_touch_controls(
-        &web_sys::window()
-            .unwrap()
-            .document()
-            .unwrap()
-            .body()
-            .unwrap(),
-        Arc::clone(&keys),
-    );
-    let keys = Arc::clone(&keys);
-    #[cfg(target_arch = "wasm32")]
-    event_loop.run(move |winit_event, _, control_flow| {
-        // log::debug!("Winit event {:?}", winit_event);
-        // wasm::log_event(&log_list, &winit_event);
-
-        let event: Option<Event> =
-            Event::from_winit(&winit_event, scale_factor, &mut logical_size, &mut || {
-                set_next_timer(control_flow)
+        let event_loop = EventLoop::new();
+        let window_builder = WindowBuilder::new()
+            .with_inner_size(LogicalSize::new(640.0, 640.0))
+            .with_title("My pico8 game");
+        #[cfg(target_arch = "wasm32")]
+        let window = window_builder.build(&event_loop).unwrap();
+        #[cfg(not(target_arch = "wasm32"))]
+        let (gl, shader_version, window, event_loop) = {
+            let event_loop = glutin::event_loop::EventLoop::new();
+            let window_builder = glutin::window::WindowBuilder::new()
+                .with_inner_size(LogicalSize::new(640.0, 640.0))
+                .with_title("My pico8 game");
+            let window: glutin::ContextWrapper<_, _> = glutin::ContextBuilder::new()
+                .with_vsync(true)
+                .build_windowed(window_builder, &event_loop)
+                .unwrap()
+                .make_current()
+                .unwrap();
+            let gl = glow::Context::from_loader_function(|s| {
+                glutin::ContextWrapper::get_proc_address(&window, s) as *const _
             });
 
-        if let Some(event) = event {
-            // wasm::log_runty8_event(&runty8_log_list, &event);
-
-            // log::debug!("{:?}", pico8.state);
-
-            match event {
-                Event::Tick { .. } => {
-                    let keys = keys.lock().unwrap();
-                    pico8.state.update_keys(&keys);
-                    game.update(&mut pico8);
-                    game.draw(&mut pico8);
-                }
-
-                Event::Keyboard(event) => {
-                    let mut keys = keys.lock().unwrap();
-                    keys.on_event(event);
-                }
-                Event::Mouse(MouseEvent::Move { x, y }) => pico8.state.on_mouse_move(x, y),
-                Event::Mouse(MouseEvent::Down(MouseButton::Left)) => {
-                    let mut keys = keys.lock().unwrap();
-                    keys.mouse = Some(true);
-                }
-                Event::Mouse(MouseEvent::Up(MouseButton::Left)) => {
-                    let mut keys = keys.lock().unwrap();
-                    keys.mouse = Some(false);
-                }
-                _ => {}
-            }
+            (gl, "#version 410", window, event_loop)
         };
 
-        if let Some(_new_title) = pico8.take_new_title() {
-            // display.gl_window().window().set_title(&new_title);
+        #[cfg(target_arch = "wasm32")]
+        let (gl, shader_version) = wasm::insert_canvas_and_create_context(&window);
+
+        log_error(&gl);
+
+        let scale_factor = 1.0; // TODO
+        let mut logical_size: LogicalSize<f64> = {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                window.window()
+            }
+            #[cfg(target_arch = "wasm32")]
+            {
+                &window
+            }
+        }
+        .inner_size()
+        .to_logical(scale_factor);
+
+        let vertex_array = gl
+            .create_vertex_array()
+            .expect("Cannot create vertex array");
+        log_error(&gl);
+
+        gl.bind_vertex_array(Some(vertex_array));
+        log_error(&gl);
+
+        gl.clear_color(0.1, 0.2, 0.3, 1.0);
+        log_error(&gl);
+        let program = gl::make_program(&gl, shader_version);
+        gl.use_program(Some(program));
+        log_error(&gl);
+        let texture = gl::make_texture(&gl);
+        gl::use_texture(&gl, program);
+
+        let mut pico8 = Pico8::new(resources);
+        let mut game = Game::init(&mut pico8);
+        gl::upload_pixels(&gl, texture, pico8.draw_data.buffer());
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            event_loop.run(move |event, _, control_flow| {
+                println!("{:?}", event);
+                // *control_flow = ControlFlow::Wait;
+                // let event = crate::Event::translate_event(
+                //     &event,
+                //     scale_factor,
+                //     &mut logical_size,
+                //     control_flow,
+                // );
+                // if let Some(event) = event {
+                //     match event {
+                //         crate::Event::Tick { .. } => {
+                //             game.update(&mut pico8);
+                //             game.draw(&mut pico8);
+                //         }
+                //         _ => {}
+                //     }
+                // };
+                //
+                // if let Some(_new_title) = pico8.take_new_title() {
+                //     // display.gl_window().window().set_title(&new_title);
+                // }
+
+                match event {
+                    winit::event::Event::LoopDestroyed => {
+                        return;
+                    }
+                    winit::event::Event::MainEventsCleared => {
+                        window.window().request_redraw();
+                    }
+                    winit::event::Event::RedrawRequested(_) => {
+                        // gl.clear(glow::COLOR_BUFFER_BIT);
+                        // gl.draw_arrays(glow::TRIANGLES, 0, 3);
+                        // window.swap_buffers().unwrap();
+                        // // Actually draw stuff!
+                        game.update(&mut pico8);
+                        game.draw(&mut pico8);
+                        draw_glutin(&window, &gl, texture, &pico8);
+                    }
+                    winit::event::Event::WindowEvent { ref event, .. } => match event {
+                        winit::event::WindowEvent::Resized(physical_size) => {
+                            window.resize(*physical_size);
+                        }
+                        winit::event::WindowEvent::CloseRequested => {
+                            gl.delete_program(program);
+                            log_error(&gl);
+                            // gl.delete_vertex_array(vertex_array);
+                            log_error(&gl);
+                            *control_flow = ControlFlow::Exit
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            });
         }
 
-        // Actually draw stuff!
-        draw(&gl, texture, &pico8);
-    });
+        let keys = Arc::new(Mutex::new(Keys::new()));
+        #[cfg(target_arch = "wasm32")]
+        let (_log_list, _runty8_log_list) = wasm::create_log_list();
+        #[cfg(target_arch = "wasm32")]
+        wasm::create_touch_controls(
+            &web_sys::window()
+                .unwrap()
+                .document()
+                .unwrap()
+                .body()
+                .unwrap(),
+            Arc::clone(&keys),
+        );
+        let keys = Arc::clone(&keys);
+        #[cfg(target_arch = "wasm32")]
+        event_loop.run(move |winit_event, _, control_flow| {
+            // log::debug!("Winit event {:?}", winit_event);
+            // wasm::log_event(&log_list, &winit_event);
+
+            let event: Option<Event> =
+                Event::from_winit(&winit_event, scale_factor, &mut logical_size, &mut || {
+                    set_next_timer(control_flow)
+                });
+
+            if let Some(event) = event {
+                // wasm::log_runty8_event(&runty8_log_list, &event);
+
+                // log::debug!("{:?}", pico8.state);
+
+                match event {
+                    Event::Tick { .. } => {
+                        let keys = keys.lock().unwrap();
+                        pico8.state.update_keys(&keys);
+                        game.update(&mut pico8);
+                        game.draw(&mut pico8);
+                    }
+
+                    Event::Keyboard(event) => {
+                        let mut keys = keys.lock().unwrap();
+                        keys.on_event(event);
+                    }
+                    Event::Mouse(MouseEvent::Move { x, y }) => pico8.state.on_mouse_move(x, y),
+                    Event::Mouse(MouseEvent::Down(MouseButton::Left)) => {
+                        let mut keys = keys.lock().unwrap();
+                        keys.mouse = Some(true);
+                    }
+                    Event::Mouse(MouseEvent::Up(MouseButton::Left)) => {
+                        let mut keys = keys.lock().unwrap();
+                        keys.mouse = Some(false);
+                    }
+                    _ => {}
+                }
+            };
+
+            if let Some(_new_title) = pico8.take_new_title() {
+                // display.gl_window().window().set_title(&new_title);
+            }
+
+            // Actually draw stuff!
+            draw(&gl, texture, &pico8);
+        });
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -304,13 +306,13 @@ unsafe fn draw_glutin<B>(
 unsafe fn draw(gl: &glow::Context, texture: glow::Texture, pico8: &Pico8) {
     println!("Buf len {}", pico8.draw_data.buffer().len());
     gl::upload_pixels(gl, texture, pico8.draw_data.buffer());
-    log_error(&gl);
+    log_error(gl);
 
     gl.clear(glow::COLOR_BUFFER_BIT);
-    log_error(&gl);
+    log_error(gl);
 
     gl.draw_arrays(glow::TRIANGLES, 0, 6);
-    log_error(&gl);
+    log_error(gl);
 }
 
 // fn create_gl_context_and_window(window: &winit::window::Window) -> glow::Context {
@@ -382,7 +384,7 @@ mod wasm {
         key_state: KeyState,
         keys: Arc<Mutex<Keys>>,
     ) -> Closure<dyn FnMut()> {
-        let update_keys_fn = Closure::<dyn FnMut()>::new(move || {
+        Closure::<dyn FnMut()>::new(move || {
             let mut keys = keys.lock().unwrap();
 
             let event = runty8_core::KeyboardEvent {
@@ -392,9 +394,7 @@ mod wasm {
             log::debug!("{:?}", event);
 
             keys.on_event(event);
-        });
-
-        update_keys_fn
+        })
     }
 
     pub(super) fn insert_canvas_and_create_context(
