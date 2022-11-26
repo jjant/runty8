@@ -728,6 +728,7 @@ impl Player {
                     ));
                 } else {
                     // -- wall jump
+                    #[allow(clippy::bool_to_int_with_if)]
                     let wall_dir = if this.is_solid(state, objects, room, -3, 0) {
                         -1
                     } else if this.is_solid(state, objects, room, 3, 0) {
@@ -2382,6 +2383,7 @@ fn horizontal_input(state: &Pico8) -> i32 {
 }
 
 fn vertical_input(state: &Pico8) -> i32 {
+    #[allow(clippy::bool_to_int_with_if)]
     if state.btn(K_UP) {
         -1
     } else if state.btn(K_DOWN) {
