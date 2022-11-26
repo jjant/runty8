@@ -35,7 +35,7 @@ impl Editor {
     pub(crate) fn update(&mut self, msg: Msg) {
         match msg {
             Msg::ColorSelected(selected_color) => {
-                self.selected_color = selected_color as u8;
+                self.selected_color = selected_color;
             }
         }
     }

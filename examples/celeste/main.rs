@@ -1183,7 +1183,7 @@ struct Object {
 
 fn got_fruit_for_room(got_fruit: &[bool], room: Vec2<i32>) -> bool {
     *got_fruit
-        .get(1 + level_index(room) as usize)
+        .get(1 + level_index(room))
         .unwrap_or(&false)
 }
 
@@ -1350,13 +1350,13 @@ impl Object {
 
         // [x] get move amount
         self.base_object.rem.x += ox;
-        let amount_x = (self.base_object.rem.x as f32 + 0.5).floor();
+        let amount_x = (self.base_object.rem.x + 0.5).floor();
         self.base_object.rem.x -= amount_x;
         self.move_x(state, objects, room, amount_x as i32, 0);
 
         // [y] get move amount
         self.base_object.rem.y += oy;
-        let amount_y = (self.base_object.rem.y as f32 + 0.5).floor();
+        let amount_y = (self.base_object.rem.y + 0.5).floor();
         self.base_object.rem.y -= amount_y;
         self.move_y(state, objects, room, amount_y as i32);
     }
@@ -1932,7 +1932,7 @@ impl Fruit {
             player.djump = max_djump;
             // sfx_timer=20
             // sfx(13)
-            got_fruit[level_index(room) as usize] = true;
+            got_fruit[level_index(room)] = true;
 
             UpdateAction::noop().destroy().push(Object::init(
                 got_fruit,

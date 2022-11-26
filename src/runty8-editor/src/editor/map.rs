@@ -95,8 +95,8 @@ impl Editor {
 
                     let Vec2i { x, y } = tile_position(camera, col_index, row_index) + vec2(x, y);
                     Button::new(
-                        x as i32,
-                        y as i32,
+                        x,
+                        y,
                         8,
                         8,
                         Some(on_tile_click(col_index, row_index)),
@@ -136,10 +136,10 @@ pub(crate) enum Msg {
 fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(tile_position: Vec2i) -> Element<'a, Msg> {
     DrawFn::new(move |draw| {
         draw.rect(
-            tile_position.x as i32,
-            tile_position.y as i32,
-            (tile_position.x + 7) as i32,
-            (tile_position.y + 7) as i32,
+            tile_position.x,
+            tile_position.y,
+            tile_position.x + 7,
+            tile_position.y + 7,
             7,
         )
     })
