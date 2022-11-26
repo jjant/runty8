@@ -40,7 +40,7 @@ jobs:
         name: Format
         with:
           command: fmt
-          args: --workspace --exclude=runty8-event-loop -- --check
+          args: --all -- --check
 
       - uses: actions-rs/cargo@v1
         name: Clippy
