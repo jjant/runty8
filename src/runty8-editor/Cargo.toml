@@ -1,0 +1,12 @@
+[package]
+name = "runty8-editor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+runty8-core = { path = "../runty8-core" }
+runty8-winit = { path = "../runty8-winit" }
+itertools = "*"
+rand = "*"
+winit = "0.26"
+glium = "0.31"
