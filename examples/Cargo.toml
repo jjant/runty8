@@ -18,3 +18,7 @@ instant = { version = "0.1", features = ["wasm-bindgen"] }
 [[bin]]
 name = "celeste"
 path = "./celeste/main.rs"
+
+[[bin]]
+name = "confetti"
+path = "./confetti/main.rs"
