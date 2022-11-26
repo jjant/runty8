@@ -40,10 +40,10 @@ impl Editor {
         }
     }
 
-    pub(crate) fn view<'a, 'b>(
+    pub(crate) fn view<'a>(
         &'a mut self,
         selected_sprite_flags: u8,
-        selected_sprite: &'b Sprite,
+        selected_sprite: &Sprite,
         editor_sprites: &'a SpriteSheet,
         brush_size: BrushSize,
         to_editor_msg: &(impl Fn(Msg) -> super::Msg + Copy),
@@ -216,12 +216,12 @@ fn flags<'a>(
     Tree::with_children(children).into()
 }
 
-fn canvas_view<'a, 'b>(
+fn canvas_view<'a>(
     x: i32,
     y: i32,
     selected_color: Color,
     pixel_buttons: &'a mut [button::State],
-    sprite: &'b Sprite,
+    sprite: &Sprite,
 ) -> Element<'a, super::Msg> {
     let mut elements = vec![];
 
