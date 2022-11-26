@@ -1,5 +1,5 @@
 [package]
-name = "runty8"
+name = "runty8-runtime"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 runty8-core = { path = "../runty8-core" }
-runty8-editor = { path = "../runty8-editor" }
-runty8-runtime = { path = "../runty8-runtime" }
+runty8-winit = { path = "../runty8-winit" }
+winit = "0.26"
+glium = "0.31"
