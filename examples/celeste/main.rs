@@ -1182,9 +1182,7 @@ struct Object {
 }
 
 fn got_fruit_for_room(got_fruit: &[bool], room: Vec2<i32>) -> bool {
-    *got_fruit
-        .get(1 + level_index(room))
-        .unwrap_or(&false)
+    *got_fruit.get(1 + level_index(room)).unwrap_or(&false)
 }
 
 impl Object {
