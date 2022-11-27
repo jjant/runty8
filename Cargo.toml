@@ -6,13 +6,5 @@ members = [
   "src/runty8-editor",
   "src/runty8-event-loop",
   "src/runty8-winit",
-  # "examples/standalone-game",
-  # "examples/moving-box",
   "examples",
-  # "examples/bresenham",
-  # "examples/celeste",
-  # "examples/confetti",
-  # "examples/stress_lines",
 ]
-
-# default-members = ["src/runty8"]
