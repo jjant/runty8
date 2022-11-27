@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 runty8 = { path = "../src/runty8" }
-runty8-runtime = { path = "../src/runty8-runtime" }
+runty8-core = { path = "../src/runty8-core" }
 glow = "0.11.2"
 wasm-bindgen = { version = "0.2" }
 web-sys = { version = "0.3", features = ["HtmlCanvasElement", "WebGl2RenderingContext", "Window", "console", "Document"]}
@@ -13,6 +13,9 @@ winit = "0.26"
 log = "0.4"
 console_log = "0.2"
 instant = { version = "0.1", features = ["wasm-bindgen"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+runty8-event-loop = { path = "../src/runty8-event-loop" }
 
 [[bin]]
 name = "celeste"
@@ -25,3 +28,11 @@ path = "./confetti/main.rs"
 [[bin]]
 name = "moving-box"
 path = "./moving-box/main.rs"
+
+[[bin]]
+name = "bresenham"
+path = "./bresenham/main.rs"
+
+[[bin]]
+name = "stress_lines"
+path = "./stress_lines/main.rs"

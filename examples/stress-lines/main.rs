@@ -1,8 +1,11 @@
 use runty8::{App, Button, Pico8};
 
 fn main() {
-    runty8::run_app::<StressLines>("examples/stress_lines".to_owned()).unwrap();
+    let resources = runty8::load_runtime_assets("examples/stress_lines".to_owned()).unwrap();
+
+    runty8::debug_run::<StressLines>(resources).unwrap();
 }
+
 struct StressLines {
     mouse: MouseState,
 }
