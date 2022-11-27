@@ -7,5 +7,7 @@ edition = "2021"
 
 [dependencies]
 runty8-core = { path = "../runty8-core" }
-runty8-editor = { path = "../runty8-editor" }
 runty8-runtime = { path = "../runty8-runtime" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+runty8-editor = { path = "../runty8-editor" }
