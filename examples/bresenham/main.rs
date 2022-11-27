@@ -1,7 +1,9 @@
-use runty8::{self, App, Button, Pico8};
+use runty8::{App, Button, Pico8};
 
 fn main() {
-    runty8::run_app::<MyThing>("examples/bresenham".to_owned()).unwrap();
+    let resources = runty8::load_runtime_assets("examples/bresenham".to_string()).unwrap();
+
+    runty8::debug_run::<MyThing>(resources).unwrap();
 }
 
 struct MyThing {

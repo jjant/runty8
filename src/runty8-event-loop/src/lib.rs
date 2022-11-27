@@ -1,101 +1,114 @@
 use glow::HasContext;
-use runty8_core::{App, Event, Input, MouseButton, MouseEvent, Pico8, Resources};
-use runty8_winit::Runty8EventExt;
+use runty8_core::{
+    App, Event, Input, InputEvent, KeyState, KeyboardEvent, MouseButton, MouseEvent, Pico8,
+    Resources,
+};
+use runty8_winit::{Runty8KeyStateExt, Runty8KeyboardEventExt};
 use std::sync::{Arc, Mutex};
 use winit::{
-    dpi::LogicalSize,
+    dpi::{LogicalPosition, LogicalSize},
+    event::ElementState,
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 mod gl;
 
-// impl Event {
-//     /// Translates a winit::event::Event into a runty8 Event.
-//     fn translate_event(
-//         winit_event: &winit::event::Event<()>,
-//         hidpi_factor: f64,
-//         window_size: &mut LogicalSize<f64>,
-//         control_flow: &mut ControlFlow,
-//     ) -> Option<Event> {
-//         match winit_event {
-//             winit::event::Event::RedrawRequested(_) =>
-//             /* Some(Self::Tick {
-//                 delta_millis: 16.6666,
-//             }) */
-//             {
-//                 None
-//             }
-//             winit::event::Event::WindowEvent { event, .. } => match event {
-//                 winit::event::WindowEvent::CloseRequested => {
-//                     *control_flow = ControlFlow::Exit;
-//
-//                     None
-//                 }
-//                 // TODO: Force aspect ratio on resize.
-//                 &winit::event::WindowEvent::Resized(new_size) => {
-//                     let new_size: LogicalSize<f64> = new_size.to_logical(hidpi_factor);
-//
-//                     *window_size = new_size;
-//
-//                     None
-//                 }
-//                 winit::event::WindowEvent::CursorMoved { position, .. } => {
-//                     let logical_mouse: LogicalPosition<f64> = position.to_logical(hidpi_factor);
-//
-//                     Some(Event::Mouse(MouseEvent::Move {
-//                         x: (logical_mouse.x / window_size.width * 128.).floor() as i32,
-//                         y: (logical_mouse.y / window_size.height * 128.).floor() as i32,
-//                     }))
-//                 }
-//                 winit::event::WindowEvent::MouseInput {
-//                     button: winit::event::MouseButton::Left,
-//                     state: input_state,
-//                     ..
-//                 } => {
-//                     let mouse_event = match input_state {
-//                         ElementState::Pressed => MouseEvent::Down(MouseButton::Left),
-//                         ElementState::Released => MouseEvent::Up(MouseButton::Left),
-//                     };
-//
-//                     Some(Event::Mouse(mouse_event))
-//                 }
-//                 winit::event::WindowEvent::KeyboardInput { input, .. } => {
-//                     KeyboardEvent::from_winit(*input).map(Event::Keyboard)
-//                 }
-//                 _ => None,
-//             },
-//             winit::event::Event::NewEvents(cause) => match cause {
-//                 winit::event::StartCause::ResumeTimeReached {
-//                     start,
-//                     requested_resume,
-//                 } => {
-//                     // set_next_timer(control_flow);
-//
-//                     log::debug!("{:?} {:?}", start, requested_resume);
-//                     // let delta: Result<i32, _> = requested_resume
-//                     //     .duration_since(*start)
-//                     //     .as_millis()
-//                     //     .try_into();
-//                     //
-//                     *control_flow = ControlFlow::Poll;
-//                     Some(Event::Tick {
-//                         delta_millis: 16.666,
-//                     })
-//                 }
-//                 winit::event::StartCause::Init => {
-//                     // set_next_timer(control_flow);
-//
-//                     None
-//                 }
-//                 winit::event::StartCause::Poll => Some(Event::Tick {
-//                     delta_millis: 16.6666,
-//                 }),
-//                 _ => None,
-//             },
-//             _ => None,
-//         }
-//     }
-// }
+const LOG_TO_DOM: bool = false;
+
+pub trait Runty8EventExt: Sized {
+    fn from_winit(
+        event: &winit::event::Event<()>,
+        hidpi_factor: f64,
+        window_size: &mut LogicalSize<f64>,
+        control_flow: &mut ControlFlow,
+    ) -> Option<Self>;
+}
+
+impl Runty8EventExt for Event {
+    fn from_winit(
+        winit_event: &winit::event::Event<()>,
+        hidpi_factor: f64,
+        window_size: &mut LogicalSize<f64>,
+        control_flow: &mut ControlFlow,
+    ) -> Option<Event> {
+        match winit_event {
+            winit::event::Event::RedrawRequested(_) =>
+            /* Some(Self::Tick {
+                delta_millis: 16.6666,
+            }) */
+            {
+                None
+            }
+            winit::event::Event::WindowEvent { event, .. } => match event {
+                winit::event::WindowEvent::CloseRequested => {
+                    *control_flow = ControlFlow::Exit;
+
+                    None
+                }
+                // TODO: Force aspect ratio on resize.
+                &winit::event::WindowEvent::Resized(new_size) => {
+                    let new_size: LogicalSize<f64> = new_size.to_logical(hidpi_factor);
+
+                    *window_size = new_size;
+
+                    None
+                }
+                winit::event::WindowEvent::CursorMoved { position, .. } => {
+                    let logical_mouse: LogicalPosition<f64> = position.to_logical(hidpi_factor);
+
+                    Some(Event::Input(InputEvent::Mouse(MouseEvent::Move {
+                        x: (logical_mouse.x / window_size.width * 128.).floor() as i32,
+                        y: (logical_mouse.y / window_size.height * 128.).floor() as i32,
+                    })))
+                }
+                winit::event::WindowEvent::MouseInput {
+                    button: winit::event::MouseButton::Left,
+                    state: input_state,
+                    ..
+                } => Some(Event::Input(InputEvent::Mouse(MouseEvent::Button {
+                    button: MouseButton::Left,
+                    state: KeyState::from_state(*input_state),
+                }))),
+                winit::event::WindowEvent::KeyboardInput { input, .. } => {
+                    KeyboardEvent::from_winit(*input)
+                        .map(InputEvent::Keyboard)
+                        .map(Event::Input)
+                }
+                _ => None,
+            },
+            winit::event::Event::NewEvents(cause) => match cause {
+                winit::event::StartCause::ResumeTimeReached {
+                    start,
+                    requested_resume,
+                } => {
+                    // set_next_timer(control_flow);
+
+                    // log::debug!("{:?} {:?}", start, requested_resume);
+                    // let delta: result<i32, _> = requested_resume
+                    //     .duration_since(*start)
+                    //     .as_millis()
+                    //     .try_into();
+                    //
+
+                    Some(Event::Tick {
+                        delta_millis: 16.666,
+                    })
+                }
+                winit::event::StartCause::Init => {
+                    log::debug!("Got init");
+                    Some(Event::Tick {
+                        delta_millis: 16.6666,
+                    })
+                }
+                winit::event::StartCause::Poll => Some(Event::Tick {
+                    delta_millis: 16.6666,
+                }),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+}
 
 pub fn event_loop<Game: App + 'static>(resources: Resources) {
     unsafe {
@@ -230,53 +243,61 @@ pub fn event_loop<Game: App + 'static>(resources: Resources) {
 
         let keys = Arc::new(Mutex::new(Input::new()));
         #[cfg(target_arch = "wasm32")]
-        let (_log_list, _runty8_log_list) = wasm::create_log_list();
-        #[cfg(target_arch = "wasm32")]
-        wasm::create_touch_controls(
-            &web_sys::window()
-                .unwrap()
-                .document()
-                .unwrap()
-                .body()
-                .unwrap(),
-            Arc::clone(&keys),
-        );
+        let (log_list, runty8_log_list) = wasm::create_log_list();
+        // #[cfg(target_arch = "wasm32")]
+        // wasm::create_touch_controls(
+        //     &web_sys::window()
+        //         .unwrap()
+        //         .document()
+        //         .unwrap()
+        //         .body()
+        //         .unwrap(),
+        //     Arc::clone(&keys),
+        // );
         let keys = Arc::clone(&keys);
+
+        let mut now = instant::Instant::now();
         #[cfg(target_arch = "wasm32")]
         event_loop.run(move |winit_event, _, control_flow| {
+            // *control_flow = ControlFlow::Wait;
+
             // log::debug!("Winit event {:?}", winit_event);
-            // wasm::log_event(&log_list, &winit_event);
+            if LOG_TO_DOM {
+                wasm::log_event(&log_list, &winit_event);
+            }
 
             let event: Option<Event> =
-                Event::from_winit(&winit_event, scale_factor, &mut logical_size, &mut || {
-                    set_next_timer(control_flow)
-                });
+                Event::from_winit(&winit_event, scale_factor, &mut logical_size, control_flow);
 
             if let Some(event) = event {
-                // wasm::log_runty8_event(&runty8_log_list, &event);
+                if LOG_TO_DOM {
+                    wasm::log_runty8_event(&runty8_log_list, &event);
+                }
 
                 // log::debug!("{:?}", pico8.state);
 
                 match event {
-                    Event::Tick { .. } => {
+                    Event::Tick { delta_millis } => {
+                        let now_ = instant::Instant::now();
+                        log::debug!(" Duration {:?}", now_.duration_since(now));
+                        now = now_;
+
                         let keys = keys.lock().unwrap();
-                        pico8.state.update_keys(&keys);
+                        pico8.state.update_input(&keys);
                         game.update(&mut pico8);
                         game.draw(&mut pico8);
+                        // Actually draw stuff!
+                        draw(&gl, texture, &pico8);
+                        // *control_flow = ControlFlow::WaitUntil(
+                        //     instant::Instant::now() + instant::Duration::from_micros(10),
+                        // );
+                        *control_flow = ControlFlow::Poll;
                     }
 
-                    Event::Keyboard(event) => {
+                    Event::Input(event) => {
+                        let event: InputEvent = event;
                         let mut keys = keys.lock().unwrap();
                         keys.on_event(event);
-                    }
-                    Event::Mouse(MouseEvent::Move { x, y }) => pico8.state.on_mouse_move(x, y),
-                    Event::Mouse(MouseEvent::Down(MouseButton::Left)) => {
-                        let mut keys = keys.lock().unwrap();
-                        keys.mouse = Some(true);
-                    }
-                    Event::Mouse(MouseEvent::Up(MouseButton::Left)) => {
-                        let mut keys = keys.lock().unwrap();
-                        keys.mouse = Some(false);
                     }
                     _ => {}
                 }
@@ -285,9 +306,6 @@ pub fn event_loop<Game: App + 'static>(resources: Resources) {
             if let Some(_new_title) = pico8.take_new_title() {
                 // display.gl_window().window().set_title(&new_title);
             }
-
-            // Actually draw stuff!
-            draw(&gl, texture, &pico8);
         });
     }
 }
@@ -330,7 +348,7 @@ unsafe fn draw(gl: &glow::Context, texture: glow::Texture, pico8: &Pico8) {
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    use runty8_core::Input;
+    use runty8_core::{Input, InputEvent};
     use runty8_core::{Key, KeyState};
     use std::sync::{Arc, Mutex};
     use wasm_bindgen::closure::Closure;
@@ -393,7 +411,7 @@ mod wasm {
             };
             log::debug!("{:?}", event);
 
-            keys.on_event(event);
+            keys.on_event(InputEvent::Keyboard(event));
         })
     }
 
@@ -466,7 +484,8 @@ mod wasm {
 
     #[allow(dead_code)]
     pub(super) fn log_event(log_list: &web_sys::Element, event: &winit::event::Event<()>) {
-        if let winit::event::Event::WindowEvent { event, .. } = &event {
+        // if let winit::event::Event::WindowEvent { event, .. } = &event {
+        {
             let window = web_sys::window().unwrap();
             let document = window.document().unwrap();
             let log = document.create_element("li").unwrap();
@@ -482,9 +501,6 @@ mod wasm {
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
         let log = document.create_element("li").unwrap();
-        if let crate::Event::Tick { .. } = event {
-            return;
-        }
         log.set_text_content(Some(&format!("{:?}", event)));
         log_list
             .insert_before(&log, log_list.first_child().as_ref())
@@ -497,10 +513,10 @@ fn set_next_timer(control_flow: &mut ControlFlow) {
     let fps = 30_u64;
     let nanoseconds_per_frame = 1_000_000_000 / fps;
 
-    let next_frame_time =
-        instant::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
-    log::debug!("{:?}", next_frame_time);
-    *control_flow = ControlFlow::WaitUntil(next_frame_time);
+    // let next_frame_time =
+    //     instant::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
+    // log::debug!("{:?}", next_frame_time);
+    // *control_flow = ControlFlow::WaitUntil(next_frame_time);
     *control_flow = ControlFlow::Poll;
 }
 

@@ -34,5 +34,5 @@ name = "bresenham"
 path = "./bresenham/main.rs"
 
 [[bin]]
-name = "stress_lines"
-path = "./stress_lines/main.rs"
+name = "stress-lines"
+path = "./stress-lines/main.rs"

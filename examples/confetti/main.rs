@@ -1,7 +1,8 @@
 use runty8::{App, Button, Pico8};
 
 fn main() {
-    runty8::run::<Confetti>("examples/confetti".to_owned()).unwrap();
+    let resources = runty8::load_runtime_assets("examples/celeste".to_owned()).unwrap();
+    runty8::debug_run::<Confetti>(resources).unwrap();
 }
 
 struct Confetti {

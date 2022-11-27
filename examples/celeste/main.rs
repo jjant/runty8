@@ -1,4 +1,3 @@
-use runty8_runtime::load_assets;
 use std::f32::consts::{FRAC_1_SQRT_2, PI};
 
 use runty8::{rnd, App, Button, Pico8};
@@ -7,10 +6,16 @@ use std::iter::{Chain, Map};
 use std::slice;
 
 fn main() {
-    // runty8::run_app::<GameState>("examples/celeste".to_owned()).unwrap();
-    let resources = load_assets!("./");
-
-    runty8_runtime::run_internal::<GameState>(resources).unwrap();
+    #[cfg(target_arch = "wasm32")]
+    {
+        let resources = runty8::load_assets!("./");
+        runty8_event_loop::event_loop::<GameState>(resources);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let resources = runty8::load_runtime_assets("examples/celeste".to_owned()).unwrap();
+        runty8::debug_run::<GameState>(resources).unwrap();
+    }
 }
 
 struct GameState {

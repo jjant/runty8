@@ -1,19 +1,8 @@
 use runty8::{App, Button, Pico8};
-use runty8_runtime::load_assets;
 
 fn main() {
-    let resources = load_assets!("./");
-
-    runty8_runtime::run_internal::<ExampleApp>(resources).unwrap();
-    // runty8::debug_run::<ExampleApp>("examples/moving-box".to_owned()).unwrap();
-    // unsafe {
-    //     runty8_event_loop::event_loop::<ExampleApp>(Resources {
-    //         assets_path: "moving-box/assets".to_owned(),
-    //         map: Map::new(),
-    //         sprite_flags: Flags::new(),
-    //         sprite_sheet: SpriteSheet::new(),
-    //     });
-    // }
+    let resources = runty8::load_runtime_assets("examples/moving-box".to_string()).unwrap();
+    runty8::debug_run::<ExampleApp>(resources).unwrap();
 }
 
 pub struct ExampleApp {

@@ -1,66 +1,12 @@
-use runty8_core::{App, Event, Flags, Input, Map, Pico8, Resources, SpriteSheet};
+use runty8_core::{App, Event, Input, Pico8, Resources};
 use winit::event_loop::ControlFlow;
-
-fn create_directory(_assets_path: &str) -> std::io::Result<()> {
-    Ok(())
-}
-
-fn create_map(_assets_path: &str) -> Map {
-    Map::new()
-}
-
-fn create_sprite_flags(_assets_path: &str) -> Flags {
-    Flags::new()
-}
-
-fn create_sprite_sheet(_assets_path: &str) -> SpriteSheet {
-    SpriteSheet::new()
-}
 
 // Needed for the macro below
 #[doc(hidden)]
 pub use runty8_core;
 
-#[macro_export]
-macro_rules! load_assets {
-    ($path:tt) => {{
-        static MAP_BYTES: &str = include_str!(concat!($path, "/map.txt"));
-        static FLAGS_BYTES: &str = include_str!(concat!($path, "/sprite_flags.txt"));
-        static SPRITE_SHEET_BYTES: &str = include_str!(concat!($path, "/sprite_sheet.txt"));
-
-        let map = $crate::runty8_core::Map::deserialize(MAP_BYTES).unwrap();
-        let sprite_flags = $crate::runty8_core::Flags::deserialize(FLAGS_BYTES).unwrap();
-        let sprite_sheet =
-            $crate::runty8_core::SpriteSheet::deserialize(SPRITE_SHEET_BYTES).unwrap();
-
-        $crate::runty8_core::Resources {
-            map,
-            sprite_flags,
-            sprite_sheet,
-            assets_path: $path.to_owned(),
-        }
-    }};
-}
-
-pub fn run<Game: App + 'static>(assets_path: String) -> std::io::Result<()> {
-    create_directory(&assets_path)?;
-
-    let map: Map = create_map(&assets_path);
-    let sprite_flags: Flags = create_sprite_flags(&assets_path);
-    let sprite_sheet = create_sprite_sheet(&assets_path);
-
-    let resources = Resources {
-        assets_path,
-        sprite_sheet,
-        sprite_flags,
-        map,
-    };
-
-    run_internal::<Game>(resources)
-}
-
 /// Runs a standalone Runty8 game.
-pub fn run_internal<Game: App + 'static>(resources: Resources) -> std::io::Result<()> {
+pub fn run<Game: App + 'static>(resources: Resources) -> std::io::Result<()> {
     let mut pico8 = Pico8::new(resources);
     let mut game = Game::init(&mut pico8);
     let mut input = Input::new();
