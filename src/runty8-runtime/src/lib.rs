@@ -1,10 +1,6 @@
 use runty8_core::{App, Event, Input, Pico8, Resources};
-use runty8_event_loop2::event_loop;
+use runty8_event_loop::event_loop;
 use winit::event_loop::ControlFlow;
-
-// Needed for the macro below
-#[doc(hidden)]
-pub use runty8_core;
 
 /// Runs a standalone Runty8 game.
 pub fn run<Game: App + 'static>(resources: Resources) -> std::io::Result<()> {
