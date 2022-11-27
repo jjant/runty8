@@ -10,3 +10,4 @@ runty8-core = { path = "../runty8-core" }
 runty8-winit = { path = "../runty8-winit" }
 winit = "0.26"
 glium = "0.31"
+once_cell = "1.16"
