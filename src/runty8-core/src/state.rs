@@ -1,4 +1,4 @@
-use crate::input::Keys;
+use crate::input::Input;
 use crate::Button;
 use ButtonState::*;
 
@@ -36,14 +36,16 @@ impl State {
         self.mouse_y = mouse_y;
     }
 
-    pub fn update_keys(&mut self, keys: &Keys) {
-        self.left.update(keys.left);
-        self.right.update(keys.right);
-        self.up.update(keys.up);
-        self.down.update(keys.down);
-        self.x.update(keys.x);
-        self.c.update(keys.c);
-        self.mouse_pressed.update(keys.mouse);
+    pub fn update_input(&mut self, input: &Input) {
+        self.left.update(input.left);
+        self.right.update(input.right);
+        self.up.update(input.up);
+        self.down.update(input.down);
+        self.x.update(input.x);
+        self.c.update(input.c);
+        self.mouse_pressed.update(input.mouse);
+        self.mouse_x = input.mouse_x;
+        self.mouse_y = input.mouse_y;
     }
 
     pub(crate) fn button(&self, button: Button) -> &ButtonState {

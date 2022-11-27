@@ -1,5 +1,5 @@
 use crate::Pico8;
-use runty8_core::{Event, MouseButton};
+use runty8_core::{Event, InputEvent, KeyState, MouseButton, MouseEvent};
 
 use super::{DispatchEvent, Element, Widget};
 use std::fmt::Debug;
@@ -110,12 +110,14 @@ impl<'a, Msg: Copy + Debug + 'a> Widget for Button<'a, Msg> {
         cursor_position: (i32, i32),
         dispatch_event: &mut DispatchEvent<'_, Msg>,
     ) {
-        use runty8_core::MouseEvent::*;
-        use Event::*;
+        use Event::Input;
 
         // TODO: Dispatch events for content?
         match event {
-            Mouse(Down(MouseButton::Left)) => {
+            Input(InputEvent::Mouse(MouseEvent::Button {
+                button: MouseButton::Left,
+                state: KeyState::Down,
+            })) => {
                 self.state.mouse_pressed = true;
 
                 if self.contains(cursor_position.0, cursor_position.1) {
@@ -128,7 +130,10 @@ impl<'a, Msg: Copy + Debug + 'a> Widget for Button<'a, Msg> {
                     self.state.pressed = true;
                 }
             }
-            Mouse(Up(MouseButton::Left)) => {
+            Input(InputEvent::Mouse(MouseEvent::Button {
+                button: MouseButton::Left,
+                state: KeyState::Up,
+            })) => {
                 self.state.mouse_pressed = false;
 
                 if self.contains(cursor_position.0, cursor_position.1)
@@ -142,7 +147,7 @@ impl<'a, Msg: Copy + Debug + 'a> Widget for Button<'a, Msg> {
 
                 self.state.pressed = false;
             }
-            Mouse(Move { .. }) => {
+            Input(InputEvent::Mouse(MouseEvent::Move { .. })) => {
                 let currently_contained = self.contains(cursor_position.0, cursor_position.1);
 
                 match (Delta {

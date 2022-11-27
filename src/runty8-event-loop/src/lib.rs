@@ -1,5 +1,5 @@
 use glow::HasContext;
-use runty8_core::{App, Event, Keys, MouseButton, MouseEvent, Pico8, Resources};
+use runty8_core::{App, Event, Input, MouseButton, MouseEvent, Pico8, Resources};
 use runty8_winit::Runty8EventExt;
 use std::sync::{Arc, Mutex};
 use winit::{
@@ -228,7 +228,7 @@ pub fn event_loop<Game: App + 'static>(resources: Resources) {
             });
         }
 
-        let keys = Arc::new(Mutex::new(Keys::new()));
+        let keys = Arc::new(Mutex::new(Input::new()));
         #[cfg(target_arch = "wasm32")]
         let (_log_list, _runty8_log_list) = wasm::create_log_list();
         #[cfg(target_arch = "wasm32")]
@@ -330,14 +330,14 @@ unsafe fn draw(gl: &glow::Context, texture: glow::Texture, pico8: &Pico8) {
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    use runty8_core::Keys;
+    use runty8_core::Input;
     use runty8_core::{Key, KeyState};
     use std::sync::{Arc, Mutex};
     use wasm_bindgen::closure::Closure;
     use wasm_bindgen::JsCast;
     use winit::window::Window;
 
-    pub(super) fn create_touch_controls(container: &web_sys::HtmlElement, keys: Arc<Mutex<Keys>>) {
+    pub(super) fn create_touch_controls(container: &web_sys::HtmlElement, keys: Arc<Mutex<Input>>) {
         for key in [
             Key::RightArrow,
             Key::LeftArrow,
@@ -351,7 +351,7 @@ mod wasm {
         }
     }
 
-    fn make_input_button(key: Key, keys: Arc<Mutex<Keys>>) -> web_sys::HtmlElement {
+    fn make_input_button(key: Key, keys: Arc<Mutex<Input>>) -> web_sys::HtmlElement {
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
 
@@ -382,7 +382,7 @@ mod wasm {
     fn make_key_closure(
         key: Key,
         key_state: KeyState,
-        keys: Arc<Mutex<Keys>>,
+        keys: Arc<Mutex<Input>>,
     ) -> Closure<dyn FnMut()> {
         Closure::<dyn FnMut()>::new(move || {
             let mut keys = keys.lock().unwrap();

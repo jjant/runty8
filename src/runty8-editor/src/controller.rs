@@ -7,7 +7,7 @@ use crate::{
     ui::Element,
     Resources,
 };
-use runty8_core::{Event, Key, KeyboardEvent, Keys, MouseButton, MouseEvent, Pico8};
+use runty8_core::{Event, Input, InputEvent, Key, KeyboardEvent, MouseEvent, Pico8};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg<AppMsg> {
@@ -30,7 +30,7 @@ pub(crate) struct Controller<Game> {
     editor: Editor,
     app: Game,
     key_combos: KeyCombos<KeyComboAction>,
-    keys: Keys,
+    keys: Input,
     pico8: Pico8,
 }
 impl<T> Controller<T> {
@@ -54,7 +54,7 @@ impl<Game: AppCompat> Controller<Game> {
             key_combos: KeyCombos::new()
                 .push(KeyComboAction::RestartGame, Key::R, &[Key::Control])
                 .push(KeyComboAction::SwitchScene, Key::Escape, &[]),
-            keys: Keys::new(),
+            keys: Input::new(),
             pico8,
         }
     }
@@ -70,24 +70,14 @@ impl<Game: AppCompat> Controller<Game> {
             &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
                 self.pico8.state.on_mouse_move(x, y);
             }
-            &Msg::MouseEvent(event) => {
-                let left_pressed = match event {
-                    MouseEvent::Down(MouseButton::Left) => Some(true),
-                    MouseEvent::Up(MouseButton::Left) => Some(false),
-                    _ => None,
-                };
-
-                if let Some(left_pressed) = left_pressed {
-                    self.keys.mouse = Some(left_pressed);
-                }
-            }
+            &Msg::MouseEvent(event) => self.keys.on_event(InputEvent::Mouse(event)),
 
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event);
-                self.keys.on_event(event);
+                self.keys.on_event(InputEvent::Keyboard(event));
             }
             &Msg::Tick => {
-                self.pico8.state.update_keys(&self.keys);
+                self.pico8.state.update_input(&self.keys);
             }
         }
     }
@@ -106,8 +96,10 @@ impl<Game: AppCompat> Controller<Game> {
         };
 
         let own_msgs = match event {
-            Event::Mouse(mouse_event) => Some(Msg::MouseEvent(*mouse_event)),
-            Event::Keyboard(keyboard_event) => Some(Msg::KeyboardEvent(*keyboard_event)),
+            Event::Input(InputEvent::Mouse(mouse_event)) => Some(Msg::MouseEvent(*mouse_event)),
+            Event::Input(InputEvent::Keyboard(keyboard_event)) => {
+                Some(Msg::KeyboardEvent(*keyboard_event))
+            }
             Event::Tick { .. } => Some(Msg::Tick),
             Event::WindowClosed => todo!("WindowClosed event not yet handled"),
         }

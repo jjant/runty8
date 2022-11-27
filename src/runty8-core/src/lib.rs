@@ -13,7 +13,7 @@ pub mod draw;
 pub mod font;
 
 pub use flags::Flags;
-pub use input::Keys;
+pub use input::Input;
 pub use map::Map;
 pub use pico8::*;
 pub use sprite_sheet::{Sprite, SpriteSheet};
@@ -110,6 +110,12 @@ pub struct KeyboardEvent {
     pub state: KeyState,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum InputEvent {
+    Keyboard(KeyboardEvent),
+    Mouse(MouseEvent),
+}
+
 /// Mouse buttons.
 #[derive(Clone, Copy, Debug)]
 pub enum MouseButton {
@@ -132,16 +138,16 @@ pub enum MouseEvent {
     },
     // TODO: Refactor these two below to factor out the MouseButton
     /// Mouse button pressed.
-    Down(MouseButton),
-    /// Mouse button released.
-    Up(MouseButton),
+    Button {
+        button: MouseButton,
+        state: KeyState,
+    },
 }
 
 /// Keyboard events (key up, key down).
 #[derive(Clone, Copy, Debug)]
 pub enum Event {
-    Mouse(MouseEvent),
-    Keyboard(KeyboardEvent),
+    Input(InputEvent),
     Tick { delta_millis: f64 },
     WindowClosed,
 }

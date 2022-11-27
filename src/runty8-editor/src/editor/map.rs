@@ -3,7 +3,7 @@ use crate::ui::{DrawFn, Element, Tree};
 use crate::util::vec2::{vec2, Vec2i};
 use crate::Map;
 use itertools::Itertools;
-use runty8_core::{Event, Key, KeyState, KeyboardEvent, MouseEvent};
+use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseEvent};
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl Editor {
 
     pub(crate) fn subscriptions(event: &Event) -> Option<Msg> {
         match event {
-            Event::Keyboard(event) => {
+            Event::Input(InputEvent::Keyboard(event)) => {
                 let KeyboardEvent { key, state } = event;
 
                 match (key, state) {
@@ -64,7 +64,9 @@ impl Editor {
                     _ => None,
                 }
             }
-            &Event::Mouse(MouseEvent::Move { x, y }) => Some(Msg::MouseMove(vec2(x, y))),
+            &Event::Input(InputEvent::Mouse(MouseEvent::Move { x, y })) => {
+                Some(Msg::MouseMove(vec2(x, y)))
+            }
             _ => None,
         }
     }

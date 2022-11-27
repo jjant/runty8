@@ -7,7 +7,7 @@ use glium::{
     uniforms::{MagnifySamplerFilter, Sampler},
     Display, Program, Surface, VertexBuffer,
 };
-use runty8_core::{App, Event, Flags, Keys, Map, Pico8, Resources, SpriteSheet};
+use runty8_core::{App, Event, Flags, Input, Map, Pico8, Resources, SpriteSheet};
 use runty8_winit::Runty8EventExt as _;
 use winit::{
     dpi::LogicalSize,
@@ -46,26 +46,22 @@ pub fn run<Game: App + 'static>(assets_path: String) -> std::io::Result<()> {
     };
     let mut pico8 = Pico8::new(resources);
     let mut game = Game::init(&mut pico8);
-    let mut keys = Keys::new();
+    let mut input = Input::new();
 
     let on_event = move |event, control_flow: &mut ControlFlow, draw: &dyn Fn(&[u8])| match event {
         Event::Tick { .. } => {
-            pico8.state.update_keys(&keys);
+            pico8.state.update_input(&input);
 
             game.update(&mut pico8);
             game.draw(&mut pico8);
 
             draw(pico8.draw_data.buffer());
         }
-        Event::Keyboard(event) => {
-            keys.on_event(event);
+        Event::Input(input_event) => {
+            input.on_event(input_event);
         }
-        // Event::Mouse
         Event::WindowClosed => {
             *control_flow = ControlFlow::Exit;
-        }
-        _ => {
-            println!("TODO: Handle event {:?}", event);
         }
     };
 

@@ -1,5 +1,5 @@
 //! Compatibility layers for Runty8 crates that need to leverage winit.
-use runty8_core::{Event, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
+use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
 use winit::dpi::{LogicalPosition, LogicalSize};
 
 pub trait Runty8EventExt: Sized {
@@ -35,25 +35,31 @@ impl Runty8EventExt for Event {
                 winit::event::WindowEvent::CursorMoved { position, .. } => {
                     let logical_mouse: LogicalPosition<f64> = position.to_logical(hidpi_factor);
 
-                    Some(Event::Mouse(MouseEvent::Move {
+                    Some(Event::Input(InputEvent::Mouse(MouseEvent::Move {
                         x: (logical_mouse.x / window_size.width * 128.).floor() as i32,
                         y: (logical_mouse.y / window_size.height * 128.).floor() as i32,
-                    }))
+                    })))
                 }
                 winit::event::WindowEvent::MouseInput {
                     button: winit::event::MouseButton::Left,
                     state: input_state,
                     ..
                 } => {
-                    let mouse_event = match input_state {
-                        ElementState::Pressed => MouseEvent::Down(MouseButton::Left),
-                        ElementState::Released => MouseEvent::Up(MouseButton::Left),
+                    let mouse_button_state = match input_state {
+                        ElementState::Pressed => KeyState::Down,
+                        ElementState::Released => KeyState::Up,
                     };
 
-                    Some(Event::Mouse(mouse_event))
+                    let mouse_event = MouseEvent::Button {
+                        button: MouseButton::Left,
+                        state: mouse_button_state,
+                    };
+                    Some(Event::Input(InputEvent::Mouse(mouse_event)))
                 }
                 winit::event::WindowEvent::KeyboardInput { input, .. } => {
-                    KeyboardEvent::from_winit(*input).map(Event::Keyboard)
+                    KeyboardEvent::from_winit(*input)
+                        .map(InputEvent::Keyboard)
+                        .map(Event::Input)
                 }
                 _ => None,
             },

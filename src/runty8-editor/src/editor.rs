@@ -14,6 +14,7 @@ use crate::ui::{
 };
 use crate::ui::{DrawFn, Element, Tree};
 use brush_size::BrushSize;
+use runty8_core::InputEvent;
 use runty8_core::{
     serialize::{Ppm, Serialize},
     Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources, Sprite, SpriteSheet,
@@ -410,10 +411,10 @@ impl ElmApp for Editor {
 
     fn subscriptions(&self, event: &Event) -> Vec<Msg> {
         match event {
-            Event::Mouse(_) => None,
-            Event::Keyboard(event) => Some(Msg::KeyboardEvent(*event)),
+            Event::Input(InputEvent::Keyboard(event)) => Some(Msg::KeyboardEvent(*event)),
             Event::Tick { .. } => None,
             Event::WindowClosed => todo!("WindowClosed event not yet handled"),
+            _ => None,
         }
         .into_iter()
         .chain(match self.tab {
