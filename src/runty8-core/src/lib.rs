@@ -35,7 +35,7 @@ pub type Color = u8; // Actually a u4
 pub enum Button {
     /// Left arrow.
     Left,
-    /// Rigth arrow.
+    /// Right arrow.
     Right,
     /// Up arrow.
     Up,
@@ -143,4 +143,5 @@ pub enum Event {
     Mouse(MouseEvent),
     Keyboard(KeyboardEvent),
     Tick { delta_millis: f64 },
+    WindowClosed,
 }

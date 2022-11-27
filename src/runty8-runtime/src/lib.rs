@@ -7,7 +7,7 @@ use glium::{
     uniforms::{MagnifySamplerFilter, Sampler},
     Display, Program, Surface, VertexBuffer,
 };
-use runty8_core::{App, Event, Flags, Map, Pico8, Resources, SpriteSheet};
+use runty8_core::{App, Event, Flags, Keys, Map, Pico8, Resources, SpriteSheet};
 use runty8_winit::Runty8EventExt as _;
 use winit::{
     dpi::LogicalSize,
@@ -30,6 +30,7 @@ fn create_sprite_sheet(_assets_path: &str) -> SpriteSheet {
     SpriteSheet::new()
 }
 
+/// Runs a standalone Runty8 game.
 pub fn run<Game: App + 'static>(assets_path: String) -> std::io::Result<()> {
     create_directory(&assets_path)?;
 
@@ -44,14 +45,24 @@ pub fn run<Game: App + 'static>(assets_path: String) -> std::io::Result<()> {
         map,
     };
     let mut pico8 = Pico8::new(resources);
-
     let mut game = Game::init(&mut pico8);
-    let on_event = move |event, draw: &dyn Fn(&[u8])| match event {
+    let mut keys = Keys::new();
+
+    let on_event = move |event, control_flow: &mut ControlFlow, draw: &dyn Fn(&[u8])| match event {
         Event::Tick { .. } => {
+            pico8.state.update_keys(&keys);
+
             game.update(&mut pico8);
             game.draw(&mut pico8);
 
             draw(pico8.draw_data.buffer());
+        }
+        Event::Keyboard(event) => {
+            keys.on_event(event);
+        }
+        // Event::Mouse
+        Event::WindowClosed => {
+            *control_flow = ControlFlow::Exit;
         }
         _ => {
             println!("TODO: Handle event {:?}", event);
@@ -62,7 +73,7 @@ pub fn run<Game: App + 'static>(assets_path: String) -> std::io::Result<()> {
     Ok(())
 }
 
-pub fn event_loop(mut on_event: impl FnMut(Event, &dyn Fn(&[u8])) + 'static) {
+pub fn event_loop(mut on_event: impl FnMut(Event, &mut ControlFlow, &dyn Fn(&[u8])) + 'static) {
     let event_loop = EventLoop::new();
     let display = make_display(&event_loop, "Runty8");
     let (scale_factor, mut logical_size) = {
@@ -88,7 +99,7 @@ pub fn event_loop(mut on_event: impl FnMut(Event, &dyn Fn(&[u8])) + 'static) {
             let draw: &dyn Fn(&[u8]) =
                 &|pixels| do_draw(&display, &indices, &program, &vertex_buffer, pixels);
 
-            on_event(event, draw);
+            on_event(event, control_flow, draw);
         }
     })
 }
@@ -160,14 +171,14 @@ mod gl_boilerplate {
     // Rendering boilerplate
 
     #[derive(Copy, Clone)]
-    pub struct Vertex {
+    pub(crate) struct Vertex {
         position: [f32; 4],
         tex_coords: [f32; 2],
     }
 
     implement_vertex!(Vertex, position, tex_coords); // don't forget to add `tex_coords` here
 
-    pub fn whole_screen_vertex_buffer(display: &impl Facade) -> VertexBuffer<Vertex> {
+    pub(crate) fn whole_screen_vertex_buffer(display: &impl Facade) -> VertexBuffer<Vertex> {
         let vertex1 = Vertex {
             position: [-1.0, -1.0, 0.0, 1.0],
             tex_coords: [0.0, 0.0],
@@ -199,7 +210,7 @@ mod gl_boilerplate {
         glium::VertexBuffer::new(display, &shape).unwrap()
     }
 
-    pub const VERTEX_SHADER: &str = r#"
+    pub(crate) const VERTEX_SHADER: &str = r#"
 #version 140
 
 in vec4 position;
@@ -214,7 +225,7 @@ void main() {
 }
 "#;
 
-    pub const FRAGMENT_SHADER: &str = r#"
+    pub(crate) const FRAGMENT_SHADER: &str = r#"
 #version 140
 
 in vec2 v_tex_coords;

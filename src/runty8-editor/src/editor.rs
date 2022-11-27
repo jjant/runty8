@@ -413,6 +413,7 @@ impl ElmApp for Editor {
             Event::Mouse(_) => None,
             Event::Keyboard(event) => Some(Msg::KeyboardEvent(*event)),
             Event::Tick { .. } => None,
+            Event::WindowClosed => todo!("WindowClosed event not yet handled"),
         }
         .into_iter()
         .chain(match self.tab {

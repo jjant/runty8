@@ -23,12 +23,7 @@ impl Runty8EventExt for Event {
 
         match event {
             winit::event::Event::WindowEvent { event, .. } => match event {
-                winit::event::WindowEvent::CloseRequested => {
-                    // TODO
-                    // *control_flow = winit::event_loop::ControlFlow::Exit;
-
-                    None
-                }
+                winit::event::WindowEvent::CloseRequested => Some(Event::WindowClosed),
                 // TODO: Force aspect ratio on resize.
                 &winit::event::WindowEvent::Resized(new_size) => {
                     let new_size: LogicalSize<f64> = new_size.to_logical(hidpi_factor);

@@ -109,6 +109,7 @@ impl<Game: AppCompat> Controller<Game> {
             Event::Mouse(mouse_event) => Some(Msg::MouseEvent(*mouse_event)),
             Event::Keyboard(keyboard_event) => Some(Msg::KeyboardEvent(*keyboard_event)),
             Event::Tick { .. } => Some(Msg::Tick),
+            Event::WindowClosed => todo!("WindowClosed event not yet handled"),
         }
         .into_iter();
 
