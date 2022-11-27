@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 rand = "*"
 itertools = "*"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "*", features = ["js"] }
