@@ -7,7 +7,6 @@ pub trait Runty8EventExt: Sized {
         event: &winit::event::Event<()>,
         hidpi_factor: f64,
         window_size: &mut LogicalSize<f64>,
-        set_next_timer: &mut impl FnMut(),
     ) -> Option<Self>;
 }
 
@@ -17,7 +16,6 @@ impl Runty8EventExt for Event {
         event: &winit::event::Event<()>,
         hidpi_factor: f64,
         window_size: &mut LogicalSize<f64>,
-        set_next_timer: &mut impl FnMut(),
     ) -> Option<Event> {
         use winit::event::ElementState;
 
@@ -68,8 +66,6 @@ impl Runty8EventExt for Event {
                     start,
                     requested_resume,
                 } => {
-                    set_next_timer();
-
                     let delta: Result<i32, _> = requested_resume
                         .duration_since(*start)
                         .as_millis()
@@ -79,11 +75,7 @@ impl Runty8EventExt for Event {
                         delta_millis: delta.unwrap().try_into().unwrap(),
                     })
                 }
-                winit::event::StartCause::Init => {
-                    set_next_timer();
-
-                    None
-                }
+                winit::event::StartCause::Init => Some(Event::Tick { delta_millis: 0.0 }),
                 // Is this correct?
                 winit::event::StartCause::Poll => Some(Event::Tick {
                     delta_millis: 16.6666,

@@ -33,6 +33,7 @@ pub(crate) struct Controller<Game> {
     keys: Input,
     pico8: Pico8,
 }
+
 impl<T> Controller<T> {
     pub(crate) fn screen_buffer(&self) -> &[u8] {
         self.pico8.draw_data.buffer()

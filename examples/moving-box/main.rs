@@ -2,7 +2,7 @@ use runty8::{App, Button, Pico8};
 // use runty8_core::{App, Button, Flags, Map, Pico8, Resources, SpriteSheet};
 
 fn main() {
-    runty8::run::<ExampleApp>("examples/moving-box".to_owned()).unwrap();
+    runty8::debug_run::<ExampleApp>("examples/moving-box".to_owned()).unwrap();
     // unsafe {
     //     runty8_event_loop::event_loop::<ExampleApp>(Resources {
     //         assets_path: "moving-box/assets".to_owned(),

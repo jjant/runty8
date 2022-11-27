@@ -27,12 +27,13 @@ pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resour
 
     let mut controller = Controller::<Game>::init(scene, resources);
     event_loop.run(move |winit_event, _, control_flow| {
-        let event: Option<Event> =
-            Event::from_winit(&winit_event, scale_factor, &mut logical_size, &mut || {
-                set_next_timer(control_flow)
-            });
+        let event: Option<Event> = Event::from_winit(&winit_event, scale_factor, &mut logical_size);
 
         controller.step(event);
+
+        if let Some(Event::Tick { .. }) = event {
+            set_next_timer(control_flow);
+        }
 
         if let Some(new_title) = controller.take_new_title() {
             display.gl_window().window().set_title(&new_title);
