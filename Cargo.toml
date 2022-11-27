@@ -5,6 +5,7 @@ members = [
   "src/runty8-runtime",
   "src/runty8-editor",
   "src/runty8-event-loop",
+  "src/runty8-event-loop2",
   "src/runty8-winit",
   "examples",
 ]
