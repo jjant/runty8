@@ -151,3 +151,24 @@ pub enum Event {
     Tick { delta_millis: f64 },
     WindowClosed,
 }
+
+/// Embed game assets in your binary (that is, loading them at compile time).
+#[macro_export]
+macro_rules! load_assets {
+    ($path:tt) => {{
+        static MAP_BYTES: &str = include_str!(concat!($path, "/map.txt"));
+        static FLAGS_BYTES: &str = include_str!(concat!($path, "/sprite_flags.txt"));
+        static SPRITE_SHEET_BYTES: &str = include_str!(concat!($path, "/sprite_sheet.txt"));
+
+        let map = $crate::Map::deserialize(MAP_BYTES).unwrap();
+        let sprite_flags = $crate::Flags::deserialize(FLAGS_BYTES).unwrap();
+        let sprite_sheet = $crate::SpriteSheet::deserialize(SPRITE_SHEET_BYTES).unwrap();
+
+        $crate::Resources {
+            map,
+            sprite_flags,
+            sprite_sheet,
+            assets_path: $path.to_owned(),
+        }
+    }};
+}
