@@ -33,13 +33,13 @@ jobs:
         name: Build
         with:
           command: build
-          args: --workspace ${{ target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
+          args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
 
       - uses: actions-rs/cargo@v1
         name: Test
         with:
           command: test
-          args: --workspace ${{ target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
+          args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
 
       - uses: actions-rs/cargo@v1
         name: Format
@@ -51,4 +51,4 @@ jobs:
         name: Clippy
         with:
           command: clippy
-          args: --workspace ${{ target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
+          args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
