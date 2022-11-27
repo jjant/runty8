@@ -17,6 +17,9 @@ use winit::{
 pub fn event_loop(
     mut on_event: impl FnMut(Event, &mut ControlFlow, &dyn Fn(&[u8], &mut ControlFlow)) + 'static,
 ) {
+    #[cfg(target_arch = "wasm32")]
+    wasm::setup_console_log_panic_hook();
+
     let event_loop = EventLoop::new();
     let display = make_display(&event_loop, "Runty8");
     let (scale_factor, mut logical_size) = {
@@ -71,13 +74,39 @@ fn do_draw(
         .unwrap();
     target.finish().unwrap();
 }
-fn set_next_timer(control_flow: &mut ControlFlow) {
-    let fps = 30_u64;
-    let nanoseconds_per_frame = 1_000_000_000 / fps;
 
-    let next_frame_time =
-        std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
-    *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
+fn set_next_timer(control_flow: &mut ControlFlow) {
+    #[cfg(not(target_arch = "wasm32"))]
+    native::set_next_timer(control_flow);
+    #[cfg(target_arch = "wasm32")]
+    wasm::set_next_timer(control_flow);
+}
+
+mod native {
+    use winit::event_loop::ControlFlow;
+
+    pub(crate) fn set_next_timer(control_flow: &mut ControlFlow) {
+        let fps = 30_u64;
+        let nanoseconds_per_frame = 1_000_000_000 / fps;
+
+        let next_frame_time =
+            std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
+        *control_flow = ControlFlow::WaitUntil(next_frame_time);
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    use winit::event_loop::ControlFlow;
+
+    pub(crate) fn set_next_timer(control_flow: &mut ControlFlow) {
+        *control_flow = ControlFlow::Poll;
+    }
+
+    pub(crate) fn setup_console_log_panic_hook() {
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        console_log::init_with_level(log::Level::Debug).unwrap();
+    }
 }
 
 fn make_display(event_loop: &EventLoop<()>, title: &str) -> Display {
