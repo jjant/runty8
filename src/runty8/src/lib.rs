@@ -13,13 +13,18 @@ pub use runty8_editor::run_app;
 pub use runty8_runtime::run;
 
 /// Run your game in the Editor in `debug` mode, and in the standalone Runtime in `release`.
-#[cfg(not(target_arch = "wasm32"))]
+/// The editor is not currently supported in `wasm`, so in that target only the runtime will be
+/// used.
 pub fn debug_run<Game: App + 'static>(resources: Resources) -> std::io::Result<()> {
     let run = {
-        if cfg!(debug_assertions) {
+        #[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
+        {
             println!("Running editor...");
             runty8_editor::run_app::<Game>
-        } else {
+        }
+
+        #[cfg(not(all(debug_assertions, not(target_arch = "wasm32"))))]
+        {
             println!("Running runtime...");
             runty8_runtime::run::<Game>
         }

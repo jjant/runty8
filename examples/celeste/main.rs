@@ -6,16 +6,8 @@ use std::iter::{Chain, Map};
 use std::slice;
 
 fn main() {
-    #[cfg(target_arch = "wasm32")]
-    {
-        let resources = runty8::load_assets!("./");
-        runty8_event_loop::event_loop::<GameState>(resources);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let resources = runty8::load_runtime_assets("examples/celeste".to_owned()).unwrap();
-        runty8::debug_run::<GameState>(resources).unwrap();
-    }
+    let resources = runty8::load_assets!("./");
+    runty8::debug_run::<GameState>(resources).unwrap();
 }
 
 struct GameState {

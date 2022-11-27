@@ -1,14 +1,4 @@
-#[cfg(not(target_arch = "wasm32"))]
-use glium::{
-    backend::Facade,
-    glutin,
-    index::NoIndices,
-    texture::{RawImage2d, SrgbTexture2d},
-    uniform,
-    uniforms::{MagnifySamplerFilter, Sampler},
-    Display, Program, Surface, VertexBuffer,
-};
-use glow::Context;
+use glow::HasContext;
 use runty8_core::Event;
 use runty8_winit::Runty8EventExt as _;
 use winit::{
@@ -16,6 +6,8 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
+
+mod gl;
 
 #[cfg(not(target_arch = "wasm32"))]
 type Window = glutin::WindowedContext<glutin::PossiblyCurrent>;
@@ -36,22 +28,27 @@ pub fn event_loop(
 
     let (window, gl, shader_version) = make_window_and_context(window_builder, &event_loop);
 
-    // let display = make_display(&event_loop, "Runty8");
-    // let (scale_factor, mut logical_size) = {
-    //     let gl_window = display.gl_window();
-    //     let window = gl_window.window();
-    //     let scale_factor = window.scale_factor();
-    //
-    //     (
-    //         scale_factor,
-    //         window.inner_size().to_logical::<f64>(scale_factor),
-    //     )
-    // };
-    // let (indices, program) = make_gl_program(&display);
-    // let vertex_buffer = gl_boilerplate::whole_screen_vertex_buffer(&display);
+    let scale_factor = 1.0; // TODO
+    let mut logical_size = LogicalSize::new(640.0, 640.0); // TODO
 
-    let scale_factor = 1.0;
-    let mut logical_size = LogicalSize::new(640.0, 640.0);
+    let texture = unsafe {
+        let vertex_array = gl
+            .create_vertex_array()
+            .expect("Cannot create vertex array");
+        gl.bind_vertex_array(Some(vertex_array));
+
+        gl.clear_color(0.1, 0.2, 0.3, 1.0);
+
+        let program = gl::make_program(&gl, shader_version);
+        gl.use_program(Some(program));
+        let texture = gl::make_texture(&gl);
+        gl::use_texture(&gl, program);
+
+        texture
+    };
+
+    // TODO: Initial render
+    // gl::upload_pixels(&gl, texture, pico8.draw_data.buffer());
     event_loop.run(move |winit_event, _, control_flow| {
         let event: Option<Event> = Event::from_winit(&winit_event, scale_factor, &mut logical_size);
 
@@ -59,6 +56,9 @@ pub fn event_loop(
             let draw: &dyn Fn(&[u8], &mut ControlFlow) = &|pixels, control_flow| {
                 set_next_timer(control_flow);
                 // do_draw(&display, &indices, &program, &vertex_buffer, pixels)
+                draw(&gl, texture, pixels);
+                #[cfg(not(target_arch = "wasm32"))]
+                window.swap_buffers().unwrap();
             };
 
             on_event(event, control_flow, draw);
@@ -66,31 +66,12 @@ pub fn event_loop(
     })
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn do_draw(
-    display: &Display,
-    indices: &NoIndices,
-    program: &Program,
-    vertex_buffer: &VertexBuffer<gl_boilerplate::Vertex>,
-    pixels: &[u8],
-) {
-    let mut target = display.draw();
-    target.clear_color(1.0, 0.0, 0.0, 1.0);
-    let image = RawImage2d::from_raw_rgb(pixels.to_vec(), (128, 128));
-    let texture = SrgbTexture2d::new(display, image).unwrap();
-    let uniforms = uniform! {
-        tex: Sampler::new(&texture).magnify_filter(MagnifySamplerFilter::Nearest)
-    };
-    target
-        .draw(
-            vertex_buffer,
-            indices,
-            program,
-            &uniforms,
-            &Default::default(),
-        )
-        .unwrap();
-    target.finish().unwrap();
+fn draw(gl: &glow::Context, texture: glow::Texture, pixels: &[u8]) {
+    unsafe {
+        gl::upload_pixels(gl, texture, pixels);
+        gl.clear(glow::COLOR_BUFFER_BIT);
+        gl.draw_arrays(glow::TRIANGLES, 0, 6);
+    }
 }
 
 fn make_window_and_context(
@@ -128,7 +109,7 @@ mod native {
         let window = unsafe {
             ContextBuilder::new()
                 .with_vsync(true)
-                .build_windowed(window_builder, &event_loop)
+                .build_windowed(window_builder, event_loop)
                 .unwrap()
                 .make_current()
                 .unwrap()
@@ -151,8 +132,6 @@ mod native {
             std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
         *control_flow = ControlFlow::WaitUntil(next_frame_time);
     }
-
-    pub(crate) fn create_window_and_context() {}
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -174,7 +153,7 @@ mod wasm {
         window_builder: WindowBuilder,
         event_loop: &EventLoop<()>,
     ) -> (Window, glow::Context, &'static str) {
-        let window = window_builder.build(&event_loop).unwrap();
+        let window = window_builder.build(event_loop).unwrap();
         let gl = insert_canvas_and_create_context(&window);
 
         (window, gl, "#version 300 es")
@@ -208,93 +187,10 @@ mod wasm {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn make_gl_program(display: &impl Facade) -> (NoIndices, Program) {
-    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-    let program = glium::Program::from_source(
-        display,
-        gl_boilerplate::VERTEX_SHADER,
-        gl_boilerplate::FRAGMENT_SHADER,
-        None,
-    )
-    .unwrap();
+fn log_error(gl: &glow::Context) {
+    let error = unsafe { gl.get_error() };
 
-    (indices, program)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-mod gl_boilerplate {
-    use glium::backend::Facade;
-    use glium::implement_vertex;
-    use glium::VertexBuffer;
-    // Rendering boilerplate
-
-    #[derive(Copy, Clone)]
-    pub(crate) struct Vertex {
-        position: [f32; 4],
-        tex_coords: [f32; 2],
+    if error != 0 {
+        panic!("Error: {}", error);
     }
-
-    implement_vertex!(Vertex, position, tex_coords); // don't forget to add `tex_coords` here
-
-    pub(crate) fn whole_screen_vertex_buffer(display: &impl Facade) -> VertexBuffer<Vertex> {
-        let vertex1 = Vertex {
-            position: [-1.0, -1.0, 0.0, 1.0],
-            tex_coords: [0.0, 0.0],
-        };
-        let vertex2 = Vertex {
-            position: [1.0, 1.0, 0.0, 1.0],
-            tex_coords: [1.0, 1.0],
-        };
-        let vertex3 = Vertex {
-            position: [-1.0, 1.0, 0.0, 1.0],
-            tex_coords: [0.0, 1.0],
-        };
-
-        let vertex4 = Vertex {
-            position: [-1.0, -1.0, 0.0, 1.0],
-            tex_coords: [0.0, 0.0],
-        };
-        let vertex5 = Vertex {
-            position: [1.0, -1.0, 0.0, 1.0],
-            tex_coords: [1.0, 0.0],
-        };
-        let vertex6 = Vertex {
-            position: [1.0, 1.0, 0.0, 1.0],
-            tex_coords: [1.0, 1.0],
-        };
-
-        let shape = vec![vertex1, vertex2, vertex3, vertex4, vertex5, vertex6];
-
-        glium::VertexBuffer::new(display, &shape).unwrap()
-    }
-
-    pub(crate) const VERTEX_SHADER: &str = r#"
-#version 140
-
-in vec4 position;
-in vec2 tex_coords;
-out vec2 v_tex_coords;
-
-uniform vec2 wanted_resolution;
-
-void main() {
-    v_tex_coords = tex_coords;
-    gl_Position = position;
-}
-"#;
-
-    pub(crate) const FRAGMENT_SHADER: &str = r#"
-#version 140
-
-in vec2 v_tex_coords;
-out vec4 color;
-
-uniform sampler2D tex;
-
-void main() {
-    float y = 1.0 - v_tex_coords.y;
-    color = texture(tex, vec2(v_tex_coords.x, y));
-}
-"#;
 }
