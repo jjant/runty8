@@ -17,27 +17,26 @@ fn create_sprite_sheet(_assets_path: &str) -> SpriteSheet {
     SpriteSheet::new()
 }
 
+// Needed for the macro below
+#[doc(hidden)]
+pub use runty8_core;
+
 #[macro_export]
 macro_rules! load_assets {
     ($path:tt) => {{
-        type Lazy<T> = once_cell::sync::Lazy<T>;
-        type Map = runty8_core::Map;
-        type Flags = runty8_core::Flags;
-        type SpriteSheet = runty8_core::SpriteSheet;
-
         static MAP_BYTES: &str = include_str!(concat!($path, "/map.txt"));
         static FLAGS_BYTES: &str = include_str!(concat!($path, "/sprite_flags.txt"));
         static SPRITE_SHEET_BYTES: &str = include_str!(concat!($path, "/sprite_sheet.txt"));
 
-        static MAP: Lazy<Map> = Lazy::new(|| Map::deserialize(MAP_BYTES).unwrap());
-        static FLAGS: Lazy<Flags> = Lazy::new(|| Flags::deserialize(FLAGS_BYTES).unwrap());
-        static SPRITE_SHEET: Lazy<SpriteSheet> =
-            Lazy::new(|| SpriteSheet::deserialize(SPRITE_SHEET_BYTES).unwrap());
+        let map = $crate::runty8_core::Map::deserialize(MAP_BYTES).unwrap();
+        let sprite_flags = $crate::runty8_core::Flags::deserialize(FLAGS_BYTES).unwrap();
+        let sprite_sheet =
+            $crate::runty8_core::SpriteSheet::deserialize(SPRITE_SHEET_BYTES).unwrap();
 
-        runty8_core::Resources {
-            map: MAP.clone(),
-            sprite_flags: FLAGS.clone(),
-            sprite_sheet: SPRITE_SHEET.clone(),
+        $crate::runty8_core::Resources {
+            map,
+            sprite_flags,
+            sprite_sheet,
             assets_path: $path.to_owned(),
         }
     }};
