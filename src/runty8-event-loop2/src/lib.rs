@@ -1,3 +1,4 @@
+#[cfg(not(target_arch = "wasm32"))]
 use glium::{
     backend::Facade,
     glutin,
@@ -7,12 +8,20 @@ use glium::{
     uniforms::{MagnifySamplerFilter, Sampler},
     Display, Program, Surface, VertexBuffer,
 };
+use glow::Context;
 use runty8_core::Event;
 use runty8_winit::Runty8EventExt as _;
 use winit::{
     dpi::LogicalSize,
     event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+type Window = glutin::WindowedContext<glutin::PossiblyCurrent>;
+
+#[cfg(target_arch = "wasm32")]
+type Window = winit::window::Window;
 
 pub fn event_loop(
     mut on_event: impl FnMut(Event, &mut ControlFlow, &dyn Fn(&[u8], &mut ControlFlow)) + 'static,
@@ -21,27 +30,35 @@ pub fn event_loop(
     wasm::setup_console_log_panic_hook();
 
     let event_loop = EventLoop::new();
-    let display = make_display(&event_loop, "Runty8");
-    let (scale_factor, mut logical_size) = {
-        let gl_window = display.gl_window();
-        let window = gl_window.window();
-        let scale_factor = window.scale_factor();
+    let window_builder = WindowBuilder::new()
+        .with_inner_size(LogicalSize::new(640.0, 640.0))
+        .with_title("Runty8");
 
-        (
-            scale_factor,
-            window.inner_size().to_logical::<f64>(scale_factor),
-        )
-    };
-    let (indices, program) = make_gl_program(&display);
-    let vertex_buffer = gl_boilerplate::whole_screen_vertex_buffer(&display);
+    let (window, gl, shader_version) = make_window_and_context(window_builder, &event_loop);
 
+    // let display = make_display(&event_loop, "Runty8");
+    // let (scale_factor, mut logical_size) = {
+    //     let gl_window = display.gl_window();
+    //     let window = gl_window.window();
+    //     let scale_factor = window.scale_factor();
+    //
+    //     (
+    //         scale_factor,
+    //         window.inner_size().to_logical::<f64>(scale_factor),
+    //     )
+    // };
+    // let (indices, program) = make_gl_program(&display);
+    // let vertex_buffer = gl_boilerplate::whole_screen_vertex_buffer(&display);
+
+    let scale_factor = 1.0;
+    let mut logical_size = LogicalSize::new(640.0, 640.0);
     event_loop.run(move |winit_event, _, control_flow| {
         let event: Option<Event> = Event::from_winit(&winit_event, scale_factor, &mut logical_size);
 
         if let Some(event) = event {
             let draw: &dyn Fn(&[u8], &mut ControlFlow) = &|pixels, control_flow| {
                 set_next_timer(control_flow);
-                do_draw(&display, &indices, &program, &vertex_buffer, pixels)
+                // do_draw(&display, &indices, &program, &vertex_buffer, pixels)
             };
 
             on_event(event, control_flow, draw);
@@ -49,6 +66,7 @@ pub fn event_loop(
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn do_draw(
     display: &Display,
     indices: &NoIndices,
@@ -75,6 +93,17 @@ fn do_draw(
     target.finish().unwrap();
 }
 
+fn make_window_and_context(
+    window_builder: WindowBuilder,
+    event_loop: &EventLoop<()>,
+) -> (Window, glow::Context, &'static str) {
+    #[cfg(not(target_arch = "wasm32"))]
+    return native::make_window_and_context(window_builder, event_loop);
+
+    #[cfg(target_arch = "wasm32")]
+    return wasm::make_window_and_context(window_builder, event_loop);
+}
+
 fn set_next_timer(control_flow: &mut ControlFlow) {
     #[cfg(not(target_arch = "wasm32"))]
     native::set_next_timer(control_flow);
@@ -82,8 +111,37 @@ fn set_next_timer(control_flow: &mut ControlFlow) {
     wasm::set_next_timer(control_flow);
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 mod native {
     use winit::event_loop::ControlFlow;
+
+    use glutin::{event_loop::EventLoop, window::WindowBuilder, ContextBuilder, ContextWrapper};
+
+    pub(crate) fn make_window_and_context(
+        window_builder: WindowBuilder,
+        event_loop: &EventLoop<()>,
+    ) -> (
+        glutin::WindowedContext<glutin::PossiblyCurrent>,
+        glow::Context,
+        &'static str,
+    ) {
+        let window = unsafe {
+            ContextBuilder::new()
+                .with_vsync(true)
+                .build_windowed(window_builder, &event_loop)
+                .unwrap()
+                .make_current()
+                .unwrap()
+        };
+
+        let gl = unsafe {
+            glow::Context::from_loader_function(|s| {
+                ContextWrapper::get_proc_address(&window, s) as *const _
+            })
+        };
+
+        (window, gl, "#version 410")
+    }
 
     pub(crate) fn set_next_timer(control_flow: &mut ControlFlow) {
         let fps = 30_u64;
@@ -93,11 +151,16 @@ mod native {
             std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
         *control_flow = ControlFlow::WaitUntil(next_frame_time);
     }
+
+    pub(crate) fn create_window_and_context() {}
 }
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    use winit::event_loop::ControlFlow;
+    use wasm_bindgen::JsCast;
+    use winit::event_loop::{ControlFlow, EventLoop};
+    use winit::platform::web::WindowExtWebSys;
+    use winit::window::{Window, WindowBuilder};
 
     pub(crate) fn set_next_timer(control_flow: &mut ControlFlow) {
         *control_flow = ControlFlow::Poll;
@@ -107,21 +170,45 @@ mod wasm {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
         console_log::init_with_level(log::Level::Debug).unwrap();
     }
-}
+    pub(crate) fn make_window_and_context(
+        window_builder: WindowBuilder,
+        event_loop: &EventLoop<()>,
+    ) -> (Window, glow::Context, &'static str) {
+        let window = window_builder.build(&event_loop).unwrap();
+        let gl = insert_canvas_and_create_context(&window);
 
-fn make_display(event_loop: &EventLoop<()>, title: &str) -> Display {
-    let wb = glutin::window::WindowBuilder::new()
-        .with_inner_size(LogicalSize::new(640.0, 640.0))
-        .with_title(title);
-    let cb = glutin::ContextBuilder::new();
-    let display = glium::Display::new(wb, cb, event_loop).unwrap();
-    {
-        display.gl_window().window().set_cursor_visible(false);
+        (window, gl, "#version 300 es")
     }
 
-    display
+    pub(crate) fn insert_canvas_and_create_context(window: &Window) -> glow::Context {
+        let canvas = window.canvas();
+
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let body = document.body().unwrap();
+
+        canvas.style().set_css_text(
+            r#"
+                border: 1px solid blue;
+                image-rendering: pixelated;
+                width: 100%;
+                max-width: 600px;
+            "#,
+        );
+        body.append_child(&canvas).unwrap();
+
+        let webgl2_context = canvas
+            .get_context("webgl2")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::WebGl2RenderingContext>()
+            .unwrap();
+
+        glow::Context::from_webgl2_context(webgl2_context)
+    }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn make_gl_program(display: &impl Facade) -> (NoIndices, Program) {
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
     let program = glium::Program::from_source(
@@ -135,6 +222,7 @@ fn make_gl_program(display: &impl Facade) -> (NoIndices, Program) {
     (indices, program)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 mod gl_boilerplate {
     use glium::backend::Facade;
     use glium::implement_vertex;
