@@ -11,23 +11,22 @@ use glium::uniforms::{MagnifySamplerFilter, Sampler};
 use glium::{glutin, Display, Program, Surface};
 use glium::{uniform, Frame};
 use runty8_core::Event;
-use runty8_winit::Runty8EventExt;
+use runty8_winit::{Runty8EventExt, ScreenInfo};
 
 pub(crate) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {
     let event_loop = glutin::event_loop::EventLoop::new();
-    let display = make_display(&event_loop, "Runty8");
-    let scale_factor = display.gl_window().window().scale_factor();
-    let mut logical_size = display
-        .gl_window()
-        .window()
-        .inner_size()
-        .to_logical(scale_factor);
+
+    let mut screen_info = ScreenInfo::new(640.0, 640.0);
+    let display = make_display(&event_loop, screen_info.logical_size, "Runty8");
+    screen_info.scale_factor = display.gl_window().window().scale_factor();
 
     let (indices, program) = make_gl_program(&display);
 
     let mut controller = Controller::<Game>::init(scene, resources);
+    let mut current_time = instant::now();
     event_loop.run(move |winit_event, _, control_flow| {
-        let event: Option<Event> = Event::from_winit(&winit_event, scale_factor, &mut logical_size);
+        let event: Option<Event> =
+            Event::from_winit(&winit_event, &mut current_time, &mut screen_info);
 
         controller.step(event);
 
@@ -83,9 +82,9 @@ fn do_draw(
     target.finish().unwrap();
 }
 
-fn make_display(event_loop: &EventLoop<()>, title: &str) -> Display {
+fn make_display(event_loop: &EventLoop<()>, window_size: LogicalSize<f64>, title: &str) -> Display {
     let wb = glutin::window::WindowBuilder::new()
-        .with_inner_size(LogicalSize::new(640.0, 640.0))
+        .with_inner_size(window_size)
         .with_title(title);
     let cb = glutin::ContextBuilder::new();
     let display = glium::Display::new(wb, cb, event_loop).unwrap();

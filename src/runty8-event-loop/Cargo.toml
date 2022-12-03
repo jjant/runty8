@@ -8,6 +8,7 @@ runty8-core = { path = "../runty8-core" }
 runty8-winit = { path = "../runty8-winit" }
 winit = "0.26"
 glow = "0.11"
+# TODO: Use this feature only on wasm32 platform
 instant = { version = "0.1", features = ["wasm-bindgen"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

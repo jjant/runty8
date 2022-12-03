@@ -2,11 +2,26 @@
 use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
 use winit::dpi::{LogicalPosition, LogicalSize};
 
+pub struct ScreenInfo {
+    pub scale_factor: f64,
+    pub logical_size: LogicalSize<f64>,
+}
+
+impl ScreenInfo {
+    // TODO: Initialise `scale_factor` properly.
+    pub fn new(width: f64, height: f64) -> Self {
+        Self {
+            scale_factor: 1.0,
+            logical_size: LogicalSize::new(width, height),
+        }
+    }
+}
+
 pub trait Runty8EventExt: Sized {
     fn from_winit(
         event: &winit::event::Event<()>,
-        hidpi_factor: f64,
-        window_size: &mut LogicalSize<f64>,
+        current_time: &mut f64,
+        screen_info: &mut ScreenInfo,
     ) -> Option<Self>;
 }
 
@@ -14,8 +29,8 @@ impl Runty8EventExt for Event {
     /// Translates a winit::event::Event into a runty8 Event.
     fn from_winit(
         event: &winit::event::Event<()>,
-        hidpi_factor: f64,
-        window_size: &mut LogicalSize<f64>,
+        current_time: &mut f64,
+        screen_info: &mut ScreenInfo,
     ) -> Option<Event> {
         use winit::event::ElementState;
 
@@ -24,15 +39,19 @@ impl Runty8EventExt for Event {
                 winit::event::WindowEvent::CloseRequested => Some(Event::WindowClosed),
                 // TODO: Force aspect ratio on resize.
                 &winit::event::WindowEvent::Resized(new_size) => {
-                    let new_size: LogicalSize<f64> = new_size.to_logical(hidpi_factor);
-
-                    *window_size = new_size;
+                    screen_info.logical_size = new_size.to_logical(screen_info.scale_factor);
 
                     None
                 }
+                &winit::event::WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
+                    screen_info.scale_factor = scale_factor;
+                    None
+                }
                 winit::event::WindowEvent::CursorMoved { position, .. } => {
-                    let logical_mouse: LogicalPosition<f64> = position.to_logical(hidpi_factor);
+                    let logical_mouse: LogicalPosition<f64> =
+                        position.to_logical(screen_info.scale_factor);
 
+                    let window_size = screen_info.logical_size;
                     Some(Event::Input(InputEvent::Mouse(MouseEvent::Move {
                         x: (logical_mouse.x / window_size.width * 128.).floor() as i32,
                         y: (logical_mouse.y / window_size.height * 128.).floor() as i32,
@@ -62,24 +81,15 @@ impl Runty8EventExt for Event {
                 _ => None,
             },
             winit::event::Event::NewEvents(cause) => match cause {
-                winit::event::StartCause::ResumeTimeReached {
-                    start,
-                    requested_resume,
-                } => {
-                    let delta: Result<i32, _> = requested_resume
-                        .duration_since(*start)
-                        .as_millis()
-                        .try_into();
-
-                    Some(Event::Tick {
-                        delta_millis: delta.unwrap().try_into().unwrap(),
-                    })
-                }
                 winit::event::StartCause::Init => Some(Event::Tick { delta_millis: 0.0 }),
-                // Is this correct?
-                winit::event::StartCause::Poll => Some(Event::Tick {
-                    delta_millis: 16.6666,
-                }),
+                winit::event::StartCause::Poll => {
+                    let new_time = instant::now();
+                    let delta_millis = new_time - *current_time;
+                    *current_time = new_time;
+
+                    Some(Event::Tick { delta_millis })
+                }
+                winit::event::StartCause::ResumeTimeReached { .. } => None,
                 winit::event::StartCause::WaitCancelled { .. } => None,
             },
             _ => None,

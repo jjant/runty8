@@ -68,9 +68,6 @@ impl<Game: AppCompat> Controller<Game> {
             Msg::App(msg) => {
                 self.app.update(msg, &mut self.pico8);
             }
-            &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
-                self.pico8.state.on_mouse_move(x, y);
-            }
             &Msg::MouseEvent(event) => self.keys.on_event(InputEvent::Mouse(event)),
 
             &Msg::KeyboardEvent(event) => {

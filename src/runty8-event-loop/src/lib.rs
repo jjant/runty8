@@ -1,8 +1,7 @@
 use glow::HasContext;
 use runty8_core::Event;
-use runty8_winit::Runty8EventExt as _;
+use runty8_winit::{Runty8EventExt as _, ScreenInfo};
 use winit::{
-    dpi::LogicalSize,
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -21,15 +20,14 @@ pub fn event_loop(
     #[cfg(target_arch = "wasm32")]
     wasm::setup_console_log_panic_hook();
 
+    let mut screen_info = ScreenInfo::new(640.0, 640.0);
+
     let event_loop = EventLoop::new();
     let window_builder = WindowBuilder::new()
-        .with_inner_size(LogicalSize::new(640.0, 640.0))
+        .with_inner_size(screen_info.logical_size)
         .with_title("Runty8");
 
     let (window, gl, shader_version) = make_window_and_context(window_builder, &event_loop);
-
-    let scale_factor = 1.0; // TODO
-    let mut logical_size = LogicalSize::new(640.0, 640.0); // TODO
 
     let texture = unsafe {
         let vertex_array = gl
@@ -47,15 +45,17 @@ pub fn event_loop(
         texture
     };
 
-    // TODO: Initial render
+    let mut current_time = instant::now();
+    // TODO: Initial render.
+    // EDIT: Actually I think this handles itself through the Tick from Init? Maybe? Not sure.
+    // => Test it
     // gl::upload_pixels(&gl, texture, pico8.draw_data.buffer());
     event_loop.run(move |winit_event, _, control_flow| {
-        let event: Option<Event> = Event::from_winit(&winit_event, scale_factor, &mut logical_size);
+        let event: Option<Event> =
+            Event::from_winit(&winit_event, &mut current_time, &mut screen_info);
 
         if let Some(event) = event {
-            let draw: &dyn Fn(&[u8], &mut ControlFlow) = &|pixels, control_flow| {
-                set_next_timer(control_flow);
-                // do_draw(&display, &indices, &program, &vertex_buffer, pixels)
+            let draw: &dyn Fn(&[u8], &mut ControlFlow) = &|pixels, _control_flow| {
                 draw(&gl, texture, pixels);
                 #[cfg(not(target_arch = "wasm32"))]
                 window.swap_buffers().unwrap();
@@ -85,17 +85,8 @@ fn make_window_and_context(
     return wasm::make_window_and_context(window_builder, event_loop);
 }
 
-fn set_next_timer(control_flow: &mut ControlFlow) {
-    #[cfg(not(target_arch = "wasm32"))]
-    native::set_next_timer(control_flow);
-    #[cfg(target_arch = "wasm32")]
-    wasm::set_next_timer(control_flow);
-}
-
 #[cfg(not(target_arch = "wasm32"))]
 mod native {
-    use winit::event_loop::ControlFlow;
-
     use glutin::{event_loop::EventLoop, window::WindowBuilder, ContextBuilder, ContextWrapper};
 
     pub(crate) fn make_window_and_context(
@@ -123,15 +114,6 @@ mod native {
 
         (window, gl, "#version 410")
     }
-
-    pub(crate) fn set_next_timer(control_flow: &mut ControlFlow) {
-        let fps = 30_u64;
-        let nanoseconds_per_frame = 1_000_000_000 / fps;
-
-        let next_frame_time =
-            std::time::Instant::now() + std::time::Duration::from_nanos(nanoseconds_per_frame);
-        *control_flow = ControlFlow::WaitUntil(next_frame_time);
-    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -140,10 +122,6 @@ mod wasm {
     use winit::event_loop::{ControlFlow, EventLoop};
     use winit::platform::web::WindowExtWebSys;
     use winit::window::{Window, WindowBuilder};
-
-    pub(crate) fn set_next_timer(control_flow: &mut ControlFlow) {
-        *control_flow = ControlFlow::Poll;
-    }
 
     pub(crate) fn setup_console_log_panic_hook() {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));

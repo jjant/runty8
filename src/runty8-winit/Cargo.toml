@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 runty8-core = { path = "../runty8-core" }
 winit = "0.26"
+instant = { version = "0.1", features = ["wasm-bindgen"] }
