@@ -7,7 +7,7 @@ use runty8_core::{Flags, Map, Resources};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[doc(inline)]
-pub use runty8_editor::run_app;
+pub use runty8_editor::run_app as run_editor;
 
 #[doc(inline)]
 pub use runty8_runtime::run;
