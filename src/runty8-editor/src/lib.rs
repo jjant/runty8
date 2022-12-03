@@ -13,8 +13,6 @@ pub use runty8_core::{rnd, sin, KeyboardEvent, Pico8};
 
 mod controller;
 mod editor;
-mod graphics;
-mod run;
 mod util;
 use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
@@ -32,7 +30,7 @@ pub fn run_elm_app<T: ElmApp + 'static>(resources: Resources) -> std::io::Result
 // TODO: add example
 fn run_app_compat<T: AppCompat + 'static>(resources: Resources) -> std::io::Result<()> {
     let starting_scene = start_scene();
-    crate::run::run_app::<T>(starting_scene, resources);
+    implementation::run_app::<T>(starting_scene, resources);
 
     Ok(())
 }
@@ -42,5 +40,30 @@ fn start_scene() -> Scene {
         Scene::App
     } else {
         Scene::Editor
+    }
+}
+
+mod implementation {
+    use crate::app::AppCompat;
+    use crate::controller::{Controller, Scene};
+    use crate::Resources;
+    use runty8_winit::ScreenInfo;
+
+    pub(super) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {
+        let mut screen_info = ScreenInfo::new(640.0, 640.0);
+        screen_info.scale_factor = 1.0;
+
+        let mut controller = Controller::<Game>::init(scene, resources);
+
+        runty8_event_loop::event_loop(move |event, control_flow, draw| {
+            controller.step(event);
+
+            // TODO: support this.
+            // if let Some(new_title) = controller.take_new_title() {
+            //     display.gl_window().window().set_title(&new_title);
+            // }
+
+            draw(controller.screen_buffer(), control_flow);
+        });
     }
 }

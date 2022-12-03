@@ -41,24 +41,36 @@ impl<A: ElmApp> AppCompat for ElmAppCompat<A> {
 
 #[derive(Clone, Copy, Debug)]
 pub enum Pico8AppMsg {
-    Tick,
+    Tick { delta_millis: f64 },
 }
 
 pub(crate) struct Pico8AppCompat<A> {
     app: A,
+    accumulated_delta: f64,
+    delta_time: f64,
 }
 
 impl<A: App> AppCompat for Pico8AppCompat<A> {
     type Msg = Pico8AppMsg;
 
     fn init(pico8: &mut Pico8) -> Self {
+        let fps = 30 as f64;
+
         Self {
             app: A::init(pico8),
+            accumulated_delta: 0.0,
+            delta_time: 1000.0 / fps,
         }
     }
 
-    fn update(&mut self, _: &Self::Msg, pico8: &mut Pico8) {
-        self.app.update(pico8);
+    fn update(&mut self, msg: &Self::Msg, pico8: &mut Pico8) {
+        let Pico8AppMsg::Tick { delta_millis } = *msg;
+        self.accumulated_delta += delta_millis;
+
+        while self.accumulated_delta > self.delta_time {
+            self.app.update(pico8);
+            self.accumulated_delta -= self.delta_time;
+        }
     }
 
     fn view(&mut self, _: &mut Resources) -> Element<'_, Self::Msg> {
@@ -66,8 +78,8 @@ impl<A: App> AppCompat for Pico8AppCompat<A> {
     }
 
     fn subscriptions(&self, event: &Event) -> Vec<Self::Msg> {
-        if let Event::Tick { .. } = event {
-            vec![Pico8AppMsg::Tick]
+        if let Event::Tick { delta_millis } = *event {
+            vec![Pico8AppMsg::Tick { delta_millis }]
         } else {
             vec![]
         }

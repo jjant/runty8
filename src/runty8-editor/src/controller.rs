@@ -131,7 +131,7 @@ impl<Game: AppCompat> Controller<Game> {
     }
 
     /// Thing that actually calls update/orchestrates stuff
-    pub(crate) fn step(&mut self, event: Option<Event>) {
+    pub(crate) fn step(&mut self, event: Event) {
         let mut view = view(
             &self.scene,
             &mut self.editor,
@@ -143,17 +143,16 @@ impl<Game: AppCompat> Controller<Game> {
         let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
 
         let cursor_position = (self.pico8.state.mouse_x, self.pico8.state.mouse_y);
-        if let Some(event) = event {
-            view.as_widget_mut()
-                .on_event(event, cursor_position, dispatch_event);
-        }
+        view.as_widget_mut()
+            .on_event(event, cursor_position, dispatch_event);
 
         view.as_widget_mut().draw(&mut self.pico8);
         drop(view);
 
-        for subscription_msg in event.into_iter().flat_map(|e| self.subscriptions(&e)) {
+        for subscription_msg in self.subscriptions(&event) {
             msg_queue.push(subscription_msg);
         }
+
         for msg in msg_queue.into_iter() {
             self.update(&msg);
         }
