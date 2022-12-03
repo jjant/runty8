@@ -144,7 +144,7 @@ pub enum MouseEvent {
     },
 }
 
-/// Keyboard events (key up, key down).
+/// Runty8 events (input, tick, etc).
 #[derive(Clone, Copy, Debug)]
 pub enum Event {
     Input(InputEvent),
