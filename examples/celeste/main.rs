@@ -6,7 +6,8 @@ use std::iter::{Chain, Map};
 use std::slice;
 
 fn main() {
-    let resources = runty8::load_assets!("./");
+    let resources = runty8::load_assets!("celeste").unwrap();
+
     runty8::debug_run::<GameState>(resources).unwrap();
 }
 

@@ -15,7 +15,6 @@ impl SpriteSheet {
     }
 }
 
-#[allow(clippy::new_without_default)]
 impl SpriteSheet {
     pub const SPRITES_PER_ROW: usize = 16;
 
@@ -25,7 +24,6 @@ impl SpriteSheet {
     /// and will override its data if used
     pub const SPRITE_COUNT: usize = 256;
 
-    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             sprite_sheet: vec![0; Self::SPRITE_COUNT * Sprite::WIDTH * Sprite::HEIGHT],
@@ -85,6 +83,12 @@ impl SpriteSheet {
             .collect();
 
         Self::with_vec(sprite_sheet)
+    }
+}
+
+impl Default for SpriteSheet {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -1,7 +1,7 @@
 use runty8::{App, Button, Pico8};
 
 fn main() {
-    let resources = runty8::load_runtime_assets("examples/stress_lines".to_owned()).unwrap();
+    let resources = runty8::load_assets2!("stress-lines").unwrap();
 
     runty8::debug_run::<StressLines>(resources).unwrap();
 }
