@@ -1,3 +1,7 @@
+#![deny(missing_docs)]
+
+//! Run a standalone Runty8 game natively or in wasm.
+
 use runty8_core::{App, Event, Input, Pico8, Resources};
 use runty8_event_loop::event_loop;
 use winit::event_loop::ControlFlow;
