@@ -1,3 +1,7 @@
+#![deny(missing_docs)]
+
+//! Winit/Glow/Glutin powered event loop for Runty8 applications.
+
 use glow::HasContext;
 use runty8_core::Event;
 use runty8_winit::{Runty8EventExt as _, ScreenInfo};
@@ -14,6 +18,7 @@ type Window = glutin::WindowedContext<glutin::PossiblyCurrent>;
 #[cfg(target_arch = "wasm32")]
 type Window = winit::window::Window;
 
+/// Create a window (or canvas, in wasm) and respond to events on it.
 pub fn event_loop(
     mut on_event: impl FnMut(Event, &mut ControlFlow, &dyn Fn(&[u8], &mut ControlFlow), &dyn Fn(&str))
         + 'static,
