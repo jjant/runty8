@@ -51,4 +51,4 @@ jobs:
         name: Clippy
         with:
           command: clippy
-          args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }} -- -D warnings
+          args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }} -- -D warnings -A unknown-lints
