@@ -47,6 +47,7 @@ mod implementation {
     use crate::app::AppCompat;
     use crate::controller::{Controller, Scene};
     use crate::Resources;
+    use runty8_core::Event;
     use runty8_winit::ScreenInfo;
 
     pub(super) fn run_app<Game: AppCompat + 'static>(scene: Scene, resources: Resources) {
@@ -63,7 +64,9 @@ mod implementation {
             //     display.gl_window().window().set_title(&new_title);
             // }
 
-            draw(controller.screen_buffer(), control_flow);
+            if let Event::Tick { .. } = event {
+                draw(controller.screen_buffer(), control_flow);
+            }
         });
     }
 }
