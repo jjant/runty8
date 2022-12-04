@@ -75,7 +75,6 @@ fn key_to_button(key: Key) -> Option<Button> {
         Key::RightArrow => Some(Button::Right),
         Key::UpArrow => Some(Button::Up),
         Key::DownArrow => Some(Button::Down),
-        // Key::X => Some(Button::Mouse),
         _ => None,
     }
 }
