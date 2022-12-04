@@ -1,8 +1,8 @@
-use rand::Rng;
 use runty8::{App, Button, Pico8};
 
 fn main() {
-    runty8::run_app::<Confetti>("examples/confetti".to_owned()).unwrap();
+    let resources = runty8::load_assets!("confetti").unwrap();
+    runty8::debug_run::<Confetti>(resources).unwrap();
 }
 
 struct Confetti {
@@ -80,11 +80,11 @@ struct Particle {
 
 impl Particle {
     fn new(x: f32, y: f32) -> Self {
-        let x = rand::thread_rng().gen_range(-2.0..2.0) + x;
-        let y = rand::thread_rng().gen_range(-2.0..2.0) + y;
-        let vx = rand::thread_rng().gen_range(-15.0..15.0) / 50.0;
-        let vy = rand::thread_rng().gen_range(-50.0..10.0) / 50.0;
-        let ttl = rand::thread_rng().gen_range(10..70);
+        let x = rand_between(-2.0, 2.0) + x;
+        let y = rand_between(-2.0, 2.0) + y;
+        let vx = rand_between(-15.0, 15.0) / 50.0;
+        let vy = rand_between(-50.0, 10.0) / 50.0;
+        let ttl = rand_between(10.0, 70.0) as i32;
 
         Self {
             x,
@@ -93,7 +93,7 @@ impl Particle {
             vy,
             ay: 0.05,
             ttl,
-            color: rand::thread_rng().gen_range(1..16),
+            color: rand_between(1.0, 16.0) as u8,
         }
     }
 
@@ -107,4 +107,8 @@ impl Particle {
     fn draw(&self, draw_context: &mut Pico8) {
         draw_context.pset(self.x as i32, self.y as i32, self.color);
     }
+}
+
+fn rand_between(min: f32, max: f32) -> f32 {
+    min + runty8::rnd(max - min)
 }

@@ -1,11 +1,10 @@
-[package]
-name = "runty8"
-version = "0.1.0"
-edition = "2021"
-default-run = "runty8"
-readme = "README.md"
-
-[dependencies]
-glium = "*"
-itertools = "*"
-rand = "*"
+[workspace]
+members = [
+  "src/runty8",
+  "src/runty8-core",
+  "src/runty8-runtime",
+  "src/runty8-editor",
+  "src/runty8-event-loop",
+  "src/runty8-winit",
+  "examples",
+]

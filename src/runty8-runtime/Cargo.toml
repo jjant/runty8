@@ -1,0 +1,10 @@
+[package]
+name = "runty8-runtime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+runty8-core = { path = "../runty8-core" }
+runty8-winit = { path = "../runty8-winit" }
+runty8-event-loop = { path = "../runty8-event-loop" }
+winit = "0.26"

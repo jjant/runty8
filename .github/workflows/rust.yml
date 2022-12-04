@@ -12,30 +12,43 @@ jobs:
           - beta
           - nightly
           - 1.63.0 # Current rustc on my machine
+        target:
+          - x86_64-unknown-linux-gnu
+          - wasm32-unknown-unknown
+
     steps:
       - uses: actions/checkout@v2
+        name: Checkout source
 
       - uses: actions-rs/toolchain@v1
+        name: Install toolchain
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
           override: true
           components: rustfmt, clippy
 
       - uses: actions-rs/cargo@v1
+        name: Build
         with:
           command: build
+          args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
 
       - uses: actions-rs/cargo@v1
+        name: Test
         with:
           command: test
+          args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
 
       - uses: actions-rs/cargo@v1
+        name: Format
         with:
           command: fmt
           args: --all -- --check
 
       - uses: actions-rs/cargo@v1
+        name: Clippy
         with:
           command: clippy
-          args: -- -D warnings
+          args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }} -- -D warnings -A unknown-lints

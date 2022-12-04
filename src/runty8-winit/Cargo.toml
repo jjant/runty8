@@ -1,0 +1,14 @@
+[package]
+name = "runty8-winit"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+runty8-core = { path = "../runty8-core" }
+winit = "0.26"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+instant = { version = "0.1" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+instant = { version = "0.1", features = ["wasm-bindgen"] }

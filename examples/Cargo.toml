@@ -1,0 +1,34 @@
+[package]
+name = "examples"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+runty8 = { path = "../src/runty8" }
+runty8-core = { path = "../src/runty8-core" }
+log = "0.4"
+include_dir= "0.7.3"
+
+[[bin]]
+name = "celeste"
+path = "./celeste/main.rs"
+
+[[bin]]
+name = "confetti"
+path = "./confetti/main.rs"
+
+[[bin]]
+name = "moving-box"
+path = "./moving-box/main.rs"
+
+[[bin]]
+name = "bresenham"
+path = "./bresenham/main.rs"
+
+[[bin]]
+name = "stress-lines"
+path = "./stress-lines/main.rs"
+
+[[bin]]
+name = "standalone-game"
+path = "./standalone-game/main.rs"

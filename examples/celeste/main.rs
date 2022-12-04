@@ -1,13 +1,14 @@
 use std::f32::consts::{FRAC_1_SQRT_2, PI};
 
-use rand::Rng;
-use runty8::{App, Button, Pico8};
+use runty8::{rnd, App, Button, Pico8};
 
 use std::iter::{Chain, Map};
 use std::slice;
 
 fn main() {
-    runty8::run_app::<GameState>("examples/celeste".to_owned()).unwrap();
+    let resources = runty8::load_assets!("celeste").unwrap();
+
+    runty8::debug_run::<GameState>(resources).unwrap();
 }
 
 struct GameState {
@@ -465,10 +466,6 @@ struct Vec2<T> {
     y: T,
 }
 
-fn rnd(max: f32) -> f32 {
-    rand::thread_rng().gen_range(0.0..max)
-}
-
 impl GameState {
     fn begin_game(&mut self, pico8: &Pico8) {
         self.frames = 0;
@@ -733,6 +730,7 @@ impl Player {
                     ));
                 } else {
                     // -- wall jump
+                    #[allow(clippy::bool_to_int_with_if)]
                     let wall_dir = if this.is_solid(state, objects, room, -3, 0) {
                         -1
                     } else if this.is_solid(state, objects, room, 3, 0) {
@@ -1159,7 +1157,7 @@ impl RoomTitle {
             } else {
                 let level = (1 + level_index(room)) * 100;
                 let x = 52 + (if level < 1000 { 2 } else { 0 });
-                draw.print(&format!("{} M", level), x, 62, 7);
+                draw.print(&format!("{level} M"), x, 62, 7);
             }
 
             draw_time(seconds, minutes, draw, 4, 4);
@@ -1186,9 +1184,7 @@ struct Object {
 }
 
 fn got_fruit_for_room(got_fruit: &[bool], room: Vec2<i32>) -> bool {
-    *got_fruit
-        .get(1 + level_index(room) as usize)
-        .unwrap_or(&false)
+    *got_fruit.get(1 + level_index(room)).unwrap_or(&false)
 }
 
 impl Object {
@@ -1354,13 +1350,13 @@ impl Object {
 
         // [x] get move amount
         self.base_object.rem.x += ox;
-        let amount_x = (self.base_object.rem.x as f32 + 0.5).floor();
+        let amount_x = (self.base_object.rem.x + 0.5).floor();
         self.base_object.rem.x -= amount_x;
         self.move_x(state, objects, room, amount_x as i32, 0);
 
         // [y] get move amount
         self.base_object.rem.y += oy;
-        let amount_y = (self.base_object.rem.y as f32 + 0.5).floor();
+        let amount_y = (self.base_object.rem.y + 0.5).floor();
         self.base_object.rem.y -= amount_y;
         self.move_y(state, objects, room, amount_y as i32);
     }
@@ -1748,21 +1744,21 @@ fn draw_time(seconds: i32, minutes: i32, draw: &mut Pico8, x: i32, y: i32) {
     let h = minutes / 60;
 
     let h_str = if h < 10 {
-        format!("0{}", h)
+        format!("0{h}")
     } else {
         h.to_string()
     };
     let m_str = if m < 10 {
-        format!("0{}", m)
+        format!("0{m}")
     } else {
         m.to_string()
     };
     let s_str = if s < 10 {
-        format!("0{}", s)
+        format!("0{s}")
     } else {
         s.to_string()
     };
-    let time_str = format!("{}:{}:{}", h_str, m_str, s_str);
+    let time_str = format!("{h_str}:{m_str}:{s_str}");
 
     draw.rectfill(x, y, x + 32, y + 6, 0);
     draw.print(&time_str, x + 1, y + 1, 7);
@@ -1784,8 +1780,9 @@ fn appr(val: f32, target: f32, amount: f32) -> f32 {
 }
 
 fn maybe() -> bool {
-    rand::thread_rng().gen()
+    rnd(1.0) > 0.5
 }
+
 fn ice_at(state: &Pico8, room: Vec2<i32>, x: i32, y: i32, w: i32, h: i32) -> bool {
     tile_flag_at(state, room, x, y, w, h, 4)
 }
@@ -1935,7 +1932,7 @@ impl Fruit {
             player.djump = max_djump;
             // sfx_timer=20
             // sfx(13)
-            got_fruit[level_index(room) as usize] = true;
+            got_fruit[level_index(room)] = true;
 
             UpdateAction::noop().destroy().push(Object::init(
                 got_fruit,
@@ -2386,6 +2383,7 @@ fn horizontal_input(state: &Pico8) -> i32 {
 }
 
 fn vertical_input(state: &Pico8) -> i32 {
+    #[allow(clippy::bool_to_int_with_if)]
     if state.btn(K_UP) {
         -1
     } else if state.btn(K_DOWN) {
@@ -3170,7 +3168,7 @@ impl Flag {
             draw.spr(26, 55, 6);
             draw.print(&format!("X{}", self.score), 64, 9, 7);
             draw_time(seconds, minutes, draw, 49, 16);
-            draw.print(&format!("DEATHS:{}", deaths), 48, 24, 7);
+            draw.print(&format!("DEATHS:{deaths}"), 48, 24, 7);
         } else if this.check(objects.into_iter(), &ObjectKind::Player, 0, 0) {
             // sfx(55);
             // sfx_timer = 30;

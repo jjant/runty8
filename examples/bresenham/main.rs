@@ -1,7 +1,9 @@
-use runty8::{self, App, Button, Pico8};
+use runty8::{App, Button, Pico8};
 
 fn main() {
-    runty8::run_app::<MyThing>("examples/bresenham".to_owned()).unwrap();
+    let resources = runty8::load_assets!("bresenham").unwrap();
+
+    runty8::debug_run::<MyThing>(resources).unwrap();
 }
 
 struct MyThing {
@@ -84,7 +86,7 @@ fn midpoint(cx: i32, cy: i32, r: i32) -> Vec<(i32, i32)> {
         points.push((cx - y as i32, cy - x as i32));
 
         x = (x.powi(2) - 2.0 * y - 1.0).sqrt();
-        y = y + 1.0;
+        y += 1.0;
     }
     points
 }
