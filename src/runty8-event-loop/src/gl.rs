@@ -19,8 +19,6 @@ const vec2 all_tex_coords[6] = vec2[6](
     vec2(1.0f, 1.0f)
 );
 
-// in vec2 position;
-// in vec2 tex_coords;
 out vec2 v_tex_coords;
 
 void main() {
