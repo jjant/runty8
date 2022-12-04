@@ -1,4 +1,7 @@
+// #![deny(missing_docs)]
+
 //! Types and functions required to run a Runty8 game.
+
 mod draw_data;
 mod flags;
 mod input;
@@ -68,62 +71,103 @@ pub enum KeyState {
 /// Keyboard keys.
 #[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub enum Key {
+    ///
     A,
+    ///
     B,
+    ///
     C,
+    ///
     D,
+    ///
     E,
+    ///
     F,
+    ///
     G,
+    ///
     H,
+    ///
     I,
+    ///
     J,
+    ///
     K,
+    ///
     L,
+    ///
     M,
+    ///
     N,
+    ///
     O,
+    ///
     P,
+    ///
     Q,
+    ///
     R,
+    ///
     S,
+    ///
     T,
+    ///
     U,
+    ///
     V,
+    ///
     W,
+    ///
     X,
+    ///
     Y,
+    ///
     Z,
+    ///
     Control,
+    ///
     LeftArrow,
+    ///
     RightArrow,
+    ///
     UpArrow,
+    ///
     DownArrow,
+    ///
     Escape,
+    ///
     Alt,
+    ///
     Space,
 }
 
 /// Keyboard event (key up/down).
 #[derive(Clone, Copy, Debug)]
 pub struct KeyboardEvent {
+    /// Key that was pressed or released.
     pub key: Key,
+    /// Whether the key was pressed or released.
     pub state: KeyState,
 }
 
+/// Input events (mouse/keyboard).
 #[derive(Clone, Copy, Debug)]
 pub enum InputEvent {
+    /// Keyboard event
     Keyboard(KeyboardEvent),
+    /// Mouse event
     Mouse(MouseEvent),
 }
 
 /// Mouse buttons.
 #[derive(Clone, Copy, Debug)]
 pub enum MouseButton {
-    // TODO: Handle other mouse buttons?
+    /// Left mouse button
     Left,
-    Right,
+    /// Middle mouse button
     Middle,
+    /// Right mouse button
+    Right,
 }
 
 /// Mouse events (mouse move, button presses).
@@ -137,10 +181,11 @@ pub enum MouseEvent {
         ///
         y: i32,
     },
-    // TODO: Refactor these two below to factor out the MouseButton
-    /// Mouse button pressed.
+    /// Mouse button pressed/released.
     Button {
+        /// Mouse button that was pressed or released.
         button: MouseButton,
+        /// Whether the button was pressed or released.
         state: KeyState,
     },
 }
@@ -148,11 +193,18 @@ pub enum MouseEvent {
 /// Runty8 events (input, tick, etc).
 #[derive(Clone, Copy, Debug)]
 pub enum Event {
+    ///
     Input(InputEvent),
-    Tick { delta_millis: f64 },
+    ///
+    Tick {
+        /// How much time passed since the last [`Event::Tick`], in milliseconds.
+        delta_millis: f64,
+    },
+    // TODO: Remove this
     WindowClosed,
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! include_dir_hack {
     (#[doc = $arg:tt]) => {
@@ -160,22 +212,7 @@ macro_rules! include_dir_hack {
     };
 }
 
-#[macro_export]
-macro_rules! assets_path_hack {
-    (#[doc = $arg:tt]) => {{
-        $arg
-    }};
-}
-
-#[macro_export]
-macro_rules! assets_path {
-    ($arg:tt) => {
-        $crate::paste! {
-            $crate::assets_path_hack!(#[doc = "$CARGO_MANIFEST_DIR/" $arg ])
-        }
-    };
-}
-
+#[doc(hidden)]
 #[macro_export]
 macro_rules! include_assets {
     ($arg:tt) => {
