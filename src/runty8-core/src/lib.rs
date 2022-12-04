@@ -238,9 +238,7 @@ pub fn create_asset<T: Default>(
             deserialize(contents)
         }
         None => {
-            println!(
-                "Couldn't find file for asset: {asset_name}, creating a blank one."
-            );
+            println!("Couldn't find file for asset: {asset_name}, creating a blank one.");
             Ok(T::default())
         }
     }

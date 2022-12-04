@@ -95,8 +95,7 @@ impl Default for SpriteSheet {
 impl Serialize for SpriteSheet {
     fn serialize(&self) -> String {
         let lines = self.sprite_sheet.chunks(128).map(|chunk| {
-            Itertools::intersperse(chunk.iter().map(|n| format!("{n:X}")), "".to_owned())
-                .collect()
+            Itertools::intersperse(chunk.iter().map(|n| format!("{n:X}")), "".to_owned()).collect()
         });
 
         Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
