@@ -1,16 +1,10 @@
-use runty8_core::{App, Button, Flags, Map, Pico8, Resources, SpriteSheet};
+use runty8::{App, Button, Pico8};
 
 const LOG: bool = false;
 
 fn main() {
-    unsafe {
-        runty8_event_loop::event_loop::<Game>(Resources {
-            assets_path: "standalone-game/assets".to_owned(),
-            map: Map::new(),
-            sprite_flags: Flags::new(),
-            sprite_sheet: SpriteSheet::new(),
-        });
-    }
+    let assets = runty8::load_assets!("standalone-game").unwrap();
+    runty8::run::<Game>(assets).unwrap();
 }
 
 struct Game {

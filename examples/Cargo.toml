@@ -28,3 +28,7 @@ path = "./bresenham/main.rs"
 [[bin]]
 name = "stress-lines"
 path = "./stress-lines/main.rs"
+
+[[bin]]
+name = "standalone-game"
+path = "./standalone-game/main.rs"

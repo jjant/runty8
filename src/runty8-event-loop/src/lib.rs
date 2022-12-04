@@ -137,7 +137,7 @@ mod native {
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use wasm_bindgen::JsCast;
-    use winit::event_loop::{ControlFlow, EventLoop};
+    use winit::event_loop::EventLoop;
     use winit::platform::web::WindowExtWebSys;
     use winit::window::{Window, WindowBuilder};
 
