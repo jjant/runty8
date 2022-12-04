@@ -44,7 +44,6 @@ impl Flags {
         self.flags.len()
     }
 
-    #[allow(clippy::only_used_in_recursion)] // clippy is wrong
     fn set(&mut self, index: usize, value: u8) {
         self.flags[index] = value;
     }
