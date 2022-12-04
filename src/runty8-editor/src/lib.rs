@@ -56,13 +56,12 @@ mod implementation {
 
         let mut controller = Controller::<Game>::init(scene, resources);
 
-        runty8_event_loop::event_loop(move |event, control_flow, draw| {
+        runty8_event_loop::event_loop(move |event, control_flow, draw, set_title| {
             controller.step(event);
 
-            // TODO: support this.
-            // if let Some(new_title) = controller.take_new_title() {
-            //     display.gl_window().window().set_title(&new_title);
-            // }
+            if let Some(new_title) = controller.take_new_title() {
+                set_title(&new_title);
+            }
 
             if let Event::Tick { .. } = event {
                 draw(controller.screen_buffer(), control_flow);

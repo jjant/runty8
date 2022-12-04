@@ -15,7 +15,8 @@ type Window = glutin::WindowedContext<glutin::PossiblyCurrent>;
 type Window = winit::window::Window;
 
 pub fn event_loop(
-    mut on_event: impl FnMut(Event, &mut ControlFlow, &dyn Fn(&[u8], &mut ControlFlow)) + 'static,
+    mut on_event: impl FnMut(Event, &mut ControlFlow, &dyn Fn(&[u8], &mut ControlFlow), &dyn Fn(&str))
+        + 'static,
 ) {
     #[cfg(target_arch = "wasm32")]
     wasm::setup_console_log_panic_hook();
@@ -62,7 +63,9 @@ pub fn event_loop(
                 window.swap_buffers().unwrap();
             };
 
-            on_event(event, control_flow, draw);
+            let set_title: &dyn Fn(&str) = &|title| set_title(&window, title);
+
+            on_event(event, control_flow, draw, set_title);
         }
     })
 }
@@ -92,6 +95,12 @@ fn winit_window(window: &Window) -> &winit::window::Window {
 
     #[cfg(target_arch = "wasm32")]
     return window;
+}
+
+fn set_title<'a, 'b>(window: &'a Window, title: &'b str) {
+    winit_window(window).set_title(title);
+    #[cfg(target_arch = "wasm32")]
+    wasm::set_title(title);
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -171,6 +180,12 @@ mod wasm {
             .unwrap();
 
         glow::Context::from_webgl2_context(webgl2_context)
+    }
+
+    pub(crate) fn set_title(title: &str) {
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        document.set_title(title);
     }
 }
 

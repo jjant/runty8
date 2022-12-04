@@ -13,26 +13,33 @@ pub fn run<Game: App + 'static>(resources: Resources) -> std::io::Result<()> {
     let mut accumulated_delta = 0.0;
     let on_event = move |event,
                          control_flow: &mut ControlFlow,
-                         draw: &dyn Fn(&[u8], &mut ControlFlow)| match event {
-        Event::Tick { delta_millis } => {
-            accumulated_delta += delta_millis;
+                         draw: &dyn Fn(&[u8], &mut ControlFlow),
+                         set_title: &dyn Fn(&str)| {
+        if let Some(new_title) = pico8.take_new_title() {
+            set_title(&new_title);
+        }
 
-            while accumulated_delta > DELTA_TIME {
-                pico8.state.update_input(&input);
+        match event {
+            Event::Tick { delta_millis } => {
+                accumulated_delta += delta_millis;
 
-                game.update(&mut pico8);
-                game.draw(&mut pico8);
+                while accumulated_delta > DELTA_TIME {
+                    pico8.state.update_input(&input);
 
-                draw(pico8.draw_data.buffer(), control_flow);
+                    game.update(&mut pico8);
+                    game.draw(&mut pico8);
 
-                accumulated_delta -= DELTA_TIME;
+                    draw(pico8.draw_data.buffer(), control_flow);
+
+                    accumulated_delta -= DELTA_TIME;
+                }
             }
-        }
-        Event::Input(input_event) => {
-            input.on_event(input_event);
-        }
-        Event::WindowClosed => {
-            *control_flow = ControlFlow::Exit;
+            Event::Input(input_event) => {
+                input.on_event(input_event);
+            }
+            Event::WindowClosed => {
+                *control_flow = ControlFlow::Exit;
+            }
         }
     };
 
