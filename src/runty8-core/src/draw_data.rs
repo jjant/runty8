@@ -48,7 +48,6 @@ impl DrawData {
         self.set_pixel(index, color);
     }
 
-    #[allow(clippy::only_used_in_recursion)]
     fn set_pixel(&mut self, index: usize, color: Color) {
         // https://pico-8.fandom.com/wiki/Pal
         let color = self.draw_palette[color as usize];

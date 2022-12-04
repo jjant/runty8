@@ -54,7 +54,7 @@ impl<A: App> AppCompat for Pico8AppCompat<A> {
     type Msg = Pico8AppMsg;
 
     fn init(pico8: &mut Pico8) -> Self {
-        let fps = 30 as f64;
+        let fps = 30_f64;
 
         Self {
             app: A::init(pico8),

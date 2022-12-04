@@ -97,7 +97,7 @@ fn winit_window(window: &Window) -> &winit::window::Window {
     return window;
 }
 
-fn set_title<'a, 'b>(window: &'a Window, title: &'b str) {
+fn set_title(window: &Window, title: &str) {
     winit_window(window).set_title(title);
     #[cfg(target_arch = "wasm32")]
     wasm::set_title(title);

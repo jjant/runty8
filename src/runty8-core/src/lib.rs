@@ -197,7 +197,7 @@ pub fn create_asset<T: Default>(
         Some(file) => {
             let contents = file
                 .contents_utf8()
-                .ok_or("File contents were not utf8".to_owned())?;
+                .ok_or_else(|| "File contents were not utf8".to_owned())?;
             deserialize(contents)
         }
         None => {
