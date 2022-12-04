@@ -1,7 +1,7 @@
 use runty8::{App, Button, Pico8};
 
 fn main() {
-    let resources = runty8::load_runtime_assets("examples/moving-box".to_string()).unwrap();
+    let resources = runty8::load_assets!("moving-box").unwrap();
     runty8::debug_run::<ExampleApp>(resources).unwrap();
 }
 
