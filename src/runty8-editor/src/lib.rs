@@ -9,12 +9,7 @@ mod app;
 pub mod ui;
 
 pub use app::ElmApp;
-pub use runty8_core::colors;
-pub use runty8_core::App;
-pub use runty8_core::Button;
-pub use runty8_core::Color;
-use runty8_core::Resources;
-pub use runty8_core::{rnd, sin, KeyboardEvent, Pico8};
+use runty8_core::{App, Color, Pico8, Resources};
 
 mod controller;
 mod editor;
