@@ -1,3 +1,5 @@
+//! A simple "game" to test that keyboard/mouse input work.
+
 use runty8::{App, Button, Pico8};
 
 const LOG: bool = false;
