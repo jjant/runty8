@@ -1,6 +1,11 @@
 #![allow(clippy::new_without_default)]
 // #![deny(missing_docs)]
+
+//! The Runty8 editor.
+
 mod app;
+
+/// The editor's own UI system.
 pub mod ui;
 
 pub use app::ElmApp;
