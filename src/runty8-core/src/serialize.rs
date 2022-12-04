@@ -12,7 +12,7 @@ fn write_and_log(file_name: &str, contents: &str) {
 }
 
 pub fn serialize(assets_path: &str, file_name: &str, serializable: &impl Serialize) {
-    let file_path = format!("{assets_path}/{}", file_name);
+    let file_path = format!("{assets_path}/{file_name}");
 
     write_and_log(&file_path, &serializable.serialize());
 }
@@ -143,7 +143,7 @@ impl Serialize for Ppm {
             .data
             .iter()
             .copied()
-            .map(|component| format!(" {} ", component))
+            .map(|component| format!(" {component} "))
             .join("");
 
         format!("{header}\n{body}")

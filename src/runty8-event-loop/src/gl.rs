@@ -59,7 +59,7 @@ pub(crate) unsafe fn make_program(gl: &Context, shader_version: &str) -> glow::P
     for (shader_type, shader_source) in shader_sources.into_iter() {
         let shader = gl.create_shader(shader_type).expect("Cannot create shader");
         crate::log_error(gl);
-        gl.shader_source(shader, &format!("{}\n{}", shader_version, shader_source));
+        gl.shader_source(shader, &format!("{shader_version}\n{shader_source}"));
         crate::log_error(gl);
         gl.compile_shader(shader);
         crate::log_error(gl);

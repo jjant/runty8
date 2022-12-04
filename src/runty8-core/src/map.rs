@@ -89,7 +89,7 @@ impl Serialize for Map {
             .iter()
             .chunks(Map::WIDTH_SPRITES)
             .into_iter()
-            .map(|chunk| chunk.map(|n| format!("{:0>2X}", n)).join(" "))
+            .map(|chunk| chunk.map(|n| format!("{n:0>2X}")).join(" "))
             .join("\n")
     }
 }

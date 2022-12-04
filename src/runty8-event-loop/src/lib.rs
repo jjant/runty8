@@ -198,6 +198,6 @@ fn log_error(gl: &glow::Context) {
     let error = unsafe { gl.get_error() };
 
     if error != 0 {
-        panic!("Error: {}", error);
+        panic!("Error: {error}");
     }
 }

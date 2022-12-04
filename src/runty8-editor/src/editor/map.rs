@@ -34,7 +34,7 @@ impl Editor {
             Msg::MouseMove(mouse_position) => {
                 let delta = self.mouse_position - mouse_position;
 
-                println!("[Map Editor] Mouse delta: {:?}", delta);
+                println!("[Map Editor] Mouse delta: {delta:?}");
 
                 self.mouse_position = mouse_position;
                 if self.dragging {
@@ -108,7 +108,7 @@ impl Editor {
                             if show_sprites_in_map {
                                 draw.spr(sprite.into(), 0, 0);
                             } else {
-                                draw.print(&format!("{:0>2X}", sprite), 0, 1, 7);
+                                draw.print(&format!("{sprite:0>2X}"), 0, 1, 7);
                             }
                         }),
                     )

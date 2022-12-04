@@ -239,8 +239,7 @@ pub fn create_asset<T: Default>(
         }
         None => {
             println!(
-                "Couldn't find file for asset: {}, creating a blank one.",
-                asset_name
+                "Couldn't find file for asset: {asset_name}, creating a blank one."
             );
             Ok(T::default())
         }

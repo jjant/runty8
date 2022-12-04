@@ -23,7 +23,7 @@ impl Display for Flags {
             &self
                 .flags
                 .chunks(16)
-                .map(|chunk| chunk.iter().map(|c| format!("{:0>8b}", c)).join(" "))
+                .map(|chunk| chunk.iter().map(|c| format!("{c:0>8b}")).join(" "))
                 .join("\n"),
         )
     }
@@ -93,7 +93,7 @@ impl Flags {
                 |line| u8::from_str_radix(line, 2), //  line.parse::<u8>().map_err(|e| format!("{:?}", e))
             )
             .collect::<Result<Vec<u8>, _>>()
-            .map_err(|err| format!("{:?}", err));
+            .map_err(|err| format!("{err:?}"));
 
         let flags_array: [u8; SpriteSheet::SPRITE_COUNT] =
             flags_vec?.try_into().map_err(|v: Vec<u8>| {
@@ -112,7 +112,7 @@ impl Serialize for Flags {
     fn serialize(&self) -> String {
         self.flags
             .iter()
-            .map(|flag| format!("{:0>8b}", flag))
+            .map(|flag| format!("{flag:0>8b}"))
             .join("\n")
     }
 }

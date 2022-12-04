@@ -1157,7 +1157,7 @@ impl RoomTitle {
             } else {
                 let level = (1 + level_index(room)) * 100;
                 let x = 52 + (if level < 1000 { 2 } else { 0 });
-                draw.print(&format!("{} M", level), x, 62, 7);
+                draw.print(&format!("{level} M"), x, 62, 7);
             }
 
             draw_time(seconds, minutes, draw, 4, 4);
@@ -1744,21 +1744,21 @@ fn draw_time(seconds: i32, minutes: i32, draw: &mut Pico8, x: i32, y: i32) {
     let h = minutes / 60;
 
     let h_str = if h < 10 {
-        format!("0{}", h)
+        format!("0{h}")
     } else {
         h.to_string()
     };
     let m_str = if m < 10 {
-        format!("0{}", m)
+        format!("0{m}")
     } else {
         m.to_string()
     };
     let s_str = if s < 10 {
-        format!("0{}", s)
+        format!("0{s}")
     } else {
         s.to_string()
     };
-    let time_str = format!("{}:{}:{}", h_str, m_str, s_str);
+    let time_str = format!("{h_str}:{m_str}:{s_str}");
 
     draw.rectfill(x, y, x + 32, y + 6, 0);
     draw.print(&time_str, x + 1, y + 1, 7);
@@ -3168,7 +3168,7 @@ impl Flag {
             draw.spr(26, 55, 6);
             draw.print(&format!("X{}", self.score), 64, 9, 7);
             draw_time(seconds, minutes, draw, 49, 16);
-            draw.print(&format!("DEATHS:{}", deaths), 48, 24, 7);
+            draw.print(&format!("DEATHS:{deaths}"), 48, 24, 7);
         } else if this.check(objects.into_iter(), &ObjectKind::Player, 0, 0) {
             // sfx(55);
             // sfx_timer = 30;

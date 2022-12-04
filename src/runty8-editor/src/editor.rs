@@ -335,7 +335,7 @@ impl ElmApp for Editor {
                 self.selected_tool = selected_tool;
             }
             &Msg::ColorHovered(color) => {
-                self.bottom_bar_text = format!("COLOUR {}", color);
+                self.bottom_bar_text = format!("COLOUR {color}");
             }
 
             &Msg::ClickedMapTile { x, y } => {
@@ -551,7 +551,7 @@ fn tools_row<'a>(
     });
     children.push(sprite_preview.into());
 
-    let spr_str = format!("{:0>3}", sprite);
+    let spr_str = format!("{sprite:0>3}");
     let sprite_number = DrawFn::new(move |draw| {
         let y = y + 2;
         draw.rectfill(X + 9, y + 1, X + 9 + 13 - 1, y + 7, 6);
