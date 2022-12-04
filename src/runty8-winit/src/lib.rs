@@ -1,14 +1,18 @@
+#![deny(missing_docs)]
 //! Compatibility layers for Runty8 crates that need to leverage winit.
 use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
 use winit::dpi::{LogicalPosition, LogicalSize};
 
+/// Information about the current viewport for rendering.
 pub struct ScreenInfo {
+    /// DPI factor.
     pub scale_factor: f64,
+    /// Display resolution in "logical" units.
     pub logical_size: LogicalSize<f64>,
 }
 
 impl ScreenInfo {
-    // TODO: Initialise `scale_factor` properly.
+    ///
     pub fn new(width: f64, height: f64) -> Self {
         Self {
             scale_factor: 1.0,
@@ -17,7 +21,9 @@ impl ScreenInfo {
     }
 }
 
+/// Extension trait to convert a [`winit::event::Event`] into a [`runty8_core::Event`].
 pub trait Runty8EventExt: Sized {
+    /// Convert a [`winit::event::Event`] into a [`runty8_core::Event`].
     fn from_winit(
         event: &winit::event::Event<()>,
         current_time: &mut f64,
@@ -96,7 +102,7 @@ impl Runty8EventExt for Event {
         }
     }
 }
-pub trait Runty8KeyboardEventExt: Sized {
+trait Runty8KeyboardEventExt: Sized {
     fn from_winit(input: winit::event::KeyboardInput) -> Option<Self>;
 }
 
@@ -113,7 +119,7 @@ impl Runty8KeyboardEventExt for KeyboardEvent {
     }
 }
 
-pub trait Runty8KeyExt: Sized {
+trait Runty8KeyExt: Sized {
     fn from_virtual_keycode(key: winit::event::VirtualKeyCode) -> Option<Self>;
 }
 
@@ -161,7 +167,7 @@ impl Runty8KeyExt for Key {
     }
 }
 
-pub trait Runty8KeyStateExt: Sized {
+trait Runty8KeyStateExt: Sized {
     fn from_state(state: winit::event::ElementState) -> Self;
 }
 
