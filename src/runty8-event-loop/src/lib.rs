@@ -28,6 +28,7 @@ pub fn event_loop(
         .with_title("Runty8");
 
     let (window, gl, shader_version) = make_window_and_context(window_builder, &event_loop);
+    screen_info.scale_factor = winit_window(&window).scale_factor();
 
     let texture = unsafe {
         let vertex_array = gl
@@ -83,6 +84,14 @@ fn make_window_and_context(
 
     #[cfg(target_arch = "wasm32")]
     return wasm::make_window_and_context(window_builder, event_loop);
+}
+
+fn winit_window(window: &Window) -> &winit::window::Window {
+    #[cfg(not(target_arch = "wasm32"))]
+    return window.window();
+
+    #[cfg(target_arch = "wasm32")]
+    return window;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
