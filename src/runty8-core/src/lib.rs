@@ -207,9 +207,11 @@ pub enum Event {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! include_dir_hack {
-    (#[doc = $arg:tt]) => {
-        include_dir::include_dir!($arg);
-    };
+    (#[doc = $arg:tt]) => {{
+        use $crate::include_dir;
+
+        include_dir::include_dir!($arg)
+    }};
 }
 
 #[doc(hidden)]
@@ -222,6 +224,9 @@ macro_rules! include_assets {
     };
 }
 
+#[doc(hidden)]
+pub use include_dir;
+#[doc(hidden)]
 pub use paste::paste;
 /// Embed game assets in your binary
 
@@ -248,6 +253,7 @@ pub fn create_asset<T: Default>(
 #[macro_export]
 macro_rules! load_assets {
     ($path:tt) => {{
+        use $crate::include_dir;
         static DIR: include_dir::Dir = $crate::include_assets!($path);
 
         (|| {

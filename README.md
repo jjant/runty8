@@ -47,12 +47,6 @@ Press escape to switch between the game and the editor.
 - [ ] Modify editor W, A, S, D key short cuts (shift sprite) to use arrow keys
 - [ ] Implement sprite editor tools: line, circle, selection tool, zoom, etc
 - [ ] Finish porting the pico8 API (missing functions like `peek`, `poke`, `circ`, etc)
-- [ ] Building/packaging your game as a single file.
-      Currently the library stores your assets (sprite sheet, map, sprite flags (and sound in the future))
-      in separate files, and the application loads them at runtime.
-      It'd be cool to have a way to bundle all the code and assets together in a single executable file for ease of distribution.
-      This should also facilitate using wasm.
-- [ ] Wasm support
 - [ ] Add a concept of "active widget" in the sprite editor.
       If you're click-dragging the mouse in the color picker, moving the mouse away will trigger interactions in other components, this is wrong
 - [ ] Some rudimentary console-like thing like in Pico8 (to run graphic commands, etc)

@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+
 //! Entrypoints for all games using runty8.
 
 #[doc(inline)]
