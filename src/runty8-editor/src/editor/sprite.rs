@@ -3,9 +3,8 @@ use crate::ui::{
     button::{self, Button},
     DrawFn, Element, Tree,
 };
-use crate::Color;
 use itertools::Itertools;
-use runty8_core::{Sprite, SpriteSheet};
+use runty8_core::{Color, Sprite, SpriteSheet};
 use std::fmt::Debug;
 
 #[derive(Clone, Copy, Debug)]

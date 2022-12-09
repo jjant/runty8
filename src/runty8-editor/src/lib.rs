@@ -9,14 +9,15 @@ mod app;
 pub mod ui;
 
 pub use app::ElmApp;
-use runty8_core::{App, Color, Pico8, Resources};
+use runty8_core::{App, Resources};
 
 mod controller;
 mod editor;
+mod pico8;
 mod util;
+
 use app::{AppCompat, ElmAppCompat, Pico8AppCompat};
 use controller::Scene;
-use runty8_core::{Map, Sprite};
 
 /// Run a Pico8 application.
 pub fn run_app<T: App + 'static>(resources: Resources) -> std::io::Result<()> {

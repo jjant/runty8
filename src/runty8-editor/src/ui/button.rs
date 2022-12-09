@@ -1,5 +1,4 @@
-use crate::Pico8;
-use runty8_core::{Event, InputEvent, KeyState, MouseButton, MouseEvent};
+use runty8_core::{Event, InputEvent, KeyState, MouseButton, MouseEvent, Pico8};
 
 use super::{DispatchEvent, Element, Widget};
 use std::fmt::Debug;
@@ -195,9 +194,9 @@ impl<'a, Msg: Copy + Debug + 'a> Widget for Button<'a, Msg> {
         }
     }
 
-    fn draw(&mut self, draw: &mut Pico8) {
-        draw.append_camera(-self.x, -self.y);
-        self.content.as_widget_mut().draw(draw);
-        draw.append_camera(self.x, self.y);
+    fn draw(&mut self, pico8: &mut Pico8) {
+        pico8.append_camera(-self.x, -self.y);
+        self.content.as_widget_mut().draw(pico8);
+        pico8.append_camera(self.x, self.y);
     }
 }

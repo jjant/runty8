@@ -1,9 +1,8 @@
 use crate::ui::button::{self, Button};
 use crate::ui::{DrawFn, Element, Tree};
 use crate::util::vec2::{vec2, Vec2i};
-use crate::Map;
 use itertools::Itertools;
-use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseEvent};
+use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, Map, MouseEvent};
 use std::fmt::Debug;
 
 #[derive(Debug)]
