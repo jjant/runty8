@@ -509,13 +509,13 @@ fn tools_row<'a>(
                 8,
                 Some(Msg::ToolSelected(tool_index)),
                 tool_button,
-                DrawFn::new(move |draw| {
-                    draw.palt(Some(0));
+                DrawFn::new(move |pico8| {
+                    pico8.palt(Some(0));
                     if selected_tool == tool_index {
-                        draw.pal(13, 7);
+                        pico8.pal(13, 7);
                     }
-                    draw.spr(spr, 0, 0);
-                    draw.pal(13, 13);
+                    pico8.editor_spr(spr, 0, 0);
+                    pico8.pal(13, 13);
                 }),
             )
             .into(),
