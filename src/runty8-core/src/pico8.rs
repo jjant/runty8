@@ -2,7 +2,7 @@ use rand::Rng;
 use std::f32::consts::PI;
 
 use crate::draw_data::DrawData;
-use crate::sprite_sheet::{Sprite, SpriteSheet};
+use crate::sprite_sheet::Sprite;
 use crate::state::State;
 use crate::{Button, Color, Resources};
 
@@ -186,16 +186,17 @@ impl Pico8 {
 
 // Utility pub(crate) methods
 impl Pico8 {
-    // TODO: Remove this `allow` when we use it in the editor.
-    #[allow(dead_code)]
-    pub(crate) fn spr_from(&mut self, sprite_sheet: &SpriteSheet, spr: usize, x: i32, y: i32) {
-        let spr = sprite_sheet.get_sprite(spr);
-
-        self.draw_data.spr(spr, x, y);
-    }
-
-    pub fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
-        self.draw_data.raw_spr(sprite, x, y);
+    pub fn raw_spr(
+        &mut self,
+        sprite: &Sprite,
+        x: i32,
+        y: i32,
+        w: f32,
+        h: f32,
+        flip_x: bool,
+        flip_y: bool,
+    ) {
+        self.draw_data.spr_(sprite, x, y, w, h, flip_x, flip_y);
     }
 
     pub fn take_new_title(&mut self) -> Option<String> {
