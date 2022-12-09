@@ -186,6 +186,7 @@ impl Pico8 {
 
 // Utility pub(crate) methods
 impl Pico8 {
+    #[allow(clippy::too_many_arguments)]
     pub fn raw_spr(
         &mut self,
         sprite: &Sprite,
