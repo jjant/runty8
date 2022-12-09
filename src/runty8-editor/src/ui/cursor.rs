@@ -1,11 +1,18 @@
 use super::{DispatchEvent, Widget};
-use crate::Pico8;
-use crate::{editor, Sprite};
+use crate::pico8::Pico8EditorExt as _;
+use runty8_core::Pico8;
 use std::{fmt::Debug, marker::PhantomData};
 
 pub struct Cursor<'a, Msg> {
     state: &'a mut State,
     pd: PhantomData<Msg>,
+}
+
+impl<Msg> Cursor<'_, Msg> {
+    const POINTER_SPRITE: usize = 48;
+    // TODO: Use target sprite.
+    #[allow(dead_code)]
+    const TARGET_SPRITE: usize = 49;
 }
 
 #[derive(Debug)]
@@ -50,8 +57,8 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
 
     fn draw(&mut self, draw: &mut Pico8) {
         draw.palt(Some(0));
-        draw.raw_spr(
-            Sprite::new(editor::MOUSE_SPRITE),
+        draw.editor_spr(
+            Self::POINTER_SPRITE,
             self.state.cursor_position.0 - 3,
             self.state.cursor_position.1 - 1,
         );
