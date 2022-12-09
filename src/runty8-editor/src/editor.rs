@@ -7,6 +7,7 @@ mod undo_redo;
 
 use crate::app::ElmApp;
 use crate::editor::notification::Notification;
+use crate::pico8::Pico8EditorExt as _;
 use crate::ui::button::{self, Button};
 use crate::ui::{
     cursor::{self, Cursor},
@@ -472,7 +473,7 @@ fn editor_button(
             let color = if selected { 15 } else { 2 };
 
             draw.pal(15, color);
-            draw.spr(sprite, 0, 0);
+            draw.editor_spr(sprite, 0, 0);
             draw.pal(15, 15);
         }),
     )
@@ -534,9 +535,9 @@ fn tools_row<'a>(
                 8,
                 Some(Msg::SpritePageSelected(sprite_tab)),
                 tab_button_state,
-                DrawFn::new(move |draw| {
-                    draw.palt(Some(0));
-                    draw.spr(base_sprite + sprite_tab, 0, 0);
+                DrawFn::new(move |pico8| {
+                    pico8.palt(Some(0));
+                    pico8.editor_spr(base_sprite + sprite_tab, 0, 0);
                 }),
             )
             .into(),
@@ -634,28 +635,6 @@ fn bottom_bar(text: &str) -> Element<'_, Msg> {
         .push(Text::new(text, X + 1, Y + 1, 2))
         .into()
 }
-
-pub(crate) static MOUSE_SPRITE: &[Color] = &[
-    0, 0, 0, 0, 0, 0, 0, 0, //
-    0, 0, 0, 1, 0, 0, 0, 0, //
-    0, 0, 1, 7, 1, 0, 0, 0, //
-    0, 0, 1, 7, 7, 1, 0, 0, //
-    0, 0, 1, 7, 7, 7, 1, 0, //
-    0, 0, 1, 7, 7, 7, 7, 1, //
-    0, 0, 1, 7, 7, 1, 1, 0, //
-    0, 0, 0, 1, 1, 7, 1, 0, //
-];
-
-// static MOUSE_TARGET_SPRITE: &[Color] = &[
-//     0, 0, 0, 1, 0, 0, 0, 0, //
-//     0, 0, 1, 7, 1, 0, 0, 0, //
-//     0, 1, 0, 0, 0, 1, 0, 0, //
-//     1, 7, 0, 0, 0, 7, 1, 0, //
-//     0, 1, 0, 0, 0, 1, 0, 0, //
-//     0, 0, 1, 7, 1, 0, 0, 0, //
-//     0, 0, 0, 1, 0, 0, 0, 0, //
-//     0, 0, 0, 0, 0, 0, 0, 0, //
-// ];
 
 #[derive(Clone, Copy, Debug)]
 enum ShiftDirection {
