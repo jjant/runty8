@@ -4,12 +4,12 @@ use runty8::{App, Pico8};
 fn main() {
     let resources = runty8::load_assets!("../src/runty8-editor/src/editor_assets").unwrap();
 
-    runty8::debug_run::<Confetti>(resources).unwrap();
+    runty8::debug_run::<EditorSprites>(resources).unwrap();
 }
 
-struct Confetti;
+struct EditorSprites;
 
-impl App for Confetti {
+impl App for EditorSprites {
     fn init(_pico8: &mut Pico8) -> Self {
         Self
     }
