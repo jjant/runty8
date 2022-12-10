@@ -18,9 +18,9 @@ impl Pico8EditorExt for Pico8 {
 
 /// Lazily parse sprite sheet.
 fn editor_sprite_sheet() -> &'static SpriteSheet {
-    static SPRITE_SHEET_BYTES: &str = include_str!("./editor_assets/sprite_sheet.txt");
-    static SPRITE_SHEET: Lazy<SpriteSheet> =
-        Lazy::new(|| SpriteSheet::deserialize(SPRITE_SHEET_BYTES).unwrap());
+    static SPRITE_SHEET: Lazy<SpriteSheet> = Lazy::new(|| {
+        SpriteSheet::deserialize(include_str!("./editor_assets/sprite_sheet.txt")).unwrap()
+    });
 
     &SPRITE_SHEET
 }
