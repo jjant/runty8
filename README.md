@@ -28,19 +28,15 @@ See [the contributing guide](./CONTRIBUTING.md) for instructions on how to get s
 
 ## Running
 
-Run editor with a default "empty" game:
-
-```bash
-cargo run
-```
-
 Run examples (`celeste`, `moving_box`, `confetti`) with:
 
 ```bash
-cargo run --example example_name -- --game
+cargo run --bin celeste -- --game
+cargo run --bin confetti -- --game
+cargo run --bin moving-box -- --game
 ```
 
-Or run `cargo run --example` to get a list of the available examples.
+Or run `cargo run --bin` to get a list of the available examples.
 
-Press escape to switch between the game and the editor.
+Press the `Escape` key to switch between the game and the editor.
 
