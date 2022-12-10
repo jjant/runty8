@@ -1,11 +1,11 @@
 use super::brush_size::{self, BrushSize, BrushSizeSelector};
+use crate::pico8::Pico8EditorExt as _;
 use crate::ui::{
     button::{self, Button},
     DrawFn, Element, Tree,
 };
-use crate::Color;
 use itertools::Itertools;
-use runty8_core::{Sprite, SpriteSheet};
+use runty8_core::{Color, Sprite, SpriteSheet};
 use std::fmt::Debug;
 
 #[derive(Clone, Copy, Debug)]
@@ -191,7 +191,7 @@ fn flags<'a>(
                     // because it's still WIP).
                     //
                     // pico8.spr_from(editor_sprites, 58, 0, 0);
-                    pico8.spr(58, 0, 0);
+                    pico8.editor_spr(58, 0, 0);
                     pico8.pal(1, 1);
                     pico8.palt(Some(0));
                     pico8.pal(13, 13);

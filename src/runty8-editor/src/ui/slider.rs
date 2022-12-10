@@ -4,6 +4,7 @@ use super::{
     button::{self, Button},
     DrawFn, Element, Tree,
 };
+use crate::pico8::Pico8EditorExt as _;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum SliderValue {
@@ -87,15 +88,16 @@ pub(crate) fn view<'a, Msg: Debug + Copy + 'a>(
     .collect();
 
     Tree::with_children(buttons)
-        .push(DrawFn::new(move |draw| {
+        .push(DrawFn::new(move |pico8| {
             // TODO: Use spr_ when width and height parameters are implemented.
-            draw.spr(64, x, y);
-            draw.spr(65, x + 8, y);
-            draw.spr(66, x + 16, y);
-            draw.spr(67, x + 24, y);
+            // ^ Why? I don't remember.
+            pico8.editor_spr(64, x, y);
+            pico8.editor_spr(65, x + 8, y);
+            pico8.editor_spr(66, x + 16, y);
+            pico8.editor_spr(67, x + 24, y);
 
             // Draw selection indicator
-            draw.spr(68, x + value.to_index() * 8 - 2, y);
+            pico8.editor_spr(68, x + value.to_index() * 8 - 2, y);
         }))
         .into()
 }

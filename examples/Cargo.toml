@@ -31,3 +31,7 @@ path = "./stress-lines/main.rs"
 [[bin]]
 name = "standalone-game"
 path = "./standalone-game/main.rs"
+
+[[bin]]
+name = "editor-assets"
+path = "./editor-assets/main.rs"

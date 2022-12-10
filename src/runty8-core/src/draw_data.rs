@@ -98,21 +98,6 @@ impl DrawData {
         }
     }
 
-    pub(crate) fn raw_spr(&mut self, sprite: &Sprite, x: i32, y: i32) {
-        let buffer = &sprite.sprite;
-
-        for i in 0..8 {
-            for j in 0..8 {
-                let x = x + i;
-                let y = y + j;
-
-                if let Some(index) = self.index(x, y) {
-                    self.set_pixel_with_transparency(index, buffer[(i + j * 8) as usize]);
-                }
-            }
-        }
-    }
-
     pub(crate) fn quarter_bresenham(
         &mut self,
         cx: i32,

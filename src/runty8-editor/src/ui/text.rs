@@ -1,7 +1,5 @@
-use crate::Pico8;
+use runty8_core::{Color, Pico8};
 use std::{fmt::Debug, marker::PhantomData};
-
-use crate::Color;
 
 use super::{DispatchEvent, Widget};
 
@@ -36,7 +34,7 @@ impl<'a, Msg: Copy + Debug> Widget for Text<'a, Msg> {
     ) {
     }
 
-    fn draw(&mut self, draw: &mut Pico8) {
-        draw.print(self.text, self.x, self.y, self.color);
+    fn draw(&mut self, pico8: &mut Pico8) {
+        pico8.print(self.text, self.x, self.y, self.color);
     }
 }

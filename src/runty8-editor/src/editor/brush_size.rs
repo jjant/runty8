@@ -129,26 +129,26 @@ fn size_indicator<'a, Msg: Copy + Debug + 'a>(
         WIDGET_SIZE,
         Some(on_press),
         state,
-        DrawFn::new(move |draw| {
+        DrawFn::new(move |pico8| {
             let local_left = local_center_x - (size - 1) / 2;
             let local_top = local_center_y - (size - 1) / 2;
 
-            draw.palt(None);
-            draw.rectfill(
+            pico8.palt(None);
+            pico8.rectfill(
                 0,
                 0,
                 WIDGET_SIZE - 1,
                 WIDGET_SIZE - 1,
                 background_color(selected_color),
             );
-            draw.rectfill(
+            pico8.rectfill(
                 local_left,
                 local_top,
                 local_left + size - 1,
                 local_top + size - 1,
                 selected_color,
             );
-            draw.palt(Some(0));
+            pico8.palt(Some(0));
         }),
     )
     .event_on_press()
