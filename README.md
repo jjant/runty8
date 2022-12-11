@@ -10,6 +10,15 @@ A Pico8 clone in Rust.
 
 Head over to our [template](https://github.com/jjant/runty8-game-template) for an example to get started!
 
+## Crates
+
+* `runty8`: Main entry point for games created with Runty8. Most Runty8 users should probably only depend on this crate.
+* `runty8-core`: Core types needed by every Runty8 related crate
+* `runty8-runtime`: Run standalone Runty8 games in `native` or `wasm` targets
+* `runty8-editor`: Run game inside editor
+* `runty8-winit`: Integration layer for `winit`
+* `runty8-event-loop`: Thin layer over `winit`/`glow`/`glutin` to have a cross-platform OpenGL/WebGL-powered event loop
+
 ## Contributing
 
 See [the contributing guide](./CONTRIBUTING.md) for instructions on how to get started.
