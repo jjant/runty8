@@ -226,6 +226,11 @@ pub fn mid(first: f32, second: f32, third: f32) -> f32 {
     slice[1]
 }
 
+/// Pico8's [`flr`](<https://pico-8.fandom.com/wiki/Flr>) function.
+pub fn flr(num: f32) -> i32 {
+    num.floor() as i32
+}
+
 #[cfg(test)]
 mod tests {
     use super::{mid, rnd, sin};
@@ -265,5 +270,13 @@ mod tests {
         assert_delta!(mid(8.0, 2.0, 4.0), 4.0, 0.00001);
         assert_delta!(mid(-3.5, -3.4, -3.6), -3.5, 0.00001);
         assert_delta!(mid(6.0, 6.0, 8.0), 6.0, 0.00001);
+    }
+
+    #[test]
+    fn flr_works() {
+        assert_eq!(flr(5.9), 5);
+        assert_eq!(flr(-5.2), -6);
+        assert_eq!(flr(7.0), 7);
+        assert_eq!(flr(-7.0), -7);
     }
 }
