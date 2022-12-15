@@ -233,7 +233,7 @@ pub fn flr(num: f32) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{mid, rnd, sin};
+    use super::{mid, rnd, sin, flr};
 
     macro_rules! assert_delta {
         ($x:expr, $y:expr, $d:expr) => {
