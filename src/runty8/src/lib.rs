@@ -3,7 +3,7 @@
 //! Entrypoints for all games using runty8.
 
 #[doc(inline)]
-pub use runty8_core::{load_assets, mid, rnd, sin, flr, App, Button, Pico8};
+pub use runty8_core::{flr, load_assets, mid, rnd, sin, App, Button, Pico8};
 
 use runty8_core::Resources;
 
