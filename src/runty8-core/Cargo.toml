@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rand = "0.8.5"
-itertools = "*"
-include_dir = "0.7.3"
-paste = "1.0.9"
+rand = "0.8"
+itertools = "0.10"
+include_dir = "0.7"
+paste = "1.0"
 log = "0.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -15,4 +15,4 @@ web-sys = { version = "0.3", features = ["Window", "Storage"] }
 wasm-bindgen = "0.2"
 getrandom = { version = "*", features = ["js"] }
 console_log = "0.2"
-console_error_panic_hook = "0.1.7"
+console_error_panic_hook = "0.1"
