@@ -23,18 +23,13 @@ pub fn event_loop(
     mut on_event: impl FnMut(Event, &mut ControlFlow, &dyn Fn(&[u8], &mut ControlFlow), &dyn Fn(&str))
         + 'static,
 ) {
-    #[cfg(target_arch = "wasm32")]
-    wasm::setup_console_log_panic_hook();
-
     let mut screen_info = ScreenInfo::new(640.0, 640.0);
 
     let event_loop = EventLoop::new();
-    let window_builder = WindowBuilder::new()
-        .with_inner_size(screen_info.logical_size)
-        .with_title("Runty8");
 
-    let (window, gl, shader_version) = make_window_and_context(window_builder, &event_loop);
+    let (window, gl, shader_version) = make_window_and_context(&event_loop, &screen_info);
     screen_info.scale_factor = winit_window(&window).scale_factor();
+    log::info!("New scale factor: {}", screen_info.scale_factor);
 
     let texture = unsafe {
         let vertex_array = gl
@@ -84,9 +79,13 @@ fn draw(gl: &glow::Context, texture: glow::Texture, pixels: &[u8]) {
 }
 
 fn make_window_and_context(
-    window_builder: WindowBuilder,
     event_loop: &EventLoop<()>,
+    screen_info: &ScreenInfo,
 ) -> (Window, glow::Context, &'static str) {
+    let window_builder = WindowBuilder::new()
+        .with_inner_size(screen_info.logical_size)
+        .with_title("Runty8");
+
     #[cfg(not(target_arch = "wasm32"))]
     return native::make_window_and_context(window_builder, event_loop);
 
@@ -146,10 +145,6 @@ mod wasm {
     use winit::platform::web::WindowExtWebSys;
     use winit::window::{Window, WindowBuilder};
 
-    pub(crate) fn setup_console_log_panic_hook() {
-        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        console_log::init_with_level(log::Level::Debug).unwrap();
-    }
     pub(crate) fn make_window_and_context(
         window_builder: WindowBuilder,
         event_loop: &EventLoop<()>,
@@ -160,22 +155,28 @@ mod wasm {
         (window, gl, "#version 300 es")
     }
 
-    pub(crate) fn insert_canvas_and_create_context(window: &Window) -> glow::Context {
+    fn insert_canvas_and_create_context(window: &Window) -> glow::Context {
+        log::info!("Window: {:?}", window);
         let canvas = window.canvas();
+        let winit::dpi::PhysicalSize { width, height } = window.inner_size();
 
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
         let body = document.body().unwrap();
 
-        canvas.style().set_css_text(
+        canvas.style().set_css_text(&format!(
             r#"
-                border: 1px solid blue;
                 image-rendering: pixelated;
-                width: 100%;
-                max-width: 600px;
-            "#,
-        );
+                width: {width}px;
+                height: {height}px;
+                border: 2px solid ivory;
+                cursor: none;
+                outline: none;
+                "#
+        ));
+
         body.append_child(&canvas).unwrap();
+        canvas.focus().expect("Couldn't focus canvas element");
 
         let webgl2_context = canvas
             .get_context("webgl2")
