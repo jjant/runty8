@@ -17,8 +17,8 @@ use crate::ui::{DrawFn, Element, Tree};
 use brush_size::BrushSize;
 use runty8_core::InputEvent;
 use runty8_core::{
-    serialize::{Ppm, Serialize},
-    Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources, Sprite, SpriteSheet,
+    serialize::Serialize, Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources,
+    Sprite, SpriteSheet,
 };
 
 use self::key_combo::KeyCombos;

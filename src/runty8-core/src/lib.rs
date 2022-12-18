@@ -271,7 +271,7 @@ pub fn load_file(
     assets_path: &str,
     file_name: &str,
 ) -> Result<Option<String>, String> {
-    let file_path = format!("{}/{}", assets_path, file_name);
+    let file_path = format!("{assets_path}/{file_name}");
 
     let wasm_contents = load(&file_path);
     if let Some(wasm_contents) = wasm_contents {
