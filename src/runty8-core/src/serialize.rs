@@ -6,9 +6,9 @@ use crate::sprite_sheet::SpriteSheet;
 use std::fmt::Display;
 
 fn write_and_log(file_name: &str, contents: &str) {
-    print!("Writing {file_name}... ");
+    log::info!("Writing {file_name}... ");
     write(file_name, contents).unwrap();
-    println!("success.");
+    log::info!("success.");
 }
 
 #[cfg(not(target_arch = "wasm32"))]
