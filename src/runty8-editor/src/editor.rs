@@ -182,14 +182,10 @@ fn handle_key_combo(
 fn save(notification: &mut notification::State, resources: &Resources) {
     notification.alert("SAVED".to_owned());
 
-    let map_ppm = Ppm::from_map(&resources.map, &resources.sprite_sheet);
-    let sprite_sheet_ppm = Ppm::from_sprite_sheet(&resources.sprite_sheet);
     let to_serialize: &[(&str, &dyn Serialize)] = &[
         (&Flags::file_name(), &resources.sprite_flags),
         (&SpriteSheet::file_name(), &resources.sprite_sheet),
         (&Map::file_name(), &resources.map),
-        ("map.ppm", &map_ppm),
-        ("sprite_sheet.ppm", &sprite_sheet_ppm),
     ];
 
     for (name, serializable) in to_serialize.iter() {
