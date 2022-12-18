@@ -109,10 +109,10 @@ fn set_title(window: &Window, title: &str) {
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native {
-    use glutin::{event_loop::EventLoop, window::WindowBuilder, ContextBuilder, ContextWrapper};
+    use glutin::{event_loop::EventLoop, ContextBuilder, ContextWrapper};
 
     pub(crate) fn make_window_and_context(
-        window_builder: WindowBuilder,
+        window_builder: glutin::window::WindowBuilder,
         event_loop: &EventLoop<()>,
     ) -> (
         glutin::WindowedContext<glutin::PossiblyCurrent>,
