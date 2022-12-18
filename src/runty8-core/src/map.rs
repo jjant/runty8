@@ -1,6 +1,7 @@
 use crate::serialize::Serialize;
 
 use super::sprite_sheet::Sprite;
+use itertools::Itertools;
 
 type SpriteId = u8;
 
