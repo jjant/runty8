@@ -31,6 +31,7 @@ pub(crate) struct Editor {
     selected_sprite_page: usize,
     sprite_button_state: button::State,
     map_button_state: button::State,
+    export_assets_button: button::State,
     tab_buttons: [button::State; 4],
     sprite_buttons: Vec<button::State>,
     selected_tool: usize,
@@ -87,6 +88,8 @@ pub(crate) enum Msg {
     BrushSizeSelected(BrushSize),
     MapEditorMsg(map::Msg),
     SpriteEditorMsg(sprite::Msg),
+    ExportWebAssets,
+    ExportWebAssetsHovered,
 }
 
 impl Editor {
@@ -222,6 +225,7 @@ impl ElmApp for Editor {
             cursor: cursor::State::new(),
             sprite_button_state: button::State::new(),
             map_button_state: button::State::new(),
+            export_assets_button: button::State::new(),
             tab: Tab::SpriteEditor,
             selected_sprite_page: 0,
             tab_buttons: [
@@ -347,6 +351,13 @@ impl ElmApp for Editor {
                 self.bottom_bar_text =
                     format!("BRUSH SIZE: {}", self.brush_size.to_human_readable());
             }
+            &Msg::ExportWebAssets => {
+                log::info!("export clicked");
+                println!("export clicked");
+            }
+            Msg::ExportWebAssetsHovered => {
+                self.bottom_bar_text = "EXPORT ASSETS".to_owned();
+            }
         }
     }
 
@@ -358,6 +369,7 @@ impl ElmApp for Editor {
                 draw.rectfill(0, 0, 127, 127, BACKGROUND)
             }))
             .push(top_bar(
+                &mut self.export_assets_button,
                 &mut self.sprite_button_state,
                 &mut self.map_button_state,
                 self.tab,
@@ -425,6 +437,7 @@ impl ElmApp for Editor {
 }
 
 fn top_bar<'a>(
+    export_assets_button: &'a mut button::State,
     sprite_button_state: &'a mut button::State,
     map_button_state: &'a mut button::State,
     tab: Tab,
@@ -433,9 +446,31 @@ fn top_bar<'a>(
         .push(DrawFn::new(|draw| {
             draw.rectfill(0, 0, 127, 7, 8);
         }))
+        .push(self::export_assets_button(export_assets_button))
         .push(sprite_editor_button(sprite_button_state, tab))
         .push(map_editor_button(map_button_state, tab))
         .into()
+}
+
+fn export_assets_button(state: &mut button::State) -> Element<'_, Msg> {
+    const EXPORT_TEXT: &str = "EXPORT";
+    let width = 4 * EXPORT_TEXT.len() as i32;
+    let height = 7;
+
+    Button::new(
+        1,
+        0,
+        width,
+        height,
+        Some(Msg::ExportWebAssets),
+        state,
+        DrawFn::new(move |draw| {
+            draw.rect(0, 0, width, height, 2);
+            draw.print(EXPORT_TEXT, 1, 1, 7);
+        }),
+    )
+    .on_hover(Msg::ExportWebAssetsHovered)
+    .into()
 }
 
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {

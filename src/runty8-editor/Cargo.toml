@@ -10,3 +10,4 @@ runty8-event-loop = { path = "../runty8-event-loop" }
 itertools = "0.10"
 instant = "0.1"
 once_cell = "1.16"
+log = "0.4"
