@@ -3,6 +3,7 @@ pub mod key_combo;
 mod map;
 mod notification;
 mod sprite;
+mod top_bar;
 mod undo_redo;
 
 use crate::app::ElmApp;
@@ -22,6 +23,7 @@ use runty8_core::{
 };
 
 use self::key_combo::KeyCombos;
+use self::top_bar::TopBar;
 use self::undo_redo::{Command, Commands};
 
 #[derive(Debug)]
@@ -29,10 +31,7 @@ pub(crate) struct Editor {
     cursor: cursor::State,
     tab: Tab,
     selected_sprite_page: usize,
-    sprite_button_state: button::State,
-    map_button_state: button::State,
-    #[cfg(target_arch = "wasm32")]
-    export_assets_button: button::State,
+    top_bar: TopBar,
     tab_buttons: [button::State; 4],
     sprite_buttons: Vec<button::State>,
     selected_tool: usize,
@@ -50,7 +49,7 @@ pub(crate) struct Editor {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-enum Tab {
+pub(crate) enum Tab {
     SpriteEditor,
     MapEditor,
 }
@@ -235,10 +234,7 @@ impl ElmApp for Editor {
     fn init() -> Self {
         Self {
             cursor: cursor::State::new(),
-            sprite_button_state: button::State::new(),
-            map_button_state: button::State::new(),
-            #[cfg(target_arch = "wasm32")]
-            export_assets_button: button::State::new(),
+            top_bar: TopBar::new(),
             tab: Tab::SpriteEditor,
             selected_sprite_page: 0,
             tab_buttons: [
@@ -385,13 +381,7 @@ impl ElmApp for Editor {
             .push(DrawFn::new(|draw| {
                 draw.rectfill(0, 0, 127, 127, BACKGROUND)
             }))
-            .push(top_bar(
-                #[cfg(target_arch = "wasm32")]
-                &mut self.export_assets_button,
-                &mut self.sprite_button_state,
-                &mut self.map_button_state,
-                self.tab,
-            ))
+            .push(self.top_bar.view(self.tab))
             .push(match self.tab {
                 Tab::SpriteEditor => {
                     let selected_sprite_flags =
@@ -452,65 +442,6 @@ impl ElmApp for Editor {
         })
         .collect()
     }
-}
-
-fn top_bar<'a>(
-    #[cfg(target_arch = "wasm32")] export_assets_button: &'a mut button::State,
-    sprite_button_state: &'a mut button::State,
-    map_button_state: &'a mut button::State,
-    tab: Tab,
-) -> Element<'a, Msg> {
-    let buttons = vec![
-        #[cfg(target_arch = "wasm32")]
-        wasm::export_assets_button(export_assets_button),
-        sprite_editor_button(sprite_button_state, tab),
-        map_editor_button(map_button_state, tab),
-    ];
-
-    Tree::new()
-        .push(DrawFn::new(|draw| {
-            draw.rectfill(0, 0, 127, 7, 8);
-        }))
-        .push(buttons)
-        .into()
-}
-
-fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
-    let selected = tab == Tab::SpriteEditor;
-
-    editor_button(state, 63, 110, 0, Msg::SpriteTabClicked, selected)
-}
-
-fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
-    let selected = tab == Tab::MapEditor;
-
-    editor_button(state, 62, 118, 0, Msg::MapButtonClicked, selected)
-}
-
-fn editor_button(
-    state: &mut button::State,
-    sprite: usize,
-    x: i32,
-    y: i32,
-    msg: Msg,
-    selected: bool,
-) -> Element<'_, Msg> {
-    Button::new(
-        x,
-        y,
-        8,
-        8,
-        Some(msg),
-        state,
-        DrawFn::new(move |draw| {
-            let color = if selected { 15 } else { 2 };
-
-            draw.pal(15, color);
-            draw.editor_spr(sprite, 0, 0);
-            draw.pal(15, 15);
-        }),
-    )
-    .into()
 }
 
 fn tools_row<'a>(
@@ -701,19 +632,6 @@ impl ShiftDirection {
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    // function download(filename, text) {
-    //   var element = document.createElement('a');
-    //   element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-    //   element.setAttribute('download', filename);
-    //
-    //   element.style.display = 'none';
-    //   document.body.appendChild(element);
-    //
-    //   element.click();
-    //
-    //   document.body.removeChild(element);
-    // }
-
     use runty8_core::{serialize::Serialize, Resources};
     use wasm_bindgen::JsCast;
     use web_sys::HtmlElement;
@@ -745,32 +663,5 @@ mod wasm {
         html_element.click();
 
         body.remove_child(&html_element).unwrap();
-    }
-
-    use super::Msg;
-    use crate::ui::{
-        button::{self, Button},
-        DrawFn, Element,
-    };
-
-    pub(crate) fn export_assets_button(state: &mut button::State) -> Element<'_, Msg> {
-        const EXPORT_TEXT: &str = "EXPORT";
-        let width = 4 * EXPORT_TEXT.len() as i32;
-        let height = 7;
-
-        Button::new(
-            1,
-            0,
-            width,
-            height,
-            Some(Msg::ExportWebAssets),
-            state,
-            DrawFn::new(move |draw| {
-                draw.rect(0, 0, width, height, 2);
-                draw.print(EXPORT_TEXT, 1, 1, 7);
-            }),
-        )
-        .on_hover(Msg::ExportWebAssetsHovered)
-        .into()
     }
 }

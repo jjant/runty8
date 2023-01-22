@@ -1,0 +1,109 @@
+use crate::pico8::Pico8EditorExt as _;
+use crate::ui::{
+    button::{self, Button},
+    DrawFn, Element, Tree,
+};
+
+use super::{Msg, Tab};
+
+#[derive(Debug)]
+pub(crate) struct TopBar {
+    #[cfg(target_arch = "wasm32")]
+    export_assets_button: button::State,
+    sprite_editor_button: button::State,
+    map_editor_button: button::State,
+}
+
+impl TopBar {
+    pub(crate) fn new() -> Self {
+        Self {
+            #[cfg(target_arch = "wasm32")]
+            export_assets_button: button::State::new(),
+            sprite_editor_button: button::State::new(),
+            map_editor_button: button::State::new(),
+        }
+    }
+
+    pub(crate) fn view(&mut self, tab: Tab) -> Element<'_, Msg> {
+        let buttons = vec![
+            #[cfg(target_arch = "wasm32")]
+            wasm::export_assets_button(&mut self.export_assets_button),
+            sprite_editor_button(&mut self.sprite_editor_button, tab),
+            map_editor_button(&mut self.map_editor_button, tab),
+        ];
+
+        let background = DrawFn::new(|draw| {
+            draw.rectfill(0, 0, 127, 7, 8);
+        });
+
+        Tree::new().push(background).push(buttons).into()
+    }
+}
+
+fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
+    let selected = tab == Tab::SpriteEditor;
+
+    editor_button(state, 63, 110, 0, Msg::SpriteTabClicked, selected)
+}
+
+fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
+    let selected = tab == Tab::MapEditor;
+
+    editor_button(state, 62, 118, 0, Msg::MapButtonClicked, selected)
+}
+
+fn editor_button(
+    state: &mut button::State,
+    sprite: usize,
+    x: i32,
+    y: i32,
+    msg: Msg,
+    selected: bool,
+) -> Element<'_, Msg> {
+    Button::new(
+        x,
+        y,
+        8,
+        8,
+        Some(msg),
+        state,
+        DrawFn::new(move |draw| {
+            let color = if selected { 15 } else { 2 };
+
+            draw.pal(15, color);
+            draw.editor_spr(sprite, 0, 0);
+            draw.pal(15, 15);
+        }),
+    )
+    .into()
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    use super::Msg;
+    use crate::ui::{
+        button::{self, Button},
+        DrawFn, Element,
+    };
+
+    pub(crate) fn export_assets_button(state: &mut button::State) -> Element<'_, Msg> {
+        const EXPORT_TEXT: &str = "EXPORT";
+        let width = 4 * EXPORT_TEXT.len() as i32;
+        let height = 7;
+
+        Button::new(
+            1,
+            0,
+            width,
+            height,
+            Some(Msg::ExportWebAssets),
+            state,
+            DrawFn::new(move |draw| {
+                draw.rect(0, 0, width, height, 2);
+                draw.print(EXPORT_TEXT, 1, 1, 7);
+            }),
+        )
+        .on_hover(Msg::ExportWebAssetsHovered)
+        .into()
+    }
+}
