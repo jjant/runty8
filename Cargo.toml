@@ -8,3 +8,4 @@ members = [
   "src/runty8-winit",
   "examples",
 ]
+default-members = ["examples"]
