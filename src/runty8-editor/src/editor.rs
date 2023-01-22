@@ -632,12 +632,18 @@ impl ShiftDirection {
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
-    use runty8_core::{serialize::Serialize, Resources};
+    use runty8_core::{serialize::Serialized, Resources};
     use wasm_bindgen::JsCast;
     use web_sys::HtmlElement;
 
     pub(crate) fn download_assets(resources: &Resources) {
-        download_file("sprite_sheet.txt", &resources.sprite_sheet.serialize());
+        for Serialized {
+            file_name,
+            serialized: contents,
+        } in resources.serialize()
+        {
+            download_file(&file_name, &contents);
+        }
     }
 
     pub(crate) fn download_file(filename: &str, file_contents: &str) {

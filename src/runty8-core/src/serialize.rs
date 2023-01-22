@@ -166,7 +166,7 @@ impl Ppm {
 }
 
 impl Serialize for Ppm {
-    /// Plain PPM format (P3)
+    /// Plain PPM format (P3).
     fn serialize(&self) -> String {
         let header = format!("P3\n{} {}\n255", self.width, self.height);
         let body = self
@@ -178,4 +178,10 @@ impl Serialize for Ppm {
 
         format!("{header}\n{body}")
     }
+}
+
+/// Represents a serialized asset ready to be stored to a file.
+pub struct Serialized {
+    pub file_name: String,
+    pub serialized: String,
 }

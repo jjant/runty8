@@ -19,6 +19,7 @@ pub use flags::Flags;
 pub use input::Input;
 pub use map::Map;
 pub use pico8::*;
+use serialize::{Serialize, Serialized};
 pub use sprite_sheet::{Sprite, SpriteSheet};
 
 /// A regular pico8 app.
@@ -60,6 +61,25 @@ pub struct Resources {
     pub sprite_sheet: SpriteSheet,
     pub sprite_flags: Flags,
     pub map: Map,
+}
+
+impl Resources {
+    pub fn serialize(&self) -> Vec<Serialized> {
+        vec![
+            Serialized {
+                file_name: SpriteSheet::file_name(),
+                serialized: self.sprite_sheet.serialize(),
+            },
+            Serialized {
+                file_name: Map::file_name(),
+                serialized: self.map.serialize(),
+            },
+            Serialized {
+                file_name: Flags::file_name(),
+                serialized: self.sprite_flags.serialize(),
+            },
+        ]
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
