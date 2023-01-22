@@ -31,6 +31,7 @@ pub(crate) struct Editor {
     selected_sprite_page: usize,
     sprite_button_state: button::State,
     map_button_state: button::State,
+    #[cfg(target_arch = "wasm32")]
     export_assets_button: button::State,
     tab_buttons: [button::State; 4],
     sprite_buttons: Vec<button::State>,
@@ -79,16 +80,27 @@ pub(crate) enum Msg {
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
-    FlagHovered { bit_number: usize },
-    SpriteEdited { x: usize, y: usize, color: Color }, // TODO: Improve
+    FlagHovered {
+        bit_number: usize,
+    },
+    SpriteEdited {
+        x: usize,
+        y: usize,
+        color: Color,
+    }, // TODO: Improve
     ToolSelected(usize),
-    ClickedMapTile { x: usize, y: usize },
+    ClickedMapTile {
+        x: usize,
+        y: usize,
+    },
     KeyboardEvent(KeyboardEvent),
     BrushSizeSliderHovered,
     BrushSizeSelected(BrushSize),
     MapEditorMsg(map::Msg),
     SpriteEditorMsg(sprite::Msg),
+    #[cfg(target_arch = "wasm32")]
     ExportWebAssets,
+    #[cfg(target_arch = "wasm32")]
     ExportWebAssetsHovered,
 }
 
@@ -225,6 +237,7 @@ impl ElmApp for Editor {
             cursor: cursor::State::new(),
             sprite_button_state: button::State::new(),
             map_button_state: button::State::new(),
+            #[cfg(target_arch = "wasm32")]
             export_assets_button: button::State::new(),
             tab: Tab::SpriteEditor,
             selected_sprite_page: 0,
@@ -351,10 +364,14 @@ impl ElmApp for Editor {
                 self.bottom_bar_text =
                     format!("BRUSH SIZE: {}", self.brush_size.to_human_readable());
             }
+            #[cfg(target_arch = "wasm32")]
             &Msg::ExportWebAssets => {
                 log::info!("export clicked");
                 println!("export clicked");
+
+                wasm::download_assets(resources);
             }
+            #[cfg(target_arch = "wasm32")]
             Msg::ExportWebAssetsHovered => {
                 self.bottom_bar_text = "EXPORT ASSETS".to_owned();
             }
@@ -369,6 +386,7 @@ impl ElmApp for Editor {
                 draw.rectfill(0, 0, 127, 127, BACKGROUND)
             }))
             .push(top_bar(
+                #[cfg(target_arch = "wasm32")]
                 &mut self.export_assets_button,
                 &mut self.sprite_button_state,
                 &mut self.map_button_state,
@@ -437,40 +455,24 @@ impl ElmApp for Editor {
 }
 
 fn top_bar<'a>(
-    export_assets_button: &'a mut button::State,
+    #[cfg(target_arch = "wasm32")] export_assets_button: &'a mut button::State,
     sprite_button_state: &'a mut button::State,
     map_button_state: &'a mut button::State,
     tab: Tab,
 ) -> Element<'a, Msg> {
+    let buttons = vec![
+        #[cfg(target_arch = "wasm32")]
+        wasm::export_assets_button(export_assets_button),
+        sprite_editor_button(sprite_button_state, tab),
+        map_editor_button(map_button_state, tab),
+    ];
+
     Tree::new()
         .push(DrawFn::new(|draw| {
             draw.rectfill(0, 0, 127, 7, 8);
         }))
-        .push(self::export_assets_button(export_assets_button))
-        .push(sprite_editor_button(sprite_button_state, tab))
-        .push(map_editor_button(map_button_state, tab))
+        .push(buttons)
         .into()
-}
-
-fn export_assets_button(state: &mut button::State) -> Element<'_, Msg> {
-    const EXPORT_TEXT: &str = "EXPORT";
-    let width = 4 * EXPORT_TEXT.len() as i32;
-    let height = 7;
-
-    Button::new(
-        1,
-        0,
-        width,
-        height,
-        Some(Msg::ExportWebAssets),
-        state,
-        DrawFn::new(move |draw| {
-            draw.rect(0, 0, width, height, 2);
-            draw.print(EXPORT_TEXT, 1, 1, 7);
-        }),
-    )
-    .on_hover(Msg::ExportWebAssetsHovered)
-    .into()
 }
 
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
@@ -694,5 +696,81 @@ impl ShiftDirection {
             ShiftDirection::Left => sprite.shift_left(),
             ShiftDirection::Right => sprite.shift_right(),
         }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    // function download(filename, text) {
+    //   var element = document.createElement('a');
+    //   element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    //   element.setAttribute('download', filename);
+    //
+    //   element.style.display = 'none';
+    //   document.body.appendChild(element);
+    //
+    //   element.click();
+    //
+    //   document.body.removeChild(element);
+    // }
+
+    use runty8_core::{serialize::Serialize, Resources};
+    use wasm_bindgen::JsCast;
+    use web_sys::HtmlElement;
+
+    pub(crate) fn download_assets(resources: &Resources) {
+        download_file("sprite_sheet.txt", &resources.sprite_sheet.serialize());
+    }
+
+    pub(crate) fn download_file(filename: &str, file_contents: &str) {
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let element = document.create_element("a").unwrap();
+
+        let encoded_content = js_sys::encode_uri_component(file_contents);
+        element
+            .set_attribute(
+                "href",
+                &format!("data:text/plain;charset=utf-8,{}", encoded_content),
+            )
+            .unwrap();
+        element.set_attribute("download", filename).unwrap();
+
+        let html_element = element.dyn_into::<HtmlElement>().unwrap();
+        html_element.style().set_css_text("display: none;");
+
+        let body = document.body().unwrap();
+        body.append_child(&html_element).unwrap();
+
+        html_element.click();
+
+        body.remove_child(&html_element).unwrap();
+    }
+
+    use super::Msg;
+    use crate::ui::{
+        button::{self, Button},
+        DrawFn, Element,
+    };
+
+    pub(crate) fn export_assets_button(state: &mut button::State) -> Element<'_, Msg> {
+        const EXPORT_TEXT: &str = "EXPORT";
+        let width = 4 * EXPORT_TEXT.len() as i32;
+        let height = 7;
+
+        Button::new(
+            1,
+            0,
+            width,
+            height,
+            Some(Msg::ExportWebAssets),
+            state,
+            DrawFn::new(move |draw| {
+                draw.rect(0, 0, width, height, 2);
+                draw.print(EXPORT_TEXT, 1, 1, 7);
+            }),
+        )
+        .on_hover(Msg::ExportWebAssetsHovered)
+        .into()
     }
 }
