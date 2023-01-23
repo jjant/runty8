@@ -43,13 +43,13 @@ impl TopBar {
 fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::SpriteEditor;
 
-    editor_button(state, 63, 110, 0, Msg::SpriteTabClicked, selected)
+    editor_button(state, 63, 110, 0, Msg::SpriteTabClicked, selected).into()
 }
 
 fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
     let selected = tab == Tab::MapEditor;
 
-    editor_button(state, 62, 118, 0, Msg::MapButtonClicked, selected)
+    editor_button(state, 62, 118, 0, Msg::MapButtonClicked, selected).into()
 }
 
 fn editor_button(
@@ -57,15 +57,15 @@ fn editor_button(
     sprite: usize,
     x: i32,
     y: i32,
-    msg: Msg,
+    on_press: Msg,
     selected: bool,
-) -> Element<'_, Msg> {
+) -> Button<Msg> {
     Button::new(
         x,
         y,
         8,
         8,
-        Some(msg),
+        Some(on_press),
         state,
         DrawFn::new(move |draw| {
             let color = if selected { 15 } else { 2 };
@@ -75,35 +75,16 @@ fn editor_button(
             draw.pal(15, 15);
         }),
     )
-    .into()
 }
 
 #[cfg(target_arch = "wasm32")]
 mod wasm {
     use super::Msg;
-    use crate::ui::{
-        button::{self, Button},
-        DrawFn, Element,
-    };
+    use crate::ui::{button, Element};
 
     pub(crate) fn export_assets_button(state: &mut button::State) -> Element<'_, Msg> {
-        const EXPORT_TEXT: &str = "EXPORT";
-        let width = 4 * EXPORT_TEXT.len() as i32;
-        let height = 7;
-
-        Button::new(
-            1,
-            0,
-            width,
-            height,
-            Some(Msg::ExportWebAssets),
-            state,
-            DrawFn::new(move |draw| {
-                draw.rect(0, 0, width, height, 2);
-                draw.print(EXPORT_TEXT, 1, 1, 7);
-            }),
-        )
-        .on_hover(Msg::ExportWebAssetsHovered)
-        .into()
+        super::editor_button(state, 61, 1, 0, Msg::ExportWebAssets, false)
+            .on_hover(Msg::ExportWebAssetsHovered)
+            .into()
     }
 }
