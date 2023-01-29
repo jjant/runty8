@@ -83,7 +83,7 @@ impl App for ExampleApp {
             self.xa += 10;
         }
 
-        if state.btn(Button::C) && self.yc == 0 {
+        if state.btn(Button::Circle) && self.yc == 0 {
             self.ya = -200;
             self.yc = 39;
         }

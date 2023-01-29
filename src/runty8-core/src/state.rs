@@ -54,8 +54,8 @@ impl State {
             Button::Right => &self.right,
             Button::Up => &self.up,
             Button::Down => &self.down,
-            Button::X => &self.x,
-            Button::C => &self.c,
+            Button::Cross => &self.x,
+            Button::Circle => &self.c,
             Button::Mouse => &self.mouse_pressed,
         }
     }

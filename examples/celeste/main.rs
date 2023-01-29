@@ -482,8 +482,8 @@ const K_LEFT: Button = Button::Left;
 const K_RIGHT: Button = Button::Right;
 const K_UP: Button = Button::Up;
 const K_DOWN: Button = Button::Down;
-const K_JUMP: Button = Button::C;
-const K_DASH: Button = Button::X;
+const K_JUMP: Button = Button::Circle;
+const K_DASH: Button = Button::Cross;
 
 fn title_screen(game_state: &mut GameState, pico8: &Pico8) {
     game_state.got_fruit = vec![false; 30];

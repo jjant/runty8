@@ -56,8 +56,8 @@ impl Input {
 
     fn button_to_ref(&mut self, button: Button) -> &mut Option<bool> {
         match button {
-            Button::X => &mut self.x,
-            Button::C => &mut self.c,
+            Button::Cross => &mut self.x,
+            Button::Circle => &mut self.c,
             Button::Left => &mut self.left,
             Button::Right => &mut self.right,
             Button::Up => &mut self.up,
@@ -69,8 +69,8 @@ impl Input {
 
 fn key_to_button(key: Key) -> Option<Button> {
     match key {
-        Key::X => Some(Button::X),
-        Key::C => Some(Button::C),
+        Key::X => Some(Button::Cross),
+        Key::C => Some(Button::Circle),
         Key::LeftArrow => Some(Button::Left),
         Key::RightArrow => Some(Button::Right),
         Key::UpArrow => Some(Button::Up),

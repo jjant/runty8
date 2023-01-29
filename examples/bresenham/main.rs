@@ -35,11 +35,11 @@ impl App for MyThing {
             self.center_x -= 1;
         }
 
-        if state.btn(Button::X) {
+        if state.btn(Button::Cross) {
             self.radius -= 1;
             self.radius = self.radius.max(0);
         }
-        if state.btn(Button::C) {
+        if state.btn(Button::Circle) {
             self.radius += 1;
         }
     }
