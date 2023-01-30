@@ -156,9 +156,10 @@ mod wasm {
     }
 
     fn insert_canvas_and_create_context(window: &Window) -> glow::Context {
-        log::info!("Window: {:?}", window);
+        let scale_factor = window.scale_factor();
         let canvas = window.canvas();
-        let winit::dpi::PhysicalSize { width, height } = window.inner_size();
+        let winit::dpi::LogicalSize::<f64> { width, height } =
+            window.inner_size().to_logical(scale_factor);
 
         let window = web_sys::window().unwrap();
         let document = window.document().unwrap();
