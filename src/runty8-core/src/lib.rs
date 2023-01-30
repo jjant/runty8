@@ -45,9 +45,9 @@ pub enum Button {
     /// Down arrow.
     Down,
     /// X key.
-    X,
+    Cross,
     /// C key.
-    C,
+    Circle,
     /// Left mouse button.
     Mouse,
 }
