@@ -51,7 +51,6 @@ impl App for GameState {
         pico8.set_title("Celeste".to_owned());
 
         let clouds = (0..=16)
-            .into_iter()
             .map(|_| Cloud {
                 x: rnd(128.),
                 y: rnd(128.),
@@ -61,7 +60,6 @@ impl App for GameState {
             .collect();
 
         let particles = (0..=24)
-            .into_iter()
             .map(|_| Particle {
                 x: rnd(128.),
                 y: rnd(128.),
