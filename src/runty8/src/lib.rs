@@ -25,7 +25,7 @@ pub fn debug_run<Game: App + 'static>(resources: Resources) -> std::io::Result<(
         #[cfg(not(debug_assertions))]
         {
             println!("Running runtime...");
-            runty8_runtime::<Game>
+            runty8_runtime::run::<Game>
         }
     };
 
