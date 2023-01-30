@@ -362,9 +362,6 @@ impl ElmApp for Editor {
             }
             #[cfg(target_arch = "wasm32")]
             &Msg::ExportWebAssets => {
-                log::info!("export clicked");
-                println!("export clicked");
-
                 wasm::download_assets(resources);
             }
             #[cfg(target_arch = "wasm32")]
