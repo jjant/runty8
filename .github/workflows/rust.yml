@@ -6,7 +6,7 @@ on:
 name: Continuous integration
 
 jobs:
-  ci:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -38,17 +38,95 @@ jobs:
           command: build
           args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
 
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+          - 1.63.0 # Current rustc on my machine
+        target:
+          - x86_64-unknown-linux-gnu
+          - wasm32-unknown-unknown
+
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout source
+
+      - uses: actions-rs/toolchain@v1
+        name: Install toolchain
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+          components: rustfmt, clippy
+
       - uses: actions-rs/cargo@v1
         name: Test
         with:
           command: test
           args: --workspace ${{ matrix.target == 'wasm32-unknown-unknown' && '--exclude runty8-editor' || '' }}
 
+  format:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+          - 1.63.0 # Current rustc on my machine
+        target:
+          - x86_64-unknown-linux-gnu
+          - wasm32-unknown-unknown
+
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout source
+
+      - uses: actions-rs/toolchain@v1
+        name: Install toolchain
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+          components: rustfmt, clippy
+
       - uses: actions-rs/cargo@v1
         name: Format
         with:
           command: fmt
           args: --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+          - 1.63.0 # Current rustc on my machine
+        target:
+          - x86_64-unknown-linux-gnu
+          - wasm32-unknown-unknown
+
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout source
+
+      - uses: actions-rs/toolchain@v1
+        name: Install toolchain
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+          components: rustfmt, clippy
 
       - uses: actions-rs/cargo@v1
         name: Clippy
