@@ -19,6 +19,7 @@ pub use flags::Flags;
 pub use input::Input;
 pub use map::Map;
 pub use pico8::*;
+use serialize::{Serialize, Serialized};
 pub use sprite_sheet::{Sprite, SpriteSheet};
 
 /// A regular pico8 app.
@@ -60,6 +61,25 @@ pub struct Resources {
     pub sprite_sheet: SpriteSheet,
     pub sprite_flags: Flags,
     pub map: Map,
+}
+
+impl Resources {
+    pub fn serialize(&self) -> Vec<Serialized> {
+        vec![
+            Serialized {
+                file_name: SpriteSheet::file_name(),
+                serialized: self.sprite_sheet.serialize(),
+            },
+            Serialized {
+                file_name: Map::file_name(),
+                serialized: self.map.serialize(),
+            },
+            Serialized {
+                file_name: Flags::file_name(),
+                serialized: self.sprite_flags.serialize(),
+            },
+        ]
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -233,19 +253,61 @@ pub use paste::paste;
 pub fn create_asset<T: Default>(
     deserialize: fn(&str) -> Result<T, String>,
     asset_name: &str,
-    file: Option<&include_dir::File>,
+    file_contents: Option<&str>,
 ) -> Result<T, String> {
-    match file {
-        Some(file) => {
-            let contents = file
-                .contents_utf8()
-                .ok_or_else(|| "File contents were not utf8".to_owned())?;
-            deserialize(contents)
-        }
+    match file_contents {
+        Some(file_contents) => deserialize(file_contents),
         None => {
             println!("Couldn't find file for asset: {asset_name}, creating a blank one.");
             Ok(T::default())
         }
+    }
+}
+
+/// Web: Try to load path from local storage and log it.
+/// Native: Returns `None`.
+fn load(_file_path: &str) -> Option<String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        let wasm_contents = wasm::load(_file_path);
+        log::info!(
+            "Loading assets from: {}... {}.",
+            _file_path,
+            wasm_contents
+                .as_ref()
+                .map(|_| "success")
+                .unwrap_or("not found")
+        );
+
+        wasm_contents
+    }
+}
+
+pub fn load_file(
+    dir: &include_dir::Dir,
+    assets_path: &str,
+    file_name: &str,
+) -> Result<Option<String>, String> {
+    let file_path = format!("{assets_path}/{file_name}");
+
+    let wasm_contents = load(&file_path);
+    if let Some(wasm_contents) = wasm_contents {
+        return Ok(Some(wasm_contents));
+    }
+
+    let asset_file = dir.get_file(file_name);
+    match asset_file {
+        Some(file) => {
+            let contents = file
+                .contents_utf8()
+                .ok_or_else(|| "File contents were not in UTF8".to_owned())?;
+
+            Ok(Some(contents.to_owned()))
+        }
+        None => Ok(None),
     }
 }
 
@@ -257,20 +319,30 @@ macro_rules! load_assets {
         static DIR: include_dir::Dir = $crate::include_assets!($path);
 
         (|| {
+            #[cfg(target_arch = "wasm32")]
+            $crate::wasm::setup_console_log_panic_hook();
+
             let assets_path = concat!(env!("CARGO_MANIFEST_DIR"), "/", $path).to_owned();
-            println!("Loading assets from: {}", assets_path);
+
+            let map_contents = $crate::load_file(&DIR, &assets_path, "map.txt")?;
+            let sprite_flags_contents =
+                $crate::load_file(&DIR, &assets_path, &$crate::Flags::file_name())?;
+            let sprite_sheet_contents =
+                $crate::load_file(&DIR, &assets_path, &$crate::SpriteSheet::file_name())?;
 
             let map =
-                $crate::create_asset($crate::Map::deserialize, "map", DIR.get_file("map.txt"))?;
+                $crate::create_asset($crate::Map::deserialize, "map", map_contents.as_deref())?;
+
             let sprite_flags = $crate::create_asset(
                 $crate::Flags::deserialize,
                 "sprite flags",
-                DIR.get_file("sprite_flags.txt"),
+                sprite_flags_contents.as_deref(),
             )?;
+
             let sprite_sheet = $crate::create_asset(
                 $crate::SpriteSheet::deserialize,
                 "sprite_sheet",
-                DIR.get_file("sprite_sheet.txt"),
+                sprite_sheet_contents.as_deref(),
             )?;
 
             Ok::<$crate::Resources, String>($crate::Resources {
@@ -281,4 +353,27 @@ macro_rules! load_assets {
             })
         })()
     }};
+}
+
+#[cfg(target_arch = "wasm32")]
+#[doc(hidden)]
+pub mod wasm {
+    #[doc(hidden)]
+    pub fn load(file_name: &str) -> Option<String> {
+        let storage = web_sys::window()
+            .unwrap()
+            .local_storage()
+            .expect("Couldn't access local storage object")
+            .expect("Couldn't access local storage object");
+
+        // get_item returns `Result<Option<String>, JsValue>`, but it looks like
+        // it can only return an `Err` (exception on JS side) in old browsers.
+        // Not totally sure about it tho, MDN doens't mention it.
+        storage.get_item(file_name).unwrap()
+    }
+
+    pub fn setup_console_log_panic_hook() {
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        console_log::init_with_level(log::Level::Debug).unwrap();
+    }
 }

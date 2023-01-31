@@ -3,6 +3,7 @@ pub mod key_combo;
 mod map;
 mod notification;
 mod sprite;
+mod top_bar;
 mod undo_redo;
 
 use crate::app::ElmApp;
@@ -17,11 +18,12 @@ use crate::ui::{DrawFn, Element, Tree};
 use brush_size::BrushSize;
 use runty8_core::InputEvent;
 use runty8_core::{
-    serialize::{Ppm, Serialize},
-    Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources, Sprite, SpriteSheet,
+    serialize::Serialize, Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources,
+    Sprite, SpriteSheet,
 };
 
 use self::key_combo::KeyCombos;
+use self::top_bar::TopBar;
 use self::undo_redo::{Command, Commands};
 
 #[derive(Debug)]
@@ -29,8 +31,7 @@ pub(crate) struct Editor {
     cursor: cursor::State,
     tab: Tab,
     selected_sprite_page: usize,
-    sprite_button_state: button::State,
-    map_button_state: button::State,
+    top_bar: TopBar,
     tab_buttons: [button::State; 4],
     sprite_buttons: Vec<button::State>,
     selected_tool: usize,
@@ -48,7 +49,7 @@ pub(crate) struct Editor {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-enum Tab {
+pub(crate) enum Tab {
     SpriteEditor,
     MapEditor,
 }
@@ -78,15 +79,28 @@ pub(crate) enum Msg {
     SpritePageSelected(usize),
     SpriteButtonClicked(usize),
     FlagToggled(usize),
-    FlagHovered { bit_number: usize },
-    SpriteEdited { x: usize, y: usize, color: Color }, // TODO: Improve
+    FlagHovered {
+        bit_number: usize,
+    },
+    SpriteEdited {
+        x: usize,
+        y: usize,
+        color: Color,
+    }, // TODO: Improve
     ToolSelected(usize),
-    ClickedMapTile { x: usize, y: usize },
+    ClickedMapTile {
+        x: usize,
+        y: usize,
+    },
     KeyboardEvent(KeyboardEvent),
     BrushSizeSliderHovered,
     BrushSizeSelected(BrushSize),
     MapEditorMsg(map::Msg),
     SpriteEditorMsg(sprite::Msg),
+    #[cfg(target_arch = "wasm32")]
+    ExportWebAssets,
+    #[cfg(target_arch = "wasm32")]
+    ExportWebAssetsHovered,
 }
 
 impl Editor {
@@ -182,14 +196,10 @@ fn handle_key_combo(
 fn save(notification: &mut notification::State, resources: &Resources) {
     notification.alert("SAVED".to_owned());
 
-    let map_ppm = Ppm::from_map(&resources.map, &resources.sprite_sheet);
-    let sprite_sheet_ppm = Ppm::from_sprite_sheet(&resources.sprite_sheet);
     let to_serialize: &[(&str, &dyn Serialize)] = &[
         (&Flags::file_name(), &resources.sprite_flags),
         (&SpriteSheet::file_name(), &resources.sprite_sheet),
         (&Map::file_name(), &resources.map),
-        ("map.ppm", &map_ppm),
-        ("sprite_sheet.ppm", &sprite_sheet_ppm),
     ];
 
     for (name, serializable) in to_serialize.iter() {
@@ -224,8 +234,7 @@ impl ElmApp for Editor {
     fn init() -> Self {
         Self {
             cursor: cursor::State::new(),
-            sprite_button_state: button::State::new(),
-            map_button_state: button::State::new(),
+            top_bar: TopBar::new(),
             tab: Tab::SpriteEditor,
             selected_sprite_page: 0,
             tab_buttons: [
@@ -351,6 +360,14 @@ impl ElmApp for Editor {
                 self.bottom_bar_text =
                     format!("BRUSH SIZE: {}", self.brush_size.to_human_readable());
             }
+            #[cfg(target_arch = "wasm32")]
+            &Msg::ExportWebAssets => {
+                wasm::download_assets(resources);
+            }
+            #[cfg(target_arch = "wasm32")]
+            Msg::ExportWebAssetsHovered => {
+                self.bottom_bar_text = "EXPORT ASSETS".to_owned();
+            }
         }
     }
 
@@ -361,11 +378,7 @@ impl ElmApp for Editor {
             .push(DrawFn::new(|draw| {
                 draw.rectfill(0, 0, 127, 127, BACKGROUND)
             }))
-            .push(top_bar(
-                &mut self.sprite_button_state,
-                &mut self.map_button_state,
-                self.tab,
-            ))
+            .push(self.top_bar.view(self.tab))
             .push(match self.tab {
                 Tab::SpriteEditor => {
                     let selected_sprite_flags =
@@ -426,58 +439,6 @@ impl ElmApp for Editor {
         })
         .collect()
     }
-}
-
-fn top_bar<'a>(
-    sprite_button_state: &'a mut button::State,
-    map_button_state: &'a mut button::State,
-    tab: Tab,
-) -> Element<'a, Msg> {
-    Tree::new()
-        .push(DrawFn::new(|draw| {
-            draw.rectfill(0, 0, 127, 7, 8);
-        }))
-        .push(sprite_editor_button(sprite_button_state, tab))
-        .push(map_editor_button(map_button_state, tab))
-        .into()
-}
-
-fn sprite_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
-    let selected = tab == Tab::SpriteEditor;
-
-    editor_button(state, 63, 110, 0, Msg::SpriteTabClicked, selected)
-}
-
-fn map_editor_button(state: &mut button::State, tab: Tab) -> Element<'_, Msg> {
-    let selected = tab == Tab::MapEditor;
-
-    editor_button(state, 62, 118, 0, Msg::MapButtonClicked, selected)
-}
-
-fn editor_button(
-    state: &mut button::State,
-    sprite: usize,
-    x: i32,
-    y: i32,
-    msg: Msg,
-    selected: bool,
-) -> Element<'_, Msg> {
-    Button::new(
-        x,
-        y,
-        8,
-        8,
-        Some(msg),
-        state,
-        DrawFn::new(move |draw| {
-            let color = if selected { 15 } else { 2 };
-
-            draw.pal(15, color);
-            draw.editor_spr(sprite, 0, 0);
-            draw.pal(15, 15);
-        }),
-    )
-    .into()
 }
 
 fn tools_row<'a>(
@@ -663,5 +624,47 @@ impl ShiftDirection {
             ShiftDirection::Left => sprite.shift_left(),
             ShiftDirection::Right => sprite.shift_right(),
         }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    use runty8_core::{serialize::Serialized, Resources};
+    use wasm_bindgen::JsCast;
+    use web_sys::HtmlElement;
+
+    pub(crate) fn download_assets(resources: &Resources) {
+        for Serialized {
+            file_name,
+            serialized: contents,
+        } in resources.serialize()
+        {
+            download_file(&file_name, &contents);
+        }
+    }
+
+    pub(crate) fn download_file(filename: &str, file_contents: &str) {
+        let window = web_sys::window().unwrap();
+        let document = window.document().unwrap();
+        let element = document.create_element("a").unwrap();
+
+        let encoded_content = js_sys::encode_uri_component(file_contents);
+        element
+            .set_attribute(
+                "href",
+                &format!("data:text/plain;charset=utf-8,{}", encoded_content),
+            )
+            .unwrap();
+        element.set_attribute("download", filename).unwrap();
+
+        let html_element = element.dyn_into::<HtmlElement>().unwrap();
+        html_element.style().set_css_text("display: none;");
+
+        let body = document.body().unwrap();
+        body.append_child(&html_element).unwrap();
+
+        html_element.click();
+
+        body.remove_child(&html_element).unwrap();
     }
 }

@@ -6,6 +6,7 @@ use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseButton, 
 use winit::dpi::{LogicalPosition, LogicalSize};
 
 /// Information about the current viewport for rendering.
+#[derive(Debug)]
 pub struct ScreenInfo {
     /// DPI factor.
     pub scale_factor: f64,

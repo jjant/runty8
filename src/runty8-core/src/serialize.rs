@@ -6,9 +6,39 @@ use crate::sprite_sheet::SpriteSheet;
 use std::fmt::Display;
 
 fn write_and_log(file_name: &str, contents: &str) {
-    print!("Writing {file_name}... ");
-    std::fs::write(file_name, contents).unwrap();
-    println!("success.")
+    log::info!("Writing {file_name}... ");
+    write(file_name, contents).unwrap();
+    log::info!("success.");
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+type WriteError = std::io::Error;
+#[cfg(target_arch = "wasm32")]
+type WriteError = wasm::Error;
+
+/// Stores this file:
+///  - Native: Uses regular `std::fs::write`
+///  - Web: Uses `localStorage.setItem`
+fn write(file_name: &str, contents: &str) -> Result<(), WriteError> {
+    #[cfg(not(target_arch = "wasm32"))]
+    return std::fs::write(file_name, contents);
+    #[cfg(target_arch = "wasm32")]
+    return wasm::write(file_name, contents);
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm {
+    pub(super) type Error = wasm_bindgen::JsValue;
+
+    pub(super) fn write(key: &str, contents: &str) -> Result<(), Error> {
+        let storage = web_sys::window()
+            .expect("Couldn't access window object")
+            .local_storage()
+            .expect("Couldn't access local storage object")
+            .expect("Couldn't access local storage object");
+
+        storage.set_item(key, contents)
+    }
 }
 
 pub fn serialize(assets_path: &str, file_name: &str, serializable: &impl Serialize) {
@@ -136,7 +166,7 @@ impl Ppm {
 }
 
 impl Serialize for Ppm {
-    /// Plain PPM format (P3)
+    /// Plain PPM format (P3).
     fn serialize(&self) -> String {
         let header = format!("P3\n{} {}\n255", self.width, self.height);
         let body = self
@@ -148,4 +178,10 @@ impl Serialize for Ppm {
 
         format!("{header}\n{body}")
     }
+}
+
+/// Represents a serialized asset ready to be stored to a file.
+pub struct Serialized {
+    pub file_name: String,
+    pub serialized: String,
 }

@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 runty8-core = { path = "../runty8-core" }
-winit = "0.26"
+winit = "0.27"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 instant = { version = "0.1" }

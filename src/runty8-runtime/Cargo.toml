@@ -7,4 +7,4 @@ edition = "2021"
 runty8-core = { path = "../runty8-core" }
 runty8-winit = { path = "../runty8-winit" }
 runty8-event-loop = { path = "../runty8-event-loop" }
-winit = "0.26"
+winit = "0.27"
