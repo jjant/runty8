@@ -142,6 +142,12 @@ impl Clipboard {
             *sprite_pixel = clipboard_pixel;
         }
     }
+    fn cut_sprite(&mut self, sprite: &mut Sprite) {
+        self.data = sprite.to_owned();
+        for sprite_pixel in sprite.iter_mut() {
+            *sprite_pixel = 0;
+        }
+    }
 }
 
 fn handle_key_combo(
@@ -164,6 +170,12 @@ fn handle_key_combo(
             notification.alert("PASTED 1 X 1 SPRITES".to_owned());
 
             clipboard.paste_into(sprite);
+        }
+        KeyComboAction::Cut => {
+            let sprite = resources.sprite_sheet.get_sprite_mut(selected_sprite);
+            notification.alert("CUT 1 X 1 SPRITES".to_owned());
+
+            clipboard.cut_sprite(sprite);
         }
         KeyComboAction::FlipVertically => {
             let sprite = resources.sprite_sheet.get_sprite_mut(selected_sprite);
@@ -211,6 +223,7 @@ fn save(notification: &mut notification::State, resources: &Resources) {
 enum KeyComboAction {
     Copy,
     Paste,
+    Cut,
     FlipVertically,
     FlipHorizontally,
     Undo,
@@ -251,6 +264,7 @@ impl ElmApp for Editor {
             key_combos: KeyCombos::new()
                 .push(KeyComboAction::Copy, Key::C, &[Key::Control])
                 .push(KeyComboAction::Paste, Key::V, &[Key::Control])
+                .push(KeyComboAction::Cut, Key::X, &[Key::Control])
                 .push(KeyComboAction::Undo, Key::Z, &[Key::Control])
                 .push(KeyComboAction::Redo, Key::Y, &[Key::Control])
                 .push(KeyComboAction::Save, Key::S, &[Key::Control])
