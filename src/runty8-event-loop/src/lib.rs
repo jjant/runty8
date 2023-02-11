@@ -48,6 +48,8 @@ pub fn event_loop(
     };
 
     let mut current_time = instant::now();
+
+    winit_window(&window).set_cursor_visible(false);
     // TODO: Initial render.
     // EDIT: Actually I think this handles itself through the Tick from Init? Maybe? Not sure.
     // => Test it
