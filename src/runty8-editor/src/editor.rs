@@ -624,10 +624,10 @@ impl ShiftDirection {
         use ShiftDirection::*;
 
         match key {
-            Key::W => Some(Up),
-            Key::D => Some(Right),
-            Key::S => Some(Down),
-            Key::A => Some(Left),
+            Key::UpArrow => Some(Up),
+            Key::RightArrow => Some(Right),
+            Key::DownArrow => Some(Down),
+            Key::LeftArrow => Some(Left),
             _ => None,
         }
     }
