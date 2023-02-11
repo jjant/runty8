@@ -21,14 +21,16 @@ if [[ $mode == "debug" ]]; then
   actual_mode=""
 fi
 
-rm -rf generated/*
+output_dir="generated"
+rm -rf $output_dir/*
 cargo build --target wasm32-unknown-unknown -p "examples" --bin "$package" $actual_mode
-wasm-bindgen target/wasm32-unknown-unknown/$mode/$package.wasm --out-dir generated --target web
+wasm-bindgen target/wasm32-unknown-unknown/$mode/$package.wasm --out-dir $output_dir --target web
 
-cp index.html generated/index.html
+cp index.html $output_dir/index.html
 placeholder="__PACKAGE_NAME__"
 echo "Replacing placeholder: $placeholder -> $package"
-sed -i.bkp "s/$placeholder/$package/g" generated/index.html
+sed -i.bkp "s/$placeholder/$package/g" $output_dir/index.html
 
-cd generated
+cd $output_dir
+echo "Assets placed in ./$output_dir"
 serve
