@@ -153,7 +153,7 @@ impl Ppm {
                 let y = base_y + pixel_index / SPRITE_WIDTH;
 
                 let color = Color::from_pico8(c);
-                data[(x + y * 128)] = color;
+                data[x + y * 128] = color;
             }
         }
 
