@@ -195,6 +195,14 @@ impl Sprite {
             }
         }
     }
+
+    pub fn to_clipboard_string(&self) -> String {
+        let width = Self::WIDTH;
+        let height = Self::HEIGHT;
+        let pixel_data = vec![];
+
+        format!("[gfx]{width:x}{height}{pixel_data}[/gfx]")
+    }
 }
 
 #[cfg(test)]
@@ -208,5 +216,10 @@ mod tests {
         assert_eq!(SpriteSheet::to_linear_index(8, 0), 64);
         assert_eq!(SpriteSheet::to_linear_index(8, 1), 64 + 8);
         assert_eq!(SpriteSheet::to_linear_index(1, 9), 1033);
+    }
+
+    #[test]
+    fn clipboard_works() {
+        let sprite = Sprite::new(&[15, 15, 15, 15]);
     }
 }
