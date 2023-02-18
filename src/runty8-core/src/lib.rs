@@ -252,15 +252,11 @@ pub use paste::paste;
 
 pub fn create_asset<T: Default>(
     deserialize: fn(&str) -> Result<T, String>,
-    asset_name: &str,
     file_contents: Option<&str>,
 ) -> Result<T, String> {
     match file_contents {
         Some(file_contents) => deserialize(file_contents),
-        None => {
-            println!("Couldn't find file for asset: {asset_name}, creating a blank one.");
-            Ok(T::default())
-        }
+        None => Ok(T::default()),
     }
 }
 
@@ -330,18 +326,13 @@ macro_rules! load_assets {
             let sprite_sheet_contents =
                 $crate::load_file(&DIR, &assets_path, &$crate::SpriteSheet::file_name())?;
 
-            let map =
-                $crate::create_asset($crate::Map::deserialize, "map", map_contents.as_deref())?;
+            let map = $crate::create_asset($crate::Map::deserialize, map_contents.as_deref())?;
 
-            let sprite_flags = $crate::create_asset(
-                $crate::Flags::deserialize,
-                "sprite flags",
-                sprite_flags_contents.as_deref(),
-            )?;
+            let sprite_flags =
+                $crate::create_asset($crate::Flags::deserialize, sprite_flags_contents.as_deref())?;
 
             let sprite_sheet = $crate::create_asset(
                 $crate::SpriteSheet::deserialize,
-                "sprite_sheet",
                 sprite_sheet_contents.as_deref(),
             )?;
 
