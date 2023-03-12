@@ -1,6 +1,7 @@
 use crate::flags::Flags;
 use crate::map::Map;
 use crate::sprite_sheet::SpriteSheet;
+use crate::util::{min_max, MinMax};
 use crate::Color;
 use crate::{draw, font};
 
@@ -148,6 +149,7 @@ impl DrawData {
     }
 
     pub(crate) fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        let MinMax { min: y0, max: y1 } = min_max(y0, y1);
         for y in y0..=y1 {
             self.line(x0, y, x1, y, color);
         }
