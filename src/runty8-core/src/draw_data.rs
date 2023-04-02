@@ -1,6 +1,7 @@
 use crate::flags::Flags;
 use crate::map::Map;
 use crate::sprite_sheet::SpriteSheet;
+use crate::util::{min_max, MinMax};
 use crate::Color;
 use crate::{draw, font};
 
@@ -9,6 +10,7 @@ use crate::sprite_sheet::Sprite;
 const WIDTH: usize = 128;
 const NUM_COMPONENTS: usize = 3;
 
+/// A raw buffer made up of `RGB` components: [R, G, B, R, G, B, ...].
 type Buffer = [u8; NUM_COMPONENTS * WIDTH * WIDTH];
 const BLACK_BUFFER: Buffer = [0; NUM_COMPONENTS * WIDTH * WIDTH];
 
@@ -148,6 +150,8 @@ impl DrawData {
     }
 
     pub(crate) fn rectfill(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, color: Color) {
+        let MinMax { min: y0, max: y1 } = min_max(y0, y1);
+
         for y in y0..=y1 {
             self.line(x0, y, x1, y, color);
         }
@@ -347,4 +351,100 @@ pub mod colors {
     pub const LAVENDER: Color = 13;
     pub const PINK: Color = 14;
     pub const LIGHT_PEACH: Color = 15;
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        colors,
+        draw_data::{get_color, Buffer, NUM_COMPONENTS},
+    };
+
+    use super::DrawData;
+
+    #[derive(Clone)]
+    enum IterBothNextYield {
+        AThenB,
+        BThenA,
+        Done,
+    }
+
+    #[derive(Clone)]
+    struct IterBoth<T> {
+        a: T,
+        b: T,
+        yield_state: IterBothNextYield,
+    }
+
+    impl<T> IterBoth<T> {
+        fn new(a: T, b: T) -> Self {
+            Self {
+                a,
+                b,
+                yield_state: IterBothNextYield::AThenB,
+            }
+        }
+    }
+
+    impl<T: Copy> Iterator for IterBoth<T> {
+        type Item = (T, T);
+
+        fn next(&mut self) -> Option<Self::Item> {
+            match self.yield_state {
+                IterBothNextYield::AThenB => {
+                    self.yield_state = IterBothNextYield::BThenA;
+                    Some((self.a, self.b))
+                }
+                IterBothNextYield::BThenA => {
+                    self.yield_state = IterBothNextYield::Done;
+                    Some((self.b, self.a))
+                }
+                IterBothNextYield::Done => None,
+            }
+        }
+    }
+
+    #[test]
+    fn rectfill_works_with_unordered_arguments() {
+        fn red_pixels_count(buf: &Buffer) -> usize {
+            fn is_red(chunk: &[u8]) -> bool {
+                let chunk: Vec<u32> = chunk
+                    .into_iter()
+                    .copied()
+                    .map(|component| component as u32)
+                    .collect();
+                let (r, g, b) = (chunk[0], chunk[1], chunk[2]);
+
+                let color = r << 16 | g << 8 | b;
+
+                color == get_color(colors::RED)
+            }
+
+            buf.chunks(NUM_COMPONENTS)
+                .filter(|chunk| is_red(chunk))
+                .count()
+        }
+
+        let x = IterBoth::new(10, 25);
+        let y = IterBoth::new(5, 30);
+
+        for (x0, x1) in x {
+            for (y0, y1) in y.clone() {
+                let mut draw_data = DrawData::new();
+
+                // No pixels are red before the `rectfill` call.
+                assert_eq!(red_pixels_count(draw_data.buffer()), 0);
+
+                draw_data.rectfill(x0, y0, x1, y1, colors::RED);
+                let width = (x1 - x0).abs() + 1;
+                let height = (y1 - y0).abs() + 1;
+                let rect_size_in_pixels = width * height;
+
+                assert_eq!(
+                    red_pixels_count(draw_data.buffer()),
+                    rect_size_in_pixels as usize
+                );
+            }
+        }
+    }
 }
