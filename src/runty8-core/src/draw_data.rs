@@ -447,4 +447,16 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn camera_coordinate_transform_works() {
+        let mut draw_data = DrawData::new();
+
+        // Examples taken from: http://pico8wiki.com/index.php?title=Camera
+        draw_data.camera(-2, 2);
+        assert_eq!(draw_data.apply_camera(20, 20), (22, 18));
+
+        draw_data.camera(-64, -64);
+        assert_eq!(draw_data.apply_camera(0, 0), (64, 64));
+    }
 }
