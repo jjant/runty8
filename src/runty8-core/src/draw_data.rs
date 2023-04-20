@@ -88,6 +88,11 @@ impl DrawData {
         (x - self.camera.0, y - self.camera.1)
     }
 
+    /// Inverse of `apply_camera`
+    fn unapply_camera(&self, x: i32, y: i32) -> (i32, i32) {
+        (x + self.camera.0, y + self.camera.1)
+    }
+
     /// Returns the linear index of the pixel with (x, y) coordinates in the screen
     fn index(&self, x: i32, y: i32) -> Option<usize> {
         let x_in_bounds = 0 <= x && x < WIDTH as i32;
@@ -261,7 +266,10 @@ impl DrawData {
     }
 
     pub(crate) fn cls_color(&mut self, color: Color) {
-        self.rectfill(0, 0, 127, 127, color);
+        let (start_x, start_y) = self.unapply_camera(0, 0);
+        let (end_x, end_y) = self.unapply_camera(127, 127);
+
+        self.rectfill(start_x, start_y, end_x, end_y, color);
     }
 
     /// <https://pico-8.fandom.com/wiki/Map>
@@ -355,6 +363,8 @@ pub mod colors {
 
 #[cfg(test)]
 mod tests {
+    use rand::Rng;
+
     use crate::{
         colors,
         draw_data::{get_color, Buffer, NUM_COMPONENTS},
@@ -458,5 +468,32 @@ mod tests {
 
         draw_data.camera(-64, -64);
         assert_eq!(draw_data.apply_camera(0, 0), (64, 64));
+    }
+
+    #[test]
+    fn unapply_is_inverse_of_apply_camera() {
+        let mut draw_data = DrawData::new();
+
+        let round_trip_one = |draw_data: &DrawData, x, y| {
+            let unapplied = draw_data.unapply_camera(x, y);
+            draw_data.apply_camera(unapplied.0, unapplied.1)
+        };
+
+        let round_trip_two = |draw_data: &DrawData, x, y| {
+            let applied = draw_data.apply_camera(x, y);
+            draw_data.unapply_camera(applied.0, applied.1)
+        };
+
+        for _ in 0..50 {
+            let offset_x = rand::thread_rng().gen_range(-100..100);
+            let offset_y = rand::thread_rng().gen_range(-100..100);
+            draw_data.camera(offset_x, offset_y);
+
+            let x = rand::thread_rng().gen_range(-100..100);
+            let y = rand::thread_rng().gen_range(-100..100);
+
+            assert_eq!((x, y), round_trip_one(&draw_data, x, y));
+            assert_eq!((x, y), round_trip_two(&draw_data, x, y));
+        }
     }
 }
