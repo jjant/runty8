@@ -7,7 +7,7 @@ use runty8_core::Event;
 use runty8_winit::{Runty8EventExt as _, ScreenInfo};
 use winit::{
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    window::{Icon, WindowBuilder},
 };
 
 mod gl;
@@ -84,9 +84,20 @@ fn make_window_and_context(
     event_loop: &EventLoop<()>,
     screen_info: &ScreenInfo,
 ) -> (Window, glow::Context, &'static str) {
+    let (icon_rgba, icon_width, icon_height) = {
+        let image = image::open("img/logo.png")
+            .expect("Failed to open icon path")
+            .into_rgba8();
+        let (width, height) = image.dimensions();
+        let rgba = image.into_raw();
+        (rgba, width, height)
+    };
+    let icon = Icon::from_rgba(icon_rgba, icon_width, icon_height).expect("Failed to open icon");
+
     let window_builder = WindowBuilder::new()
         .with_inner_size(screen_info.logical_size)
-        .with_title("Runty8");
+        .with_title("Runty8")
+        .with_window_icon(Some(icon));
 
     #[cfg(not(target_arch = "wasm32"))]
     return native::make_window_and_context(window_builder, event_loop);

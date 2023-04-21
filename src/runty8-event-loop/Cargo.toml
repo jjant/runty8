@@ -9,6 +9,7 @@ runty8-winit = { path = "../runty8-winit" }
 winit = "0.27"
 glow = "0.11"
 log = "0.4"
+image = { version = "0.24.6", default-features = false, features = ["png"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = { version = "0.2" }
