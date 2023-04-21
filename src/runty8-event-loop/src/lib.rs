@@ -85,7 +85,7 @@ fn make_window_and_context(
     screen_info: &ScreenInfo,
 ) -> (Window, glow::Context, &'static str) {
     let (icon_rgba, icon_width, icon_height) = {
-        let image = image::open("img/logo.png")
+        let image = image::open(concat!(env!("CARGO_MANIFEST_DIR"), "../../../img/logo.png"))
             .expect("Failed to open icon path")
             .into_rgba8();
         let (width, height) = image.dimensions();
