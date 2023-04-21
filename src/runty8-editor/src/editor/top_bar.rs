@@ -70,9 +70,9 @@ fn editor_button(
         DrawFn::new(move |draw| {
             let color = if selected { 15 } else { 2 };
 
-            draw.pal(15, color);
+            draw.pal(2, color);
             draw.editor_spr(sprite, 0, 0);
-            draw.pal(15, 15);
+            draw.pal(2, 2);
         }),
     )
 }
