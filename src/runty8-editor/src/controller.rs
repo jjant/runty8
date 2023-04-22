@@ -32,6 +32,10 @@ pub(crate) struct Controller<Game> {
     key_combos: KeyCombos<KeyComboAction>,
     keys: Input,
     pico8: Pico8,
+    // Needed to set/unset the game's camera when switching the scene.
+    // Otherwise, the editor may render wrong when the user's set a camera.
+    // This doesn't support setting the camera in the editor itself tho.
+    game_camera: (i32, i32),
 }
 
 impl<T> Controller<T> {
@@ -57,6 +61,7 @@ impl<Game: AppCompat> Controller<Game> {
                 .push(KeyComboAction::SwitchScene, Key::Escape, &[]),
             keys: Input::new(),
             pico8,
+            game_camera: (0, 0),
         }
     }
 
@@ -120,13 +125,27 @@ fn view<'a, Game: AppCompat>(
 }
 
 impl<Game: AppCompat> Controller<Game> {
+    // TODO: Why doesn't this function simply return a [`Msg`]?
     fn handle_key_combos(&mut self, key_event: KeyboardEvent) {
         self.key_combos.on_event(key_event, |action| match action {
             KeyComboAction::RestartGame => {
                 self.app = Game::init(&mut self.pico8);
                 self.scene = Scene::App;
             }
-            KeyComboAction::SwitchScene => self.scene.flip(),
+            KeyComboAction::SwitchScene => {
+                match self.scene {
+                    Scene::Editor => {
+                        // Switching to game
+                        let (x, y) = std::mem::replace(&mut self.game_camera, (0, 0));
+                        self.pico8.camera(x, y);
+                    }
+                    Scene::App => {
+                        // Switching to Editor
+                        self.game_camera = self.pico8.camera(0, 0);
+                    }
+                }
+                self.scene.flip()
+            }
         });
     }
 
