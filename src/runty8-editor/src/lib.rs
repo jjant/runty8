@@ -1,4 +1,4 @@
-#![allow(clippy::new_without_default)]
+#![allow(clippy::new_without_default, clippy::mem_replace_with_default)]
 // #![deny(missing_docs)]
 
 //! The Runty8 editor.
