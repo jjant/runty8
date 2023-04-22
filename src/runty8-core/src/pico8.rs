@@ -82,8 +82,9 @@ impl Pico8 {
         self.draw_data.cls_color(color);
     }
 
-    pub fn camera(&mut self, x: i32, y: i32) {
-        self.draw_data.camera(x, y);
+    /// https://pico-8.fandom.com/wiki/Camera
+    pub fn camera(&mut self, x: i32, y: i32) -> (i32, i32) {
+        self.draw_data.camera(x, y)
     }
 
     pub fn clip(&mut self, _x: i32, _y: i32, _w: i32, _h: i32) {

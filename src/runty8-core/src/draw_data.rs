@@ -143,8 +143,9 @@ impl DrawData {
         self.draw_palette[c0 as usize] = c1;
     }
 
-    pub(crate) fn camera(&mut self, x: i32, y: i32) {
-        self.camera = (x, y);
+    /// Sets the new camera. Returns the previous value set.
+    pub(crate) fn camera(&mut self, x: i32, y: i32) -> (i32, i32) {
+        std::mem::replace(&mut self.camera, (x, y))
     }
 
     pub(crate) fn pset(&mut self, x: i32, y: i32, color: Color) {
@@ -495,5 +496,15 @@ mod tests {
             assert_eq!((x, y), round_trip_one(&draw_data, x, y));
             assert_eq!((x, y), round_trip_two(&draw_data, x, y));
         }
+    }
+
+    #[test]
+    fn camera_returns_old_camera() {
+        let mut draw_data = DrawData::new();
+
+        assert_eq!(draw_data.camera(0, 0), (0, 0));
+        assert_eq!(draw_data.camera(5, 25), (0, 0));
+        assert_eq!(draw_data.camera(42, 42), (5, 25));
+        assert_eq!(draw_data.camera(0, 0), (42, 42));
     }
 }
