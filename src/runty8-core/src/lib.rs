@@ -16,6 +16,7 @@ pub use draw_data::colors;
 pub mod draw;
 pub mod font;
 
+pub use draw_data::DrawData;
 pub use flags::Flags;
 pub use input::Input;
 pub use map::Map;

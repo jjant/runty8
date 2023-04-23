@@ -7,7 +7,7 @@ use crate::{
     ui::Element,
     Resources,
 };
-use runty8_core::{Event, Input, InputEvent, Key, KeyboardEvent, MouseEvent, Pico8};
+use runty8_core::{DrawData, Event, Input, InputEvent, Key, KeyboardEvent, MouseEvent, Pico8};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg<AppMsg> {
@@ -32,10 +32,10 @@ pub(crate) struct Controller<Game> {
     key_combos: KeyCombos<KeyComboAction>,
     keys: Input,
     pico8: Pico8,
-    // Needed to set/unset the game's camera when switching the scene.
-    // Otherwise, the editor may render wrong when the user's set a camera.
-    // This doesn't support setting the camera in the editor itself tho.
-    game_camera: (i32, i32),
+    /// The editor and the game can modify the "draw state" (`draw_data`): camera, palette, etc.
+    /// In order for these settings not to spill from the game to the editor, and viceversa,
+    /// we keep an alternate [`DrawData`] that we swap, when the scene changes.
+    alternate_draw_data: DrawData,
 }
 
 impl<T> Controller<T> {
@@ -61,7 +61,7 @@ impl<Game: AppCompat> Controller<Game> {
                 .push(KeyComboAction::SwitchScene, Key::Escape, &[]),
             keys: Input::new(),
             pico8,
-            game_camera: (0, 0),
+            alternate_draw_data: DrawData::new(),
         }
     }
 
@@ -133,17 +133,7 @@ impl<Game: AppCompat> Controller<Game> {
                 self.scene = Scene::App;
             }
             KeyComboAction::SwitchScene => {
-                match self.scene {
-                    Scene::Editor => {
-                        // Switching to game
-                        let (x, y) = std::mem::replace(&mut self.game_camera, (0, 0));
-                        self.pico8.camera(x, y);
-                    }
-                    Scene::App => {
-                        // Switching to Editor
-                        self.game_camera = self.pico8.camera(0, 0);
-                    }
-                }
+                std::mem::swap(&mut self.pico8.draw_data, &mut self.alternate_draw_data);
                 self.scene.flip()
             }
         });
