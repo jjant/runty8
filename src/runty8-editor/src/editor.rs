@@ -112,7 +112,7 @@ impl Editor {
     fn handle_key_combos(&mut self, key_event: KeyboardEvent, resources: &mut Resources) {
         self.key_combos.on_event(key_event, |action| {
             handle_key_combo(
-                action,
+                *action,
                 self.selected_sprite,
                 &mut self.notification,
                 &mut self.clipboard,

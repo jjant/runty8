@@ -20,8 +20,8 @@ impl<Id> KeyCombos<Id> {
     }
 }
 
-impl<Id: Copy> KeyCombos<Id> {
-    pub fn on_event(&mut self, key_event: KeyboardEvent, mut on_combo: impl FnMut(Id)) {
+impl<Id> KeyCombos<Id> {
+    pub fn on_event(&mut self, key_event: KeyboardEvent, mut on_combo: impl FnMut(&Id)) {
         let mut handled = false;
 
         for key_combo in self.key_combos.iter_mut() {
@@ -73,10 +73,10 @@ impl<Id> KeyCombo<Id> {
     }
 }
 
-impl<Id: Copy> KeyCombo<Id> {
-    fn key_down(&mut self, key: Key) -> Option<Id> {
+impl<Id> KeyCombo<Id> {
+    fn key_down(&mut self, key: Key) -> Option<&Id> {
         if key == self.action_key && self.modifiers_pressed() {
-            return Some(self.id);
+            return Some(&self.id);
         }
 
         let entry = self.modifiers.entry(key);
