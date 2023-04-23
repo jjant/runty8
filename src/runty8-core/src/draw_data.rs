@@ -27,7 +27,7 @@ pub struct DrawData {
 }
 
 impl DrawData {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         DrawData {
             buffer: BLACK_BUFFER,
             transparent_color: Some(0),
