@@ -82,7 +82,7 @@ impl Pico8 {
         self.draw_data.cls_color(color);
     }
 
-    /// https://pico-8.fandom.com/wiki/Camera
+    /// <https://pico-8.fandom.com/wiki/Camera>
     pub fn camera(&mut self, x: i32, y: i32) -> (i32, i32) {
         self.draw_data.camera(x, y)
     }
