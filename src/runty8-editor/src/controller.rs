@@ -7,7 +7,7 @@ use crate::{
     ui::Element,
     Resources,
 };
-use runty8_core::{Event, Input, InputEvent, Key, KeyboardEvent, MouseEvent, Pico8};
+use runty8_core::{DrawData, Event, Input, InputEvent, Key, KeyboardEvent, MouseEvent, Pico8};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg<AppMsg> {
@@ -32,6 +32,10 @@ pub(crate) struct Controller<Game> {
     key_combos: KeyCombos<KeyComboAction>,
     keys: Input,
     pico8: Pico8,
+    /// The editor and the game can modify the "draw state" (`draw_data`): camera, palette, etc.
+    /// In order for these settings not to spill from the game to the editor, and viceversa,
+    /// we keep an alternate [`DrawData`] that we swap, when the scene changes.
+    alternate_draw_data: DrawData,
 }
 
 impl<T> Controller<T> {
@@ -57,6 +61,7 @@ impl<Game: AppCompat> Controller<Game> {
                 .push(KeyComboAction::SwitchScene, Key::Escape, &[]),
             keys: Input::new(),
             pico8,
+            alternate_draw_data: DrawData::new(),
         }
     }
 
@@ -120,13 +125,17 @@ fn view<'a, Game: AppCompat>(
 }
 
 impl<Game: AppCompat> Controller<Game> {
+    // TODO: Why doesn't this function simply return a [`Msg`]?
     fn handle_key_combos(&mut self, key_event: KeyboardEvent) {
         self.key_combos.on_event(key_event, |action| match action {
             KeyComboAction::RestartGame => {
                 self.app = Game::init(&mut self.pico8);
                 self.scene = Scene::App;
             }
-            KeyComboAction::SwitchScene => self.scene.flip(),
+            KeyComboAction::SwitchScene => {
+                std::mem::swap(&mut self.pico8.draw_data, &mut self.alternate_draw_data);
+                self.scene.flip()
+            }
         });
     }
 
