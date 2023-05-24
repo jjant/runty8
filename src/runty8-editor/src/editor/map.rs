@@ -2,7 +2,7 @@ use crate::ui::button::{self, Button};
 use crate::ui::{DrawFn, Element, Tree};
 use crate::util::vec2::{vec2, Vec2i};
 use itertools::Itertools;
-use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, Map, MouseEvent};
+use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, Map, MouseEvent, Sprite};
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -17,6 +17,8 @@ pub(crate) struct Editor {
 }
 
 impl Editor {
+    const FILLER_SPR: usize = 1;
+
     pub(crate) fn new() -> Self {
         Self {
             buttons: vec![button::State::new(); 144],
@@ -33,7 +35,7 @@ impl Editor {
             Msg::MouseMove(mouse_position) => {
                 let delta = self.mouse_position - mouse_position;
 
-                println!("[Map Editor] Mouse delta: {delta:?}");
+                // println!("[Map Editor] Mouse delta: {delta:?}");
 
                 self.mouse_position = mouse_position;
                 if self.dragging {
@@ -81,13 +83,38 @@ impl Editor {
         let show_sprites_in_map = self.show_sprites_in_map;
         let camera = self.camera;
 
+        dbg!(camera);
+
+        const W: i32 = Sprite::WIDTH as i32;
+        let num_to_fill_on_the_left = (camera.x + W - 1) / W;
+        let num_to_fill_on_the_left = num_to_fill_on_the_left.max(0);
+
+        dbg!(num_to_fill_on_the_left);
+
         let highlighted_tile_position =
             tile_position(self.camera, self.hovered_tile.0, self.hovered_tile.1) + vec2(x, y);
 
-        let v: Vec<Element<'_, Msg>> = self
-            .buttons
-            .iter_mut()
-            .chunks(16)
+        /// How many tiles is the map displayable area in height?
+        /// It's actually 8.5 tiles, but we need to fill 9.
+        const MAP_H_TILES: i32 = 9;
+
+        let filler_left = (0..num_to_fill_on_the_left)
+            .cartesian_product(0..MAP_H_TILES + 1)
+            .map(|(index_x, index_y)| {
+                let x = camera.x - (index_x + 1) * W;
+                let y = camera.y % W + y + index_y * 8;
+
+                DrawFn::<'_, Msg>::new(move |pico8| {
+                    // TODO: Reset palette
+                    pico8.palt(None);
+                    pico8.spr(Self::FILLER_SPR, x, y);
+                    pico8.palt(Some(0));
+                })
+                .into()
+            });
+
+        let buttons_iter = self.buttons.iter_mut().chunks(16);
+        let map = buttons_iter
             .into_iter()
             .enumerate()
             .flat_map(|(row_index, row)| {
@@ -117,10 +144,9 @@ impl Editor {
                     ))))
                     .into()
                 })
-            })
-            .collect();
+            });
 
-        Tree::with_children(v)
+        Tree::with_children(filler_left.chain(map).collect())
             .push(highlight_hovered(highlighted_tile_position))
             .into()
     }

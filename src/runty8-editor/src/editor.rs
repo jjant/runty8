@@ -413,7 +413,6 @@ impl ElmApp for Editor {
             .push(DrawFn::new(|draw| {
                 draw.rectfill(0, 0, 127, 127, BACKGROUND)
             }))
-            .push(self.top_bar.view(self.tab))
             .push(match self.tab {
                 Tab::SpriteEditor => {
                     let selected_sprite_flags =
@@ -438,6 +437,7 @@ impl ElmApp for Editor {
                     ))
                     .into(),
             })
+            .push(self.top_bar.view(self.tab))
             .push(tools_row(
                 76,
                 self.selected_sprite,
