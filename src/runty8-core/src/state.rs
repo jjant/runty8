@@ -96,6 +96,7 @@ impl ButtonState {
     }
 
     // Caution: This may come either from a "first" press or a "repeated" press.
+    // TODO: I think we don't handle repeated presses yet.
     fn press(&mut self) {
         *self = match self {
             JustPressed => Held,

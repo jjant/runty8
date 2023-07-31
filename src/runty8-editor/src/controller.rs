@@ -7,7 +7,7 @@ use crate::{
     ui::Element,
     Resources,
 };
-use runty8_core::{DrawData, Event, Input, InputEvent, Key, KeyboardEvent, MouseEvent, Pico8};
+use runty8_core::{DrawData, Event, InputEvent, Key, KeyboardEvent, MouseEvent, Pico8};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Msg<AppMsg> {
@@ -30,7 +30,6 @@ pub(crate) struct Controller<Game> {
     editor: Editor,
     app: Game,
     key_combos: KeyCombos<KeyComboAction>,
-    keys: Input,
     pico8: Pico8,
     /// The editor and the game can modify the "draw state" (`draw_data`): camera, palette, etc.
     /// In order for these settings not to spill from the game to the editor, and viceversa,
@@ -59,7 +58,6 @@ impl<Game: AppCompat> Controller<Game> {
             key_combos: KeyCombos::new()
                 .push(KeyComboAction::RestartGame, Key::R, &[Key::Control])
                 .push(KeyComboAction::SwitchScene, Key::Escape, &[]),
-            keys: Input::new(),
             pico8,
             alternate_draw_data: DrawData::new(),
         }
@@ -73,15 +71,12 @@ impl<Game: AppCompat> Controller<Game> {
             Msg::App(msg) => {
                 self.app.update(msg, &mut self.pico8);
             }
-            &Msg::MouseEvent(event) => self.keys.on_event(InputEvent::Mouse(event)),
 
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event);
-                self.keys.on_event(InputEvent::Keyboard(event));
             }
-            &Msg::Tick => {
-                self.pico8.state.update_input(&self.keys);
-            }
+            &Msg::MouseEvent(_) => {}
+            &Msg::Tick => {}
         }
     }
 
