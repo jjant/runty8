@@ -567,8 +567,7 @@ impl Player {
         has_dashed: &mut bool,
         pause_player: bool,
         shake: &mut i32,
-        // TODO:
-        #[allow(unused_variables)] freeze: &mut i32,
+        freeze: &mut i32,
     ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
