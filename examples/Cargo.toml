@@ -36,3 +36,7 @@ path = "./standalone-game/main.rs"
 [[bin]]
 name = "editor-assets"
 path = "./editor-assets/main.rs"
+
+[[bin]]
+name = "btnp-test"
+path = "./btnp-test/main.rs"

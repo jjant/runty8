@@ -1,6 +1,8 @@
 use crate::ui::DrawFn;
 use crate::ui::Element;
 use crate::Resources;
+use runty8_core::Input;
+use runty8_core::InputEvent;
 use runty8_core::{App, Event, Pico8};
 use std::fmt::Debug;
 
@@ -42,10 +44,12 @@ impl<A: ElmApp> AppCompat for ElmAppCompat<A> {
 #[derive(Clone, Copy, Debug)]
 pub enum Pico8AppMsg {
     Tick { delta_millis: f64 },
+    Input(InputEvent),
 }
 
 pub(crate) struct Pico8AppCompat<A> {
     app: A,
+    keys: Input,
     accumulated_delta: f64,
     delta_time: f64,
 }
@@ -58,18 +62,27 @@ impl<A: App> AppCompat for Pico8AppCompat<A> {
 
         Self {
             app: A::init(pico8),
+            keys: Input::new(),
             accumulated_delta: 0.0,
             delta_time: 1000.0 / fps,
         }
     }
 
     fn update(&mut self, msg: &Self::Msg, pico8: &mut Pico8) {
-        let Pico8AppMsg::Tick { delta_millis } = *msg;
-        self.accumulated_delta += delta_millis;
+        match *msg {
+            Pico8AppMsg::Tick { delta_millis } => {
+                self.accumulated_delta += delta_millis;
 
-        while self.accumulated_delta > self.delta_time {
-            self.app.update(pico8);
-            self.accumulated_delta -= self.delta_time;
+                while self.accumulated_delta > self.delta_time {
+                    pico8.state.update_input(&self.keys);
+                    self.app.update(pico8);
+                    self.accumulated_delta -= self.delta_time;
+                }
+            }
+
+            Pico8AppMsg::Input(event) => {
+                self.keys.on_event(event);
+            }
         }
     }
 
@@ -78,10 +91,10 @@ impl<A: App> AppCompat for Pico8AppCompat<A> {
     }
 
     fn subscriptions(&self, event: &Event) -> Vec<Self::Msg> {
-        if let Event::Tick { delta_millis } = *event {
-            vec![Pico8AppMsg::Tick { delta_millis }]
-        } else {
-            vec![]
+        match *event {
+            Event::Input(input_event) => vec![Pico8AppMsg::Input(input_event)],
+            Event::Tick { delta_millis } => vec![Pico8AppMsg::Tick { delta_millis }],
+            Event::WindowClosed => vec![],
         }
     }
 }
