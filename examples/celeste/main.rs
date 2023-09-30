@@ -567,7 +567,7 @@ impl Player {
         has_dashed: &mut bool,
         pause_player: bool,
         shake: &mut i32,
-        freeze: &mut i32,
+        _freeze: &mut i32,
     ) -> UpdateAction
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
@@ -927,7 +927,7 @@ impl Spring {
         &mut self,
         this: &mut BaseObject,
         objects: &mut T,
-        got_fruit: &mut [bool],
+        got_fruit: &[bool],
         room: Vec2<i32>,
         max_djump: i32,
     ) -> UpdateAction
@@ -1283,7 +1283,7 @@ impl Object {
     {
         match &mut self.object_type {
             ObjectType::PlayerSpawn(player_spawn) => {
-                player_spawn.draw(&mut self.base_object, draw, frames, *max_djump)
+                player_spawn.draw(&self.base_object, draw, frames, *max_djump)
             }
             ObjectType::BigChest(big_chest) => {
                 return big_chest.draw(
@@ -1299,18 +1299,18 @@ impl Object {
                     pause_player,
                 )
             }
-            ObjectType::Chest(_) => default_draw(&mut self.base_object, draw),
+            ObjectType::Chest(_) => default_draw(&self.base_object, draw),
             ObjectType::Player(player) => player.draw(&mut self.base_object, draw, frames),
-            ObjectType::FakeWall => FakeWall::draw(&mut self.base_object, draw),
-            ObjectType::FallFloor(fall_floor) => fall_floor.draw(&mut self.base_object, draw),
+            ObjectType::FakeWall => FakeWall::draw(&self.base_object, draw),
+            ObjectType::FallFloor(fall_floor) => fall_floor.draw(&self.base_object, draw),
             ObjectType::RoomTitle(room_title) => room_title.draw(draw, room, seconds, minutes),
             ObjectType::Platform(platform) => platform.draw(&self.base_object, draw),
-            ObjectType::Smoke => default_draw(&mut self.base_object, draw),
-            ObjectType::Fruit(_) => default_draw(&mut self.base_object, draw),
+            ObjectType::Smoke => default_draw(&self.base_object, draw),
+            ObjectType::Fruit(_) => default_draw(&self.base_object, draw),
             ObjectType::LifeUp(life_up) => life_up.draw(&self.base_object, draw),
-            ObjectType::Spring(_) => default_draw(&mut self.base_object, draw),
-            ObjectType::FlyFruit(fly_fruit) => fly_fruit.draw(&mut self.base_object, draw),
-            ObjectType::Key => default_draw(&mut self.base_object, draw),
+            ObjectType::Spring(_) => default_draw(&self.base_object, draw),
+            ObjectType::FlyFruit(fly_fruit) => fly_fruit.draw(&self.base_object, draw),
+            ObjectType::Key => default_draw(&self.base_object, draw),
             ObjectType::Balloon(balloon) => balloon.draw(&self.base_object, draw),
             ObjectType::Orb(orb) => {
                 return orb.draw(
@@ -1323,7 +1323,7 @@ impl Object {
                     frames,
                 )
             }
-            ObjectType::Message(message) => message.draw(&mut self.base_object, draw, objects),
+            ObjectType::Message(message) => message.draw(&self.base_object, draw, objects),
             ObjectType::Flag(flag) => flag.draw(
                 &mut self.base_object,
                 draw,
@@ -1439,7 +1439,7 @@ impl Object {
     }
 }
 
-fn default_draw(base_object: &mut BaseObject, draw: &mut Pico8) {
+fn default_draw(base_object: &BaseObject, draw: &mut Pico8) {
     if base_object.spr > 0. {
         draw.spr_(
             base_object.spr.floor() as usize,
@@ -1903,7 +1903,7 @@ struct Fruit {
 }
 
 impl Fruit {
-    fn init(base_object: &mut BaseObject) -> Self {
+    fn init(base_object: &BaseObject) -> Self {
         Self {
             start: base_object.y,
             off: 0,
@@ -2242,13 +2242,7 @@ impl PlayerSpawn {
         }
     }
 
-    fn draw(
-        &mut self,
-        base_object: &mut BaseObject,
-        draw: &mut Pico8,
-        frames: i32,
-        max_djump: i32,
-    ) {
+    fn draw(&mut self, base_object: &BaseObject, draw: &mut Pico8, frames: i32, max_djump: i32) {
         set_hair_color(draw, frames, max_djump);
 
         self.hair.draw(draw, base_object.x, base_object.y, 1);
@@ -2359,7 +2353,7 @@ impl FakeWall {
         update_action
     }
 
-    fn draw(base_object: &mut BaseObject, draw: &mut Pico8) {
+    fn draw(base_object: &BaseObject, draw: &mut Pico8) {
         let x = base_object.x;
         let y = base_object.y;
         draw.spr(64, x, y);
@@ -2497,7 +2491,7 @@ impl FlyFruit {
         update_action
     }
 
-    fn draw(&mut self, this: &mut BaseObject, draw: &mut Pico8) {
+    fn draw(&mut self, this: &BaseObject, draw: &mut Pico8) {
         let mut off = 0.0;
 
         if !self.fly {
@@ -2604,7 +2598,7 @@ impl FallFloor {
         update_action
     }
 
-    fn draw(&self, this: &mut BaseObject, draw: &mut Pico8) {
+    fn draw(&self, this: &BaseObject, draw: &mut Pico8) {
         match self.state {
             FallFloorState::Idling => draw.spr(23, this.x, this.y),
             FallFloorState::Shaking => {
@@ -2616,7 +2610,7 @@ impl FallFloor {
 
     fn break_fall_floor<T>(
         &mut self,
-        this: &mut BaseObject,
+        this: &BaseObject,
         objects: &mut T,
         got_fruit: &[bool],
         room: Vec2<i32>,
@@ -3084,7 +3078,7 @@ impl Message {
         }
     }
 
-    fn draw<T>(&mut self, this: &mut BaseObject, draw: &mut Pico8, objects: &mut T)
+    fn draw<T>(&mut self, this: &BaseObject, draw: &mut Pico8, objects: &mut T)
     where
         for<'b> &'b mut T: IntoIterator<Item = &'b mut Object>,
     {
