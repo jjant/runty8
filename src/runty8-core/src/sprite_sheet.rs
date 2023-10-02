@@ -195,6 +195,72 @@ impl Sprite {
             }
         }
     }
+
+    pub fn to_clipboard_string(&self) -> String {
+        let width = Self::WIDTH;
+        let height = Self::HEIGHT;
+        let pixel_data = self.to_owned();
+
+        let mut str = String::new();
+        for pixel in pixel_data {
+            str.push(char::from_digit(pixel as u32, 16).unwrap());
+        }
+
+        // TODO: Google how to pad width/height to 2 characters with zeros.
+        format!("[gfx]0{width:x}0{height:x}{str}[/gfx]")
+    }
+
+    pub fn from_clipboard(str: &str) -> Result<Vec<Color>, String> {
+        let str = chomp(str, "[gfx]")?;
+        let (width, str) = chomp_int(str, 2)?;
+        let (height, str) = chomp_int(str, 2)?;
+        let mut data = Vec::with_capacity(width as usize * height as usize);
+
+        let data_size = {
+            let expected_data_size = (width * height) as usize;
+            let actual_data_size = str.len() as i64 - "[/gfx]".len() as i64;
+
+            if expected_data_size as i64 == actual_data_size {
+                Ok(actual_data_size as usize)
+            } else {
+                let actual_len = str.len() - "[/gfx]".len();
+
+                Err(format!(
+                    "Expected data section to be {expected_data_size} long, but it is {actual_len}",
+                ))
+            }
+        }?;
+
+        let (data_str, str) = str.split_at(data_size);
+
+        for char in data_str.chars() {
+            let digit = char
+                .to_digit(16)
+                .ok_or_else(|| format!("{char} is not a hex digit"))? as u8;
+            data.push(digit);
+        }
+        let _ = chomp(str, "[/gfx]")?;
+
+        Ok(data)
+    }
+}
+
+fn chomp<'a>(source: &'a str, chomped: &str) -> Result<&'a str, String> {
+    if source.starts_with(chomped) {
+        Ok(&source[chomped.len()..])
+    } else {
+        Err(format!("\"{source}\" doesn't start with \"{chomped}\""))
+    }
+}
+
+fn chomp_int(source: &str, len: usize) -> Result<(i32, &str), String> {
+    let (int_str, next) = source.split_at(len);
+
+    if let Ok(int) = int_str.parse() {
+        Ok((int, next))
+    } else {
+        Err(format!("Couldn't parse int: {int_str}"))
+    }
 }
 
 #[cfg(test)]
@@ -208,5 +274,32 @@ mod tests {
         assert_eq!(SpriteSheet::to_linear_index(8, 0), 64);
         assert_eq!(SpriteSheet::to_linear_index(8, 1), 64 + 8);
         assert_eq!(SpriteSheet::to_linear_index(1, 9), 1033);
+    }
+
+    #[test]
+    fn clipboard_works() {
+        let str_sprite =
+            "[gfx]0808fff00000fff00000fff000000000000000000000000000000000000000000000[/gfx]";
+
+        let mut arr = [0; Sprite::WIDTH * Sprite::HEIGHT];
+        let sprite = { Sprite::new_mut(&mut arr) };
+
+        for (x, y) in (0..3).cartesian_product(0..3) {
+            sprite.set(x + y * Sprite::WIDTH, 15);
+        }
+
+        assert_eq!(&sprite.to_clipboard_string(), str_sprite);
+        assert_eq!(
+            Sprite::from_clipboard(str_sprite).unwrap(),
+            sprite.to_owned()
+        );
+    }
+
+    #[test]
+    fn from_clipboard_with_wrong_size() {
+        let str_sprite = "[gfx]0808ff00[/gfx]";
+
+        let actual = Sprite::from_clipboard(str_sprite);
+        assert!(actual.is_err());
     }
 }

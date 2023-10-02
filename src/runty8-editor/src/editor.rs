@@ -16,6 +16,7 @@ use crate::ui::{
 };
 use crate::ui::{DrawFn, Element, Tree};
 use brush_size::BrushSize;
+use once_cell::sync::Lazy;
 use runty8_core::InputEvent;
 use runty8_core::{
     serialize::Serialize, Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources,
@@ -25,6 +26,10 @@ use runty8_core::{
 use self::key_combo::KeyCombos;
 use self::top_bar::TopBar;
 use self::undo_redo::{Command, Commands};
+use std::sync::Mutex;
+
+static CLIPBOARD: Lazy<Mutex<arboard::Clipboard>> =
+    Lazy::new(|| Mutex::new(arboard::Clipboard::new().unwrap()));
 
 #[derive(Debug)]
 pub(crate) struct Editor {
@@ -134,6 +139,12 @@ impl Clipboard {
     }
 
     fn copy_sprite(&mut self, sprite: &Sprite) {
+        CLIPBOARD
+            .lock()
+            .unwrap()
+            .set_text(format!("[gfx]0202ffff[/gfx]"))
+            .unwrap();
+
         self.data = sprite.to_owned();
     }
 
