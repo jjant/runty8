@@ -1,4 +1,5 @@
 mod brush_size;
+mod bucket_fill;
 pub mod key_combo;
 mod map;
 mod notification;
