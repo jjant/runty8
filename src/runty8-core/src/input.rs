@@ -1,33 +1,40 @@
 use crate::{Button, InputEvent, Key, KeyState, KeyboardEvent, MouseButton, MouseEvent};
 
+#[derive(Debug, Clone, Copy)]
+pub enum InputState<T> {
+    Unchanged, // None
+    Changed(T),
+}
+
 #[derive(Debug)]
 pub struct Input {
-    pub(crate) left: Option<bool>,
-    pub(crate) right: Option<bool>,
-    pub(crate) up: Option<bool>,
-    pub(crate) down: Option<bool>,
-    pub(crate) x: Option<bool>,
-    pub(crate) c: Option<bool>,
-    pub mouse: Option<bool>,
-    pub mouse_x: i32,
-    pub mouse_y: i32,
+    pub(crate) left: InputState<KeyState>,
+    pub(crate) right: InputState<KeyState>,
+    pub(crate) up: InputState<KeyState>,
+    pub(crate) down: InputState<KeyState>,
+    pub(crate) x: InputState<KeyState>,
+    pub(crate) c: InputState<KeyState>,
+    pub mouse: InputState<KeyState>,
+    pub mouse_position: InputState<(i32, i32)>,
 }
 
 #[allow(clippy::new_without_default)]
 impl Input {
     pub fn new() -> Self {
         Self {
-            left: None,
-            right: None,
-            up: None,
-            down: None,
-            x: None,
-            c: None,
-            mouse: None,
-            // TODO: Initialize mouse properly
-            mouse_x: 64,
-            mouse_y: 64,
+            left: InputState::Unchanged,
+            right: InputState::Unchanged,
+            up: InputState::Unchanged,
+            down: InputState::Unchanged,
+            x: InputState::Unchanged,
+            c: InputState::Unchanged,
+            mouse: InputState::Unchanged,
+            mouse_position: InputState::Unchanged,
         }
+    }
+
+    pub fn reset(&mut self) {
+        *self = Self::new();
     }
 
     pub fn on_event(&mut self, event: InputEvent) {
@@ -35,18 +42,17 @@ impl Input {
             InputEvent::Keyboard(KeyboardEvent { key, state }) => {
                 if let Some(button) = key_to_button(key) {
                     let key_ref = self.button_to_ref(button);
-                    *key_ref = Some(state == KeyState::Down);
+                    *key_ref = InputState::Changed(state);
                 }
             }
             InputEvent::Mouse(MouseEvent::Button {
                 button: MouseButton::Left,
                 state,
             }) => {
-                self.mouse = Some(state == KeyState::Down);
+                self.mouse = InputState::Changed(state);
             }
             InputEvent::Mouse(MouseEvent::Move { x, y }) => {
-                self.mouse_x = x;
-                self.mouse_y = y;
+                self.mouse_position = InputState::Changed((x, y));
             }
             InputEvent::Mouse(MouseEvent::Button { .. }) => {
                 // Runty8 games currently can't access other mouse buttons
@@ -54,7 +60,7 @@ impl Input {
         }
     }
 
-    fn button_to_ref(&mut self, button: Button) -> &mut Option<bool> {
+    fn button_to_ref(&mut self, button: Button) -> &mut InputState<KeyState> {
         match button {
             Button::Cross => &mut self.x,
             Button::Circle => &mut self.c,

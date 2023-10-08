@@ -12,7 +12,8 @@ pub fn run<Game: App + 'static>(resources: Resources) -> std::io::Result<()> {
     let mut game = Game::init(&mut pico8);
     let mut input = Input::new();
 
-    const DELTA_TIME: f64 = 1000.0 / 30.0;
+    const FPS: f64 = 30.0;
+    const DELTA_TIME: f64 = 1000.0 / FPS;
 
     let mut accumulated_delta = 0.0;
     let on_event = move |event,
@@ -28,7 +29,7 @@ pub fn run<Game: App + 'static>(resources: Resources) -> std::io::Result<()> {
                 accumulated_delta += delta_millis;
 
                 while accumulated_delta > DELTA_TIME {
-                    pico8.state.update_input(&input);
+                    pico8.state.update_input(&mut input);
 
                     game.update(&mut pico8);
                     game.draw(&mut pico8);

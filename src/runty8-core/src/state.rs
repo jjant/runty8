@@ -1,5 +1,5 @@
-use crate::input::Input;
-use crate::Button;
+use crate::input::{Input, InputState};
+use crate::{Button, KeyState};
 use ButtonState::*;
 
 #[derive(Debug)]
@@ -36,7 +36,7 @@ impl State {
         self.mouse_y = mouse_y;
     }
 
-    pub fn update_input(&mut self, input: &Input) {
+    pub fn update_input(&mut self, input: &mut Input) {
         self.left.update(input.left);
         self.right.update(input.right);
         self.up.update(input.up);
@@ -44,8 +44,13 @@ impl State {
         self.x.update(input.x);
         self.c.update(input.c);
         self.mouse_pressed.update(input.mouse);
-        self.mouse_x = input.mouse_x;
-        self.mouse_y = input.mouse_y;
+
+        if let InputState::Changed((mouse_x, mouse_y)) = input.mouse_position {
+            self.mouse_x = mouse_x;
+            self.mouse_y = mouse_y;
+        }
+
+        input.reset();
     }
 
     pub(crate) fn button(&self, button: Button) -> &ButtonState {
@@ -73,16 +78,13 @@ pub(crate) enum ButtonState {
 }
 
 impl ButtonState {
-    fn update(&mut self, is_pressed: Option<bool>) {
+    fn update(&mut self, is_pressed: InputState<KeyState>) {
         match is_pressed {
-            Some(is_pressed) => {
-                if is_pressed {
-                    self.press()
-                } else {
-                    self.unpress()
-                }
-            }
-            None => self.no_change(),
+            InputState::Changed(key_state) => match key_state {
+                crate::KeyState::Down => self.press(),
+                crate::KeyState::Up => self.unpress(),
+            },
+            InputState::Unchanged => self.no_change(),
         }
     }
 
@@ -98,11 +100,7 @@ impl ButtonState {
     // Caution: This may come either from a "first" press or a "repeated" press.
     // TODO: I think we don't handle repeated presses yet.
     fn press(&mut self) {
-        *self = match self {
-            JustPressed => Held,
-            Held => Held,
-            NotPressed => JustPressed,
-        }
+        *self = JustPressed;
     }
 
     fn unpress(&mut self) {

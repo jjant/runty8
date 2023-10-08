@@ -74,7 +74,7 @@ impl<A: App> AppCompat for Pico8AppCompat<A> {
                 self.accumulated_delta += delta_millis;
 
                 while self.accumulated_delta > self.delta_time {
-                    pico8.state.update_input(&self.keys);
+                    pico8.state.update_input(&mut self.keys);
                     self.app.update(pico8);
                     self.accumulated_delta -= self.delta_time;
                 }
