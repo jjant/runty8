@@ -75,6 +75,9 @@ impl<Game: AppCompat> Controller<Game> {
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event);
             }
+            &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
+                self.pico8.state.on_mouse_move(x, y);
+            }
             &Msg::MouseEvent(_) => {}
             &Msg::Tick => {}
         }
