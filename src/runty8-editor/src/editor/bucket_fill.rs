@@ -5,7 +5,7 @@ pub struct PixelsMut<'a, T> {
 }
 
 impl<'a, T> PixelsMut<'a, T> {
-    fn new(buffer: &'a mut [T], width: usize) -> Self {
+    pub fn new(buffer: &'a mut [T], width: usize) -> Self {
         let height = buffer.len() / width;
         if height * width != buffer.len() {
             panic!("Buffer is not square");
@@ -40,7 +40,15 @@ impl<'a, T> PixelsMut<'a, T> {
 
 impl<'a, T: PartialEq + Copy> PixelsMut<'a, T> {
     pub fn fill_bucket(&mut self, color: T, clicked_x: isize, clicked_y: isize) {
-        let color_at_clicked_position: T = self.get(clicked_x, clicked_y).copied().unwrap();
+        let color_at_clicked_position: T = match self.get(clicked_x, clicked_y).copied() {
+            Some(color) => color,
+            // Click was outside the buffer
+            None => return,
+        };
+
+        if color_at_clicked_position == color {
+            return;
+        }
 
         let mut queue = vec![(clicked_x, clicked_y)];
 
@@ -58,7 +66,7 @@ impl<'a, T: PartialEq + Copy> PixelsMut<'a, T> {
                 let neighboring_color = self.get(neighbor_position.0, neighbor_position.1).copied();
 
                 if neighboring_color == Some(color_at_clicked_position) {
-                    queue.push(neighbor_position)
+                    queue.push(neighbor_position);
                 }
             }
 
@@ -70,6 +78,66 @@ impl<'a, T: PartialEq + Copy> PixelsMut<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::PixelsMut;
+
+    #[test]
+    fn paints_already_painted_buffer() {
+        let mut pixels = [
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+        ];
+        let mut pixels_mut = PixelsMut::new(&mut pixels, 8);
+
+        pixels_mut.fill_bucket(0, 3, 3);
+        assert_eq!(
+            pixels,
+            [
+                0, 0, 0, 0, 0, 0, 0, 0, //
+                0, 0, 0, 0, 0, 0, 0, 0, //
+                0, 0, 0, 0, 0, 0, 0, 0, //
+                0, 0, 0, 0, 0, 0, 0, 0, //
+                0, 0, 0, 0, 0, 0, 0, 0, //
+                0, 0, 0, 0, 0, 0, 0, 0, //
+                0, 0, 0, 0, 0, 0, 0, 0, //
+                0, 0, 0, 0, 0, 0, 0, 0, //
+            ]
+        )
+    }
+
+    #[test]
+    fn paints_whole_buffer() {
+        let mut pixels = [
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 7, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, 0, //
+        ];
+        let mut pixels_mut = PixelsMut::new(&mut pixels, 8);
+
+        pixels_mut.fill_bucket(7, 3, 3);
+        assert_eq!(
+            pixels,
+            [
+                7, 7, 7, 7, 7, 7, 7, 7, //
+                7, 7, 7, 7, 7, 7, 7, 7, //
+                7, 7, 7, 7, 7, 7, 7, 7, //
+                7, 7, 7, 7, 7, 7, 7, 7, //
+                7, 7, 7, 7, 7, 7, 7, 7, //
+                7, 7, 7, 7, 7, 7, 7, 7, //
+                7, 7, 7, 7, 7, 7, 7, 7, //
+                7, 7, 7, 7, 7, 7, 7, 7, //
+            ]
+        )
+    }
 
     #[test]
     fn example() {
@@ -133,6 +201,45 @@ mod tests {
                 2, 2, 2, 2, 2, 2, //
                 0, 0, 0, 2, 0, 0, //
                 0, 0, 0, 2, 0, 0,
+            ]
+        );
+    }
+
+    #[test]
+    fn clicking_outside_the_buffer_doesnt_modify_it() {
+        let mut pixels = [
+            0, 1, 2, 3, //
+            4, 5, 6, 7, //
+        ];
+
+        // x inside and y outside
+        let mut pixels_mut = PixelsMut::new(&mut pixels, 4);
+        pixels_mut.fill_bucket(99, 3, 3);
+        assert_eq!(
+            pixels,
+            [
+                0, 1, 2, 3, //
+                4, 5, 6, 7, //
+            ]
+        );
+        // x outside and y inside
+        let mut pixels_mut = PixelsMut::new(&mut pixels, 4);
+        pixels_mut.fill_bucket(99, -1, 2);
+        assert_eq!(
+            pixels,
+            [
+                0, 1, 2, 3, //
+                4, 5, 6, 7, //
+            ]
+        );
+        // x and y both outside
+        let mut pixels_mut = PixelsMut::new(&mut pixels, 4);
+        pixels_mut.fill_bucket(99, 5, 3);
+        assert_eq!(
+            pixels,
+            [
+                0, 1, 2, 3, //
+                4, 5, 6, 7, //
             ]
         );
     }
