@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use crate::ui::DispatchEvent;
+use crate::util::vec2::Vec2i;
 use crate::{
     app::{AppCompat, ElmApp},
     editor::{self, key_combo::KeyCombos, Editor},
@@ -31,6 +32,7 @@ pub(crate) struct Controller<Game> {
     app: Game,
     key_combos: KeyCombos<KeyComboAction>,
     pico8: Pico8,
+    mouse_position: Vec2i,
     /// The editor and the game can modify the "draw state" (`draw_data`): camera, palette, etc.
     /// In order for these settings not to spill from the game to the editor, and viceversa,
     /// we keep an alternate [`DrawData`] that we swap, when the scene changes.
@@ -59,6 +61,7 @@ impl<Game: AppCompat> Controller<Game> {
                 .push(KeyComboAction::RestartGame, Key::R, &[Key::Control])
                 .push(KeyComboAction::SwitchScene, Key::Escape, &[]),
             pico8,
+            mouse_position: Vec2i::new(64, 64),
             alternate_draw_data: DrawData::new(),
         }
     }
@@ -75,7 +78,10 @@ impl<Game: AppCompat> Controller<Game> {
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event);
             }
-            &Msg::MouseEvent(_) => {}
+            &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
+                self.mouse_position = Vec2i::new(x, y);
+            }
+            &Msg::MouseEvent(MouseEvent::Button { .. }) => {}
             &Msg::Tick => {}
         }
     }
@@ -146,9 +152,9 @@ impl<Game: AppCompat> Controller<Game> {
         let mut msg_queue = vec![];
         let dispatch_event = &mut DispatchEvent::new(&mut msg_queue);
 
-        let cursor_position = (self.pico8.state.mouse_x, self.pico8.state.mouse_y);
+        let mouse_position = (self.mouse_position.x, self.mouse_position.y);
         view.as_widget_mut()
-            .on_event(event, cursor_position, dispatch_event);
+            .on_event(event, mouse_position, dispatch_event);
 
         view.as_widget_mut().draw(&mut self.pico8);
         drop(view);
