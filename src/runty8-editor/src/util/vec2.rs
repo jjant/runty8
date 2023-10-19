@@ -47,8 +47,14 @@ impl<T: Neg> Neg for Vec2<T> {
 
 pub(crate) type Vec2i = Vec2<i32>;
 
+impl<T> Vec2<T> {
+    pub fn new(x: T, y: T) -> Self {
+        Self { x, y }
+    }
+}
+
 pub(crate) fn vec2<T>(x: T, y: T) -> Vec2<T> {
-    Vec2 { x, y }
+    Vec2::new(x, y)
 }
 
 #[cfg(test)]
