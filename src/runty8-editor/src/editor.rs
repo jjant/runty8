@@ -472,7 +472,7 @@ impl ElmApp for Editor {
     }
 }
 
-const TOOLS: &[usize] = &[14, 40, 30];
+const TOOLS: &[usize] = &[45, 40, 46];
 fn tools_row<'a>(
     y: i32,
     sprite: usize,
@@ -489,11 +489,11 @@ fn tools_row<'a>(
 
     fn draw_tool_sprite(pico8: &mut Pico8, tool_sprite: usize, selected: bool) {
         pico8.palt(Some(0));
-        if !selected {
-            pico8.pal(7, 13);
+        if selected {
+            pico8.pal(13, 7);
         }
         pico8.editor_spr(tool_sprite, 0, 0);
-        pico8.pal(7, 7);
+        pico8.pal(13, 13);
     }
 
     for (tool_index, tool_button) in tool_buttons.iter_mut().enumerate() {
