@@ -500,13 +500,14 @@ fn tools_row<'a>(
         pico8.pal(13, 13);
     }
 
+    const BASE_X: i32 = 9;
+    const SPACING: i32 = 2;
+    const WIDTH: i32 = Sprite::WIDTH as i32;
     for (tool_index, tool_button) in tool_buttons.iter_mut().enumerate() {
         let tool = tool_button.tool;
         let spr = tool.unselected_sprite();
 
-        // TODO: The spacing isn't totally correct,
-        // it looks slightly different than Pico8.
-        let x = (9 + 8 * tool_index) as i32;
+        let x = BASE_X + (WIDTH + SPACING) * tool_index as i32;
         let y = y + 2;
         children.push(
             Button::new(
