@@ -27,6 +27,7 @@ use tool::Tool;
 
 use self::bucket_fill::PixelsMut;
 use self::key_combo::KeyCombos;
+use self::tool::ToolButton;
 use self::top_bar::TopBar;
 use self::undo_redo::{Command, Commands};
 
@@ -39,7 +40,7 @@ pub(crate) struct Editor {
     tab_buttons: [button::State; 4],
     sprite_buttons: Vec<button::State>,
     selected_tool: Tool,
-    tool_buttons: Vec<button::State>,
+    tool_buttons: Vec<ToolButton>,
     bottom_bar_text: String,
     notification: notification::State,
     key_combos: KeyCombos<KeyComboAction>,
@@ -262,7 +263,7 @@ impl ElmApp for Editor {
             ],
             sprite_buttons: vec![button::State::new(); 64],
             selected_tool: Tool::Pencil,
-            tool_buttons: vec![button::State::new(); Tool::TOOLS.len()],
+            tool_buttons: ToolButton::buttons(),
             bottom_bar_text: "".to_owned(),
             notification: notification::State::new(),
             key_combos: KeyCombos::new()
@@ -289,6 +290,7 @@ impl ElmApp for Editor {
     }
 
     fn update(&mut self, msg: &Msg, resources: &mut Resources) {
+        println!("{:?}", self.selected_tool);
         match msg {
             &Msg::SpriteEditorMsg(sprite_msg) => {
                 self.sprite_editor.update(sprite_msg);
@@ -374,6 +376,9 @@ impl ElmApp for Editor {
             }
             &Msg::ToolSelected(selected_tool) => {
                 self.selected_tool = selected_tool;
+                self.tool_buttons
+                    .iter_mut()
+                    .for_each(|tb| tb.update(selected_tool));
             }
             &Msg::ColorHovered(color) => {
                 self.bottom_bar_text = format!("COLOUR {color}");
@@ -478,7 +483,7 @@ fn tools_row<'a>(
     selected_tab: usize,
     tab_buttons: &'a mut [button::State],
     selected_tool: Tool,
-    tool_buttons: &'a mut [button::State],
+    tool_buttons: &'a mut [ToolButton],
 ) -> Element<'a, Msg> {
     let mut children = vec![DrawFn::new(move |draw| {
         const HEIGHT: i32 = 11;
@@ -496,7 +501,7 @@ fn tools_row<'a>(
     }
 
     for (tool_index, tool_button) in tool_buttons.iter_mut().enumerate() {
-        let tool = Tool::TOOLS[tool_index];
+        let tool = tool_button.tool;
         let spr = tool.unselected_sprite();
 
         // TODO: The spacing isn't totally correct,
@@ -509,8 +514,10 @@ fn tools_row<'a>(
                 y,
                 8,
                 8,
-                Some(Msg::ToolSelected(tool)),
-                tool_button,
+                Some(Msg::ToolSelected(
+                    tool.selected_tool_on_click(selected_tool),
+                )),
+                &mut tool_button.button,
                 DrawFn::new(move |pico8| draw_tool_sprite(pico8, spr, selected_tool == tool)),
             )
             .into(),
