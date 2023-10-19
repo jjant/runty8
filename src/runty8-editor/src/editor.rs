@@ -1,4 +1,5 @@
 mod brush_size;
+mod bucket_fill;
 pub mod key_combo;
 mod map;
 mod notification;
@@ -16,12 +17,13 @@ use crate::ui::{
 };
 use crate::ui::{DrawFn, Element, Tree};
 use brush_size::BrushSize;
-use runty8_core::InputEvent;
 use runty8_core::{
     serialize::Serialize, Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources,
     Sprite, SpriteSheet,
 };
+use runty8_core::{InputEvent, Pico8};
 
+use self::bucket_fill::PixelsMut;
 use self::key_combo::KeyCombos;
 use self::top_bar::TopBar;
 use self::undo_redo::{Command, Commands};
@@ -258,7 +260,7 @@ impl ElmApp for Editor {
             ],
             sprite_buttons: vec![button::State::new(); 64],
             selected_tool: 0,
-            tool_buttons: vec![button::State::new(); 2],
+            tool_buttons: vec![button::State::new(); TOOLS.len()],
             bottom_bar_text: "".to_owned(),
             notification: notification::State::new(),
             key_combos: KeyCombos::new()
@@ -337,22 +339,37 @@ impl ElmApp for Editor {
                 let sprite = resources.sprite_sheet.get_sprite_mut(self.selected_sprite);
                 let x = x as isize;
                 let y = y as isize;
-                let previous_color = sprite.pget(x, y);
 
-                self.commands.push(Command::pixel_changed(
-                    self.selected_sprite,
-                    x,
-                    y,
-                    previous_color,
-                    color,
-                ));
+                // TODO: Use an enum for selected tool.
+                match self.selected_tool {
+                    // Brush
+                    0 => {
+                        let previous_color = sprite.pget(x, y);
+                        self.commands.push(Command::pixel_changed(
+                            self.selected_sprite,
+                            x,
+                            y,
+                            previous_color,
+                            color,
+                        ));
 
-                for (x, y) in self
-                    .brush_size
-                    .iter()
-                    .map(|(local_x, local_y)| (local_x + x, local_y + y))
-                {
-                    sprite.pset(x, y, color);
+                        for (x, y) in self
+                            .brush_size
+                            .iter()
+                            .map(|(local_x, local_y)| (local_x + x, local_y + y))
+                        {
+                            sprite.pset(x, y, color);
+                        }
+                    }
+                    // Bucket fill
+                    1 => {
+                        let pixels = &mut sprite.sprite;
+                        let mut pixels_mut = PixelsMut::new(pixels, 8);
+                        pixels_mut.fill_bucket(color, x, y);
+                    }
+                    tool => {
+                        println!("Used tool {tool}, not implemented yet");
+                    }
                 }
             }
             &Msg::ToolSelected(selected_tool) => {
@@ -455,6 +472,7 @@ impl ElmApp for Editor {
     }
 }
 
+const TOOLS: &[usize] = &[14, 40, 30];
 fn tools_row<'a>(
     y: i32,
     sprite: usize,
@@ -469,11 +487,20 @@ fn tools_row<'a>(
     })
     .into()];
 
-    const TOOLS: &[usize] = &[15, 31];
+    fn draw_tool_sprite(pico8: &mut Pico8, tool_sprite: usize, selected: bool) {
+        pico8.palt(Some(0));
+        if !selected {
+            pico8.pal(7, 13);
+        }
+        pico8.editor_spr(tool_sprite, 0, 0);
+        pico8.pal(7, 7);
+    }
 
     for (tool_index, tool_button) in tool_buttons.iter_mut().enumerate() {
         let spr = TOOLS[tool_index];
 
+        // TODO: The spacing isn't totally correct,
+        // it looks slightly different than Pico8.
         let x = (9 + 8 * tool_index) as i32;
         let y = y + 2;
         children.push(
@@ -484,14 +511,7 @@ fn tools_row<'a>(
                 8,
                 Some(Msg::ToolSelected(tool_index)),
                 tool_button,
-                DrawFn::new(move |pico8| {
-                    pico8.palt(Some(0));
-                    if selected_tool == tool_index {
-                        pico8.pal(13, 7);
-                    }
-                    pico8.editor_spr(spr, 0, 0);
-                    pico8.pal(13, 13);
-                }),
+                DrawFn::new(move |pico8| draw_tool_sprite(pico8, spr, selected_tool == tool_index)),
             )
             .into(),
         );
