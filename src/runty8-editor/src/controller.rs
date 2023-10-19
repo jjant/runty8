@@ -78,6 +78,12 @@ impl<Game: AppCompat> Controller<Game> {
             &Msg::KeyboardEvent(event) => {
                 self.handle_key_combos(event);
             }
+            // Currently the mouse position is tracked by two things independently:
+            //   - Updated by this subscription here in the controller, stored in `self.mouse_position`
+            //   - Updated by the Game, stored in the controller as well, in `self.pico8.state.mouse_{x,y}`
+            //
+            // I haven't found yet a nice way to unify them that plays nicely with both,
+            // and can be run in the editor or in the runtime by itself.
             &Msg::MouseEvent(MouseEvent::Move { x, y }) => {
                 self.mouse_position = Vec2i::new(x, y);
             }
