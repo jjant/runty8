@@ -290,7 +290,6 @@ impl ElmApp for Editor {
     }
 
     fn update(&mut self, msg: &Msg, resources: &mut Resources) {
-        println!("{:?}", self.selected_tool);
         match msg {
             &Msg::SpriteEditorMsg(sprite_msg) => {
                 self.sprite_editor.update(sprite_msg);
