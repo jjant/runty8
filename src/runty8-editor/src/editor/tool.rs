@@ -57,6 +57,9 @@ impl Tool {
         }
     }
 
+    // Returns which tool should be selected next when this one is clicked.
+    // This exists (rather than just being `self`) because the buttons for the
+    // shape tools change to the next tool when clicked again.
     pub fn selected_tool_on_click(self, currently_selected_tool: Tool) -> Self {
         match self {
             Tool::Shape(shape_tool) => {
