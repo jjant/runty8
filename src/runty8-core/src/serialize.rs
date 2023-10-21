@@ -138,17 +138,14 @@ impl Ppm {
         const SPRITE_SIZE: usize = SPRITE_WIDTH.pow(2);
 
         #[allow(clippy::never_loop)]
-        for (sprite_index, sprite) in sprite_sheet
-            .iter()
-            .copied()
-            .chunks(SPRITE_SIZE)
-            .into_iter()
-            .enumerate()
-        {
-            let base_x = SPRITE_WIDTH * (sprite_index % SpriteSheet::SPRITES_PER_ROW);
-            let base_y = SPRITE_WIDTH * (sprite_index / SpriteSheet::SPRITES_PER_ROW);
+        for (sprite_index, sprite) in sprite_sheet.iter().enumerate() {
+            let sprite_x = sprite_index % SpriteSheet::SPRITES_PER_ROW;
+            let sprite_y = sprite_index / SpriteSheet::SPRITES_PER_ROW;
 
-            for (pixel_index, c) in sprite.enumerate() {
+            let base_x = SPRITE_WIDTH * sprite_x;
+            let base_y = SPRITE_WIDTH * sprite_y;
+
+            for (pixel_index, c) in sprite.iter().enumerate() {
                 let x = base_x + pixel_index % SPRITE_WIDTH;
                 let y = base_y + pixel_index / SPRITE_WIDTH;
 

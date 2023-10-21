@@ -1,12 +1,53 @@
 use itertools::Itertools;
 
 use crate::serialize::Serialize;
-use crate::Color;
+use crate::{colors, Color};
+
+#[derive(Debug, Clone, Copy)]
+pub struct OwnedSprite {
+    buffer: [Color; Sprite::WIDTH * Sprite::HEIGHT],
+}
+
+impl AsRef<Sprite> for OwnedSprite {
+    fn as_ref(&self) -> &Sprite {
+        Sprite::new(&self.buffer)
+    }
+}
+
+impl AsMut<Sprite> for OwnedSprite {
+    fn as_mut(&mut self) -> &mut Sprite {
+        Sprite::new_mut(&mut self.buffer)
+    }
+}
+
+impl OwnedSprite {
+    fn black() -> Self {
+        Self {
+            buffer: [colors::BLACK; Sprite::WIDTH * Sprite::HEIGHT],
+        }
+    }
+
+    fn set(&mut self, x: usize, y: usize, c: u8) {
+        if x < Sprite::WIDTH && y < Sprite::HEIGHT {
+            self.buffer[x + y * Sprite::WIDTH] = c;
+        }
+    }
+
+    fn from_iterator(iter: impl Iterator<Item = Color>) -> Self {
+        Self {
+            buffer: iter.collect::<Vec<Color>>().try_into().unwrap(),
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Color> + '_ {
+        self.buffer.iter().copied()
+    }
+}
 
 /// A pico8 game's sprite sheet.
 #[derive(Debug, Clone)]
 pub struct SpriteSheet {
-    pub(crate) sprite_sheet: Vec<Color>,
+    pub(crate) sprite_sheet: Vec<OwnedSprite>,
 }
 
 impl SpriteSheet {
@@ -17,26 +58,31 @@ impl SpriteSheet {
 
 impl SpriteSheet {
     pub const SPRITES_PER_ROW: usize = 16;
+    pub const ROWS_PER_PAGE: usize = 4;
+    pub const PAGES: usize = 4;
 
     /// This is kind of a lie.
     /// The pico8 sprite sheet supports 128 "real" sprites
     /// The other 128 share memory with the map,
     /// and will override its data if used
-    pub const SPRITE_COUNT: usize = 256;
+    pub const SPRITE_COUNT: usize = Self::SPRITES_PER_ROW * Self::ROWS_PER_PAGE * Self::PAGES;
 
     pub fn new() -> Self {
         Self {
-            sprite_sheet: vec![0; Self::SPRITE_COUNT * Sprite::WIDTH * Sprite::HEIGHT],
+            sprite_sheet: vec![
+                OwnedSprite::black();
+                Self::SPRITE_COUNT * Sprite::WIDTH * Sprite::HEIGHT
+            ],
         }
     }
 
-    fn with_vec(sprite_sheet: Vec<Color>) -> Result<Self, String> {
-        const REQUIRED_BYTES: usize = SpriteSheet::SPRITE_COUNT * Sprite::WIDTH * Sprite::HEIGHT;
+    fn with_vec(sprite_sheet: Vec<OwnedSprite>) -> Result<Self, String> {
+        const REQUIRED_SPRITES: usize = SpriteSheet::SPRITE_COUNT;
 
-        if sprite_sheet.len() != REQUIRED_BYTES {
+        if sprite_sheet.len() != REQUIRED_SPRITES {
             Err(format!(
-                "[SpriteSheet] Needed {} bytes, got {}",
-                REQUIRED_BYTES,
+                "[SpriteSheet] Needed {} sprites, got {}",
+                REQUIRED_SPRITES,
                 sprite_sheet.len()
             ))
         } else {
@@ -46,7 +92,24 @@ impl SpriteSheet {
 
     /// Sets the pixel at coordinate (x,y) in the spritesheet to a specified color
     pub fn set(&mut self, x: usize, y: usize, c: Color) {
-        self.sprite_sheet[Self::to_linear_index(x, y)] = c;
+        if c > 16 {
+            panic!("Color too big {c}!");
+        }
+
+        let (sprite_x, sprite_y) = Self::sprite_index_from_pixel_index(x, y);
+        let sprite_index = sprite_x + sprite_y * Self::SPRITES_PER_ROW;
+        let sprite = &mut self.sprite_sheet[sprite_index];
+
+        let (px, py) = (x - sprite_x * Sprite::WIDTH, y - sprite_y * Sprite::HEIGHT);
+        sprite.set(px, py, c);
+        // self.sprite_sheet[Self::to_linear_index(x, y)] = c;
+    }
+
+    fn sprite_index_from_pixel_index(px: usize, py: usize) -> (usize, usize) {
+        let x = px / Sprite::WIDTH;
+        let y = py / Sprite::HEIGHT;
+
+        (x, y)
     }
 
     pub fn to_linear_index(x: usize, y: usize) -> usize {
@@ -57,15 +120,11 @@ impl SpriteSheet {
     }
 
     pub fn get_sprite(&self, sprite: usize) -> &Sprite {
-        let index = self.sprite_index(sprite);
-
-        Sprite::new(&self.sprite_sheet[index..(index + Sprite::WIDTH * Sprite::HEIGHT)])
+        self.sprite_sheet[sprite].as_ref()
     }
 
     pub fn get_sprite_mut(&mut self, sprite: usize) -> &mut Sprite {
-        let index = self.sprite_index(sprite);
-
-        Sprite::new_mut(&mut self.sprite_sheet[index..(index + Sprite::WIDTH * Sprite::HEIGHT)])
+        self.sprite_sheet[sprite].as_mut()
     }
 
     fn sprite_index(&self, sprite: usize) -> usize {
@@ -78,8 +137,12 @@ impl SpriteSheet {
             .as_bytes()
             .iter()
             .copied()
+            // TODO: Error out if any of these are errors
             .filter_map(|c| (c as char).to_digit(16))
             .map(|c| c as u8)
+            .chunks(Sprite::SIZE)
+            .into_iter()
+            .map(|chunk| OwnedSprite::from_iterator(chunk))
             .collect();
 
         Self::with_vec(sprite_sheet)
@@ -94,11 +157,13 @@ impl Default for SpriteSheet {
 
 impl Serialize for SpriteSheet {
     fn serialize(&self) -> String {
-        let lines = self.sprite_sheet.chunks(128).map(|chunk| {
-            Itertools::intersperse(chunk.iter().map(|n| format!("{n:X}")), "".to_owned()).collect()
-        });
+        // let lines = self.sprite_sheet.chunks(128).map(|chunk| {
+        //     Itertools::intersperse(chunk.iter().map(|n| format!("{n:X}")), "".to_owned()).collect()
+        // });
 
-        Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
+        // Itertools::intersperse(lines, "\n".to_owned()).collect::<String>()
+
+        "TODO: Whoops, fix serialize".to_owned()
     }
 }
 
@@ -110,6 +175,9 @@ pub struct Sprite {
 impl Sprite {
     pub const WIDTH: usize = 8;
     pub const HEIGHT: usize = 8;
+    /// Total amount of pixels taken up by this sprite.
+    /// Equals `WIDTH * HEIGHT`.
+    pub const SIZE: usize = Self::WIDTH * Self::HEIGHT;
 
     pub fn new(sprite: &[u8]) -> &Self {
         unsafe { &*(sprite as *const [u8] as *const Self) }
