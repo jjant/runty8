@@ -1,7 +1,13 @@
 use runty8::{App, Button, Pico8};
+use runty8_core::SpriteSheet;
 
 fn main() {
-    let resources = runty8::load_assets!("moving-box").unwrap();
+    let cartridge = std::fs::read_to_string("./examples/moving-box/big_cartridge.p8").unwrap();
+    let sprite_sheet = process_cartridge(cartridge);
+    println!("{sprite_sheet:#?}");
+
+    let mut resources = runty8::load_assets!("moving-box").unwrap();
+    resources.sprite_sheet = sprite_sheet;
     runty8::debug_run::<ExampleApp>(resources).unwrap();
 }
 
@@ -103,3 +109,44 @@ impl App for ExampleApp {
         }
     }
 }
+
+fn process_cartridge(cartridge_content: String) -> SpriteSheet {
+    const GFX: &str = "__gfx__\n";
+    // Get gfx data
+    let start_byte = cartridge_content.find(GFX).unwrap();
+    // TODO: label section seems to be optional
+    let end_byte = cartridge_content.find("__label__").unwrap();
+
+    let gfx_data = &cartridge_content[(start_byte + GFX.len())..end_byte];
+
+    let mut sprite_sheet = SpriteSheet::new();
+
+    for (y, line) in gfx_data.lines().enumerate() {
+        for (x, char) in line.chars().enumerate() {
+            let color = char.to_digit(16).unwrap() as u8;
+
+            sprite_sheet.set(x, y, color);
+        }
+    }
+    return sprite_sheet;
+    // return SpriteSheet::deserialize(gfx_data).unwrap();
+}
+
+// Cartridge format:
+// pico-8 cartridge // http://www.pico-8.com
+// version 41
+// __lua__
+// [LUA CODE]
+// __gfx__
+// [SPRITE DATA?]
+// __label__
+// [LABEL DATA? (cartridge cover I guess)]
+// __gff__
+// [Not sure what this is]
+// __map__
+// [MAP DATA]
+// __sfx__
+// [SOUND DATA]
+// __music__
+// [MUSIC DATA]
+// [EMPTY LINE]
