@@ -4,6 +4,7 @@ pub mod key_combo;
 mod map;
 mod notification;
 mod sprite;
+mod tool;
 mod top_bar;
 mod undo_redo;
 
@@ -22,9 +23,11 @@ use runty8_core::{
     Sprite, SpriteSheet,
 };
 use runty8_core::{InputEvent, Pico8};
+use tool::Tool;
 
 use self::bucket_fill::PixelsMut;
 use self::key_combo::KeyCombos;
+use self::tool::ToolButton;
 use self::top_bar::TopBar;
 use self::undo_redo::{Command, Commands};
 
@@ -36,8 +39,8 @@ pub(crate) struct Editor {
     top_bar: TopBar,
     tab_buttons: [button::State; 4],
     sprite_buttons: Vec<button::State>,
-    selected_tool: usize,
-    tool_buttons: Vec<button::State>,
+    selected_tool: Tool,
+    tool_buttons: Vec<ToolButton>,
     bottom_bar_text: String,
     notification: notification::State,
     key_combos: KeyCombos<KeyComboAction>,
@@ -88,8 +91,8 @@ pub(crate) enum Msg {
         x: usize,
         y: usize,
         color: Color,
-    }, // TODO: Improve
-    ToolSelected(usize),
+    },
+    ToolSelected(Tool),
     ClickedMapTile {
         x: usize,
         y: usize,
@@ -259,8 +262,8 @@ impl ElmApp for Editor {
                 button::State::new(),
             ],
             sprite_buttons: vec![button::State::new(); 64],
-            selected_tool: 0,
-            tool_buttons: vec![button::State::new(); TOOLS.len()],
+            selected_tool: Tool::Pencil,
+            tool_buttons: ToolButton::buttons(),
             bottom_bar_text: "".to_owned(),
             notification: notification::State::new(),
             key_combos: KeyCombos::new()
@@ -342,8 +345,7 @@ impl ElmApp for Editor {
 
                 // TODO: Use an enum for selected tool.
                 match self.selected_tool {
-                    // Brush
-                    0 => {
+                    Tool::Pencil => {
                         let previous_color = sprite.pget(x, y);
                         self.commands.push(Command::pixel_changed(
                             self.selected_sprite,
@@ -361,19 +363,21 @@ impl ElmApp for Editor {
                             sprite.pset(x, y, color);
                         }
                     }
-                    // Bucket fill
-                    1 => {
+                    Tool::Fill => {
                         let pixels = &mut sprite.sprite;
                         let mut pixels_mut = PixelsMut::new(pixels, 8);
                         pixels_mut.fill_bucket(color, x, y);
                     }
                     tool => {
-                        println!("Used tool {tool}, not implemented yet");
+                        println!("Used tool {tool:?}, not implemented yet");
                     }
                 }
             }
             &Msg::ToolSelected(selected_tool) => {
                 self.selected_tool = selected_tool;
+                self.tool_buttons
+                    .iter_mut()
+                    .for_each(|tb| tb.update(selected_tool));
             }
             &Msg::ColorHovered(color) => {
                 self.bottom_bar_text = format!("COLOUR {color}");
@@ -472,14 +476,13 @@ impl ElmApp for Editor {
     }
 }
 
-const TOOLS: &[usize] = &[14, 40, 30];
 fn tools_row<'a>(
     y: i32,
     sprite: usize,
     selected_tab: usize,
     tab_buttons: &'a mut [button::State],
-    selected_tool: usize,
-    tool_buttons: &'a mut [button::State],
+    selected_tool: Tool,
+    tool_buttons: &'a mut [ToolButton],
 ) -> Element<'a, Msg> {
     let mut children = vec![DrawFn::new(move |draw| {
         const HEIGHT: i32 = 11;
@@ -489,19 +492,21 @@ fn tools_row<'a>(
 
     fn draw_tool_sprite(pico8: &mut Pico8, tool_sprite: usize, selected: bool) {
         pico8.palt(Some(0));
-        if !selected {
-            pico8.pal(7, 13);
+        if selected {
+            pico8.pal(13, 7);
         }
         pico8.editor_spr(tool_sprite, 0, 0);
-        pico8.pal(7, 7);
+        pico8.pal(13, 13);
     }
 
+    const BASE_X: i32 = 9;
+    const SPACING: i32 = 2;
+    const WIDTH: i32 = Sprite::WIDTH as i32;
     for (tool_index, tool_button) in tool_buttons.iter_mut().enumerate() {
-        let spr = TOOLS[tool_index];
+        let tool = tool_button.tool;
+        let spr = tool.unselected_sprite();
 
-        // TODO: The spacing isn't totally correct,
-        // it looks slightly different than Pico8.
-        let x = (9 + 8 * tool_index) as i32;
+        let x = BASE_X + (WIDTH + SPACING) * tool_index as i32;
         let y = y + 2;
         children.push(
             Button::new(
@@ -509,9 +514,11 @@ fn tools_row<'a>(
                 y,
                 8,
                 8,
-                Some(Msg::ToolSelected(tool_index)),
-                tool_button,
-                DrawFn::new(move |pico8| draw_tool_sprite(pico8, spr, selected_tool == tool_index)),
+                Some(Msg::ToolSelected(
+                    tool.selected_tool_on_click(selected_tool),
+                )),
+                &mut tool_button.button,
+                DrawFn::new(move |pico8| draw_tool_sprite(pico8, spr, selected_tool == tool)),
             )
             .into(),
         );
