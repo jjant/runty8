@@ -6,5 +6,8 @@ edition = "2021"
 [dependencies]
 runty8-core = { path = "../runty8-core" }
 runty8-winit = { path = "../runty8-winit" }
-runty8-event-loop = { path = "../runty8-event-loop" }
 winit = "0.27"
+runty8-event-loop = { path = "../runty8-event-loop"}
+
+[features]
+steamdeck = ["runty8-event-loop/steamdeck"]

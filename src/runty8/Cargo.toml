@@ -7,3 +7,6 @@ edition = "2021"
 runty8-core = { path = "../runty8-core" }
 runty8-runtime = { path = "../runty8-runtime" }
 runty8-editor = { path = "../runty8-editor" }
+
+[features]
+steamdeck = ["runty8-runtime/steamdeck"] 

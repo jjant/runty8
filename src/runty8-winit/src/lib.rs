@@ -164,7 +164,7 @@ impl Runty8KeyExt for Key {
             VirtualKeyCode::Down => Some(Self::DownArrow),
             VirtualKeyCode::Escape => Some(Self::Escape),
             VirtualKeyCode::LAlt => Some(Self::Alt),
-            VirtualKeyCode::Space => Some(Self::Space),
+            VirtualKeyCode::Space => Some(Self::Enter),
             _ => None,
         }
     }

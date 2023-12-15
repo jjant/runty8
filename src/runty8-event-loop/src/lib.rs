@@ -23,7 +23,9 @@ pub fn event_loop(
     mut on_event: impl FnMut(Event, &mut ControlFlow, &dyn Fn(&[u8], &mut ControlFlow), &dyn Fn(&str))
         + 'static,
 ) {
-    let mut screen_info = ScreenInfo::new(640.0, 640.0);
+    let (width, height) = get_window_size();
+
+    let mut screen_info = ScreenInfo::new(width, height);
 
     let event_loop = EventLoop::new();
 
@@ -70,6 +72,13 @@ pub fn event_loop(
             on_event(event, control_flow, draw, set_title);
         }
     })
+}
+
+fn get_window_size() -> (f64, f64) {
+    #[cfg(not(feature = "steamdeck"))]
+    return (640.0, 640.0);
+    #[cfg(feature = "steamdeck")]
+    return (320.0, 320.0);
 }
 
 fn draw(gl: &glow::Context, texture: glow::Texture, pixels: &[u8]) {
