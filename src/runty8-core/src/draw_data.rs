@@ -66,6 +66,20 @@ impl DrawData {
         }
     }
 
+    /// Get the "buffer color" (as opposed to a Pico8 color) currently in the
+    /// screen at the given index.
+    fn get_pixel(&self, index: usize) -> u32 {
+        // TODO: Should the current palette affect this?
+        #[allow(clippy::identity_op)]
+        {
+            let r = self.buffer[NUM_COMPONENTS * index + 0] as u32;
+            let g = self.buffer[NUM_COMPONENTS * index + 1] as u32;
+            let b = self.buffer[NUM_COMPONENTS * index + 2] as u32;
+
+            r << 16 | g << 8 | b << 0
+        }
+    }
+
     pub fn buffer(&self) -> &Buffer {
         &self.buffer
     }
@@ -152,6 +166,17 @@ impl DrawData {
         let (x, y) = self.apply_camera(x, y);
         if let Some(index) = self.index(x, y) {
             self.set_pixel(index, color);
+        }
+    }
+
+    pub(crate) fn pget(&self, x: i32, y: i32) -> Color {
+        let (x, y) = self.apply_camera(x, y);
+        if let Some(index) = self.index(x, y) {
+            let buffer_color = self.get_pixel(index);
+
+            get_pico8_color(buffer_color)
+        } else {
+            0
         }
     }
 
@@ -314,10 +339,18 @@ impl Default for DrawData {
     }
 }
 
-// Pico8 api
-
 fn get_color(index: Color) -> u32 {
     COLORS[index as usize]
+}
+
+fn get_pico8_color(buffer_color: u32) -> Color {
+    for (index, color) in COLORS.into_iter().enumerate() {
+        if buffer_color == color {
+            return index as u8;
+        }
+    }
+
+    panic!("Couldn't convert buffer color {buffer_color:#x} to pico8 color");
 }
 
 // Add _FF at the end for alpha
@@ -364,11 +397,11 @@ pub mod colors {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::{seq::SliceRandom, Rng};
 
     use crate::{
         colors,
-        draw_data::{get_color, Buffer, NUM_COMPONENTS},
+        draw_data::{get_color, Buffer, NUM_COMPONENTS, ORIGINAL_PALETTE},
     };
 
     use super::DrawData;
@@ -506,5 +539,33 @@ mod tests {
         assert_eq!(draw_data.camera(5, 25), (0, 0));
         assert_eq!(draw_data.camera(42, 42), (5, 25));
         assert_eq!(draw_data.camera(0, 0), (42, 42));
+    }
+
+    #[test]
+    fn pget_works() {
+        let mut draw_data = DrawData::new();
+
+        fn rand_coordinate() -> (i32, i32) {
+            let x = rand::thread_rng().gen_range(0..128);
+            let y = rand::thread_rng().gen_range(0..128);
+            (x, y)
+        }
+
+        // Sanity check
+        {
+            let (x, y) = rand_coordinate();
+            assert_eq!(draw_data.pget(x, y), 0);
+        }
+
+        for _ in 0..1000 {
+            let (x, y) = rand_coordinate();
+            let color = ORIGINAL_PALETTE
+                .choose(&mut rand::thread_rng())
+                .copied()
+                .unwrap();
+
+            draw_data.pset(x, y, color);
+            assert_eq!(draw_data.pget(x, y), color);
+        }
     }
 }
