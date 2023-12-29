@@ -66,6 +66,15 @@ impl DrawData {
         }
     }
 
+    fn get_pixel(&self, index: usize) -> u32 {
+        // TODO: Should the current palette affect this?
+        let r = self.buffer[NUM_COMPONENTS * index + 0] as u32;
+        let g = self.buffer[NUM_COMPONENTS * index + 1] as u32;
+        let b = self.buffer[NUM_COMPONENTS * index + 2] as u32;
+
+        r << 16 | g << 8 | b << 0
+    }
+
     pub fn buffer(&self) -> &Buffer {
         &self.buffer
     }
@@ -152,6 +161,17 @@ impl DrawData {
         let (x, y) = self.apply_camera(x, y);
         if let Some(index) = self.index(x, y) {
             self.set_pixel(index, color);
+        }
+    }
+
+    pub(crate) fn pget(&self, x: i32, y: i32) -> Color {
+        let (x, y) = self.apply_camera(x, y);
+        if let Some(index) = self.index(x, y) {
+            let buffer_color = self.get_pixel(index);
+
+            get_pico8_color(buffer_color)
+        } else {
+            0
         }
     }
 
@@ -314,10 +334,18 @@ impl Default for DrawData {
     }
 }
 
-// Pico8 api
-
 fn get_color(index: Color) -> u32 {
     COLORS[index as usize]
+}
+
+fn get_pico8_color(buffer_color: u32) -> Color {
+    for (index, color) in COLORS.into_iter().enumerate() {
+        if buffer_color == color {
+            return index as u8;
+        }
+    }
+
+    panic!("Couldn't convert buffer color {buffer_color:#x} to pico8 color");
 }
 
 // Add _FF at the end for alpha

@@ -9,3 +9,5 @@ members = [
   "examples",
 ]
 default-members = ["examples"]
+
+resolver = "2"
