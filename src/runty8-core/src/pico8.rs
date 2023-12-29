@@ -78,6 +78,7 @@ impl Pico8 {
         self.draw_data.pset(x, y, color);
     }
 
+    /// <https://pico-8.fandom.com/wiki/Pget>
     pub fn pget(&self, x: i32, y: i32) -> Color {
         self.draw_data.pget(x, y)
     }
