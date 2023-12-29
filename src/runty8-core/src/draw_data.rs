@@ -66,13 +66,18 @@ impl DrawData {
         }
     }
 
+    /// Get the "buffer color" (as opposed to a Pico8 color) currently in the
+    /// screen at the given index.
     fn get_pixel(&self, index: usize) -> u32 {
         // TODO: Should the current palette affect this?
-        let r = self.buffer[NUM_COMPONENTS * index + 0] as u32;
-        let g = self.buffer[NUM_COMPONENTS * index + 1] as u32;
-        let b = self.buffer[NUM_COMPONENTS * index + 2] as u32;
+        #[allow(clippy::identity_op)]
+        {
+            let r = self.buffer[NUM_COMPONENTS * index + 0] as u32;
+            let g = self.buffer[NUM_COMPONENTS * index + 1] as u32;
+            let b = self.buffer[NUM_COMPONENTS * index + 2] as u32;
 
-        r << 16 | g << 8 | b << 0
+            r << 16 | g << 8 | b << 0
+        }
     }
 
     pub fn buffer(&self) -> &Buffer {
@@ -392,11 +397,11 @@ pub mod colors {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::{seq::SliceRandom, Rng};
 
     use crate::{
         colors,
-        draw_data::{get_color, Buffer, NUM_COMPONENTS},
+        draw_data::{get_color, Buffer, NUM_COMPONENTS, ORIGINAL_PALETTE},
     };
 
     use super::DrawData;
@@ -534,5 +539,33 @@ mod tests {
         assert_eq!(draw_data.camera(5, 25), (0, 0));
         assert_eq!(draw_data.camera(42, 42), (5, 25));
         assert_eq!(draw_data.camera(0, 0), (42, 42));
+    }
+
+    #[test]
+    fn pget_works() {
+        let mut draw_data = DrawData::new();
+
+        fn rand_coordinate() -> (i32, i32) {
+            let x = rand::thread_rng().gen_range(0..128);
+            let y = rand::thread_rng().gen_range(0..128);
+            (x, y)
+        }
+
+        // Sanity check
+        {
+            let (x, y) = rand_coordinate();
+            assert_eq!(draw_data.pget(x, y), 0);
+        }
+
+        for _ in 0..1000 {
+            let (x, y) = rand_coordinate();
+            let color = ORIGINAL_PALETTE
+                .choose(&mut rand::thread_rng())
+                .copied()
+                .unwrap();
+
+            draw_data.pset(x, y, color);
+            assert_eq!(draw_data.pget(x, y), color);
+        }
     }
 }
