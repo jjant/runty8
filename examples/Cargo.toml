@@ -9,6 +9,10 @@ runty8 = { path = "../src/runty8" }
 runty8-core = { path = "../src/runty8-core" }
 log = "0.4"
 
+[features]
+default = []
+steamdeck = ["runty8/steamdeck"]
+
 [[bin]]
 name = "celeste"
 path = "./celeste/main.rs"

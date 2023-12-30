@@ -35,7 +35,7 @@ See [the contributing guide](./CONTRIBUTING.md) for instructions on how to get s
 - [Confetti mouse demo](./examples/confetti/main.rs)
 - [Moving box](./examples/moving-box/main.rs)
 
-## Running
+## Running in native window
 
 Run examples (`celeste`, `moving_box`, `confetti`) with:
 
@@ -49,3 +49,34 @@ Or run `cargo run --bin` to get a list of the available examples.
 
 Press the `Escape` key to switch between the game and the editor.
 
+## Running on the Steamdeck
+
+Run examples (`celeste`, `moving_box`, `confetti`) with:
+
+```bash
+cargo run --bin celeste -- --game --feature steamdeck
+cargo run --bin confetti -- --game --feature steamdeck
+cargo run --bin moving-box -- --game --feature steamdeck
+```
+
+This will ensure to have a better scale/window size which fits the small screen. 
+Please note for now it only works in desktop mode on the deck
+
+## Running in browser using WASM
+
+Run examples (`celeste`, `moving_box`, `confetti`) with:
+
+```bash
+rustup target add wasm32-unknown-emscripten
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli
+
+./build_script.sh celeste
+```
+
+If you see an error with serve ensure to install the tool as well via cargo. 
+Alternative you can use any static web server to host the files located in the folder generated
+
+```bash
+cd ./generated
+```

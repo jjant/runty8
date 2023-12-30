@@ -69,8 +69,8 @@ impl Input {
 
 fn key_to_button(key: Key) -> Option<Button> {
     match key {
-        Key::X => Some(Button::Cross),
-        Key::C => Some(Button::Circle),
+        Key::X | Key::Escape => Some(Button::Cross),
+        Key::C | Key::Enter => Some(Button::Circle),
         Key::LeftArrow => Some(Button::Left),
         Key::RightArrow => Some(Button::Right),
         Key::UpArrow => Some(Button::Up),

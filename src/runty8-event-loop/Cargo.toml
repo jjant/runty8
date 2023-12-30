@@ -3,6 +3,10 @@ name = "runty8-event-loop"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+steamdeck = []
+
 [dependencies]
 runty8-core = { path = "../runty8-core" }
 runty8-winit = { path = "../runty8-winit" }
