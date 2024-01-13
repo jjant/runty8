@@ -17,6 +17,10 @@ pub(crate) struct Editor {
 }
 
 impl Editor {
+    /// How many tiles is the map displayable area in height?
+    /// It's actually 8.5 tiles, but we need to fill 9.
+    const MAP_H_TILES: i32 = 9;
+
     const FILLER_SPR: usize = 1;
 
     pub(crate) fn new() -> Self {
@@ -94,25 +98,16 @@ impl Editor {
         let highlighted_tile_position =
             tile_position(self.camera, self.hovered_tile.0, self.hovered_tile.1) + vec2(x, y);
 
-        /// How many tiles is the map displayable area in height?
-        /// It's actually 8.5 tiles, but we need to fill 9.
-        const MAP_H_TILES: i32 = 9;
+        // TODO: In Pico8, this padding isn't simply a black 1-pixel-tall line,
+        // it's actually a "shadow". Tile pixels "underneath" it get "darkened".
+        let top_padding = DrawFn::new(move |pico8| {
+            let end_x = 127;
+            pico8.palt(None);
+            pico8.line(x, y, end_x, y, 0);
+            pico8.palt(Some(0));
+        });
 
-        let filler_left = (0..num_to_fill_on_the_left)
-            .cartesian_product(0..MAP_H_TILES + 1)
-            .map(|(index_x, index_y)| {
-                let x = camera.x - (index_x + 1) * W;
-                let y = camera.y % W + y + index_y * 8;
-
-                DrawFn::<'_, Msg>::new(move |pico8| {
-                    // TODO: Reset palette
-                    pico8.palt(None);
-                    pico8.spr(Self::FILLER_SPR, x, y);
-                    pico8.palt(Some(0));
-                })
-                .into()
-            });
-
+        let filler = self.filler(x, y);
         let buttons_iter = self.buttons.iter_mut().chunks(16);
         let map = buttons_iter
             .into_iter()
@@ -144,11 +139,35 @@ impl Editor {
                     ))))
                     .into()
                 })
-            });
+            })
+            .collect();
 
-        Tree::with_children(filler_left.chain(map).collect())
+        Tree::new()
+            .push(top_padding)
+            .push(filler)
+            .append(map)
             .push(highlight_hovered(highlighted_tile_position))
             .into()
+    }
+
+    fn filler<'a, Msg: Copy + Debug + 'a>(&self, base_x: i32, base_y: i32) -> Element<'a, Msg> {
+        DrawFn::new(move |pico8| {
+            pico8.palt(None);
+            // TODO: Use a common constant for this
+            // This is equal to 128(pixels)/8(pixels/tile)
+            let width_tiles = 16;
+            for column in 0..width_tiles {
+                for row in 0..Self::MAP_H_TILES {
+                    let x = column * 8 + base_x;
+
+                    let top_padding = 1;
+                    let y = row * 8 + base_y + top_padding;
+                    pico8.spr(Self::FILLER_SPR, x, y);
+                }
+            }
+            pico8.palt(Some(0));
+        })
+        .into()
     }
 }
 

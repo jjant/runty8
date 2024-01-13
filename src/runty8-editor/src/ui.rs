@@ -113,6 +113,11 @@ impl<'a, Msg> Tree<'a, Msg> {
         self.children.push(element.into());
         self
     }
+
+    pub fn append(mut self, mut children: Vec<Element<'a, Msg>>) -> Self {
+        self.children.append(&mut children);
+        self
+    }
 }
 
 impl<'a, Msg: Copy + Debug + 'a> From<Vec<Element<'a, Msg>>> for Element<'a, Msg> {

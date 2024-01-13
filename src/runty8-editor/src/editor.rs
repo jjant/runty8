@@ -53,6 +53,10 @@ pub(crate) struct Editor {
     selected_sprite: usize,
 }
 
+impl Editor {
+    const INITIAL_TAB: Tab = Tab::MapEditor;
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum Tab {
     SpriteEditor,
@@ -253,7 +257,7 @@ impl ElmApp for Editor {
         Self {
             cursor: cursor::State::new(),
             top_bar: TopBar::new(),
-            tab: Tab::SpriteEditor,
+            tab: Self::INITIAL_TAB,
             selected_sprite_page: 0,
             tab_buttons: [
                 button::State::new(),
