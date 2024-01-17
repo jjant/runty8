@@ -84,7 +84,6 @@ impl Editor {
         on_tile_click: &impl Fn(usize, usize) -> Msg,
         on_map_editor_msg: &impl Fn(self::Msg) -> Msg,
     ) -> Element<'a, Msg> {
-        let show_sprites_in_map = self.show_sprites_in_map;
         let camera = self.camera;
 
         dbg!(camera);
@@ -95,8 +94,7 @@ impl Editor {
 
         dbg!(num_to_fill_on_the_left);
 
-        let highlighted_tile_position =
-            tile_position(self.camera, self.hovered_tile.0, self.hovered_tile.1) + vec2(x, y);
+        let hovered_tile_highlight = self.highlight_hovered(x, y);
 
         // TODO: In Pico8, this padding isn't simply a black 1-pixel-tall line,
         // it's actually a "shadow". Tile pixels "underneath" it get "darkened".
@@ -108,8 +106,48 @@ impl Editor {
         });
 
         let filler = self.filler(x, y);
+
+        Tree::new()
+            .push(filler)
+            .push(self.actual_map(x, y, map, on_tile_click, on_map_editor_msg))
+            .push(hovered_tile_highlight)
+            .push(top_padding)
+            .into()
+    }
+
+    fn filler<'a, Msg: Copy + Debug + 'a>(&self, base_x: i32, base_y: i32) -> Element<'a, Msg> {
+        DrawFn::new(move |pico8| {
+            pico8.palt(None);
+            // TODO: Use a common constant for this
+            // This is equal to 128(pixels)/8(pixels/tile)
+            let width_tiles = 16;
+            for column in 0..width_tiles {
+                for row in 0..Self::MAP_H_TILES {
+                    let x = column * 8 + base_x;
+
+                    let top_padding = 1;
+                    let y = row * 8 + base_y + top_padding;
+                    pico8.spr(Self::FILLER_SPR, x, y);
+                }
+            }
+            pico8.palt(Some(0));
+        })
+        .into()
+    }
+
+    fn actual_map<'a, 'b, Msg: Copy + Debug + 'a>(
+        &'a mut self,
+        x: i32,
+        y: i32,
+        map: &'b Map,
+        on_tile_click: &impl Fn(usize, usize) -> Msg,
+        on_map_editor_msg: &impl Fn(self::Msg) -> Msg,
+    ) -> Vec<Element<'a, Msg>> {
         let buttons_iter = self.buttons.iter_mut().chunks(16);
-        let map = buttons_iter
+        let camera = self.camera;
+        let show_sprites_in_map = self.show_sprites_in_map;
+
+        buttons_iter
             .into_iter()
             .enumerate()
             .flat_map(|(row_index, row)| {
@@ -140,32 +178,21 @@ impl Editor {
                     .into()
                 })
             })
-            .collect();
-
-        Tree::new()
-            .push(top_padding)
-            .push(filler)
-            .append(map)
-            .push(highlight_hovered(highlighted_tile_position))
-            .into()
+            .collect()
     }
 
-    fn filler<'a, Msg: Copy + Debug + 'a>(&self, base_x: i32, base_y: i32) -> Element<'a, Msg> {
-        DrawFn::new(move |pico8| {
-            pico8.palt(None);
-            // TODO: Use a common constant for this
-            // This is equal to 128(pixels)/8(pixels/tile)
-            let width_tiles = 16;
-            for column in 0..width_tiles {
-                for row in 0..Self::MAP_H_TILES {
-                    let x = column * 8 + base_x;
+    fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(&self, x: i32, y: i32) -> Element<'a, Msg> {
+        let tile_position =
+            tile_position(self.camera, self.hovered_tile.0, self.hovered_tile.1) + vec2(x, y);
 
-                    let top_padding = 1;
-                    let y = row * 8 + base_y + top_padding;
-                    pico8.spr(Self::FILLER_SPR, x, y);
-                }
-            }
-            pico8.palt(Some(0));
+        DrawFn::new(move |pico8| {
+            pico8.rect(
+                tile_position.x - 1,
+                tile_position.y - 1,
+                tile_position.x + 8,
+                tile_position.y + 8,
+                7,
+            )
         })
         .into()
     }
@@ -177,19 +204,6 @@ pub(crate) enum Msg {
     HoveredTile((usize, usize)),
     MouseMove(Vec2i),
     SetDragging(bool),
-}
-
-fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(tile_position: Vec2i) -> Element<'a, Msg> {
-    DrawFn::new(move |draw| {
-        draw.rect(
-            tile_position.x,
-            tile_position.y,
-            tile_position.x + 7,
-            tile_position.y + 7,
-            7,
-        )
-    })
-    .into()
 }
 
 fn tile_position(camera: Vec2i, col_index: usize, row_index: usize) -> Vec2i {

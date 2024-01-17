@@ -55,9 +55,9 @@ impl<'a, Msg: Copy + Debug> Widget for Cursor<'a, Msg> {
         self.state.cursor_position = cursor_position;
     }
 
-    fn draw(&mut self, draw: &mut Pico8) {
-        draw.palt(Some(0));
-        draw.editor_spr(
+    fn draw(&mut self, pico8: &mut Pico8) {
+        pico8.palt(Some(0));
+        pico8.editor_spr(
             Self::POINTER_SPRITE,
             self.state.cursor_position.0 - 3,
             self.state.cursor_position.1 - 1,
