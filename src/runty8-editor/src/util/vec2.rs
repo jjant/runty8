@@ -1,4 +1,4 @@
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Vec2<T> {
@@ -45,6 +45,27 @@ impl<T: Neg> Neg for Vec2<T> {
     }
 }
 
+impl Mul<Vec2<i32>> for i32 {
+    type Output = Vec2<i32>;
+
+    fn mul(self, rhs: Vec2<i32>) -> Self::Output {
+        Vec2 {
+            x: self * rhs.x,
+            y: self * rhs.y,
+        }
+    }
+}
+impl Div<i32> for Vec2<i32> {
+    type Output = Vec2<i32>;
+
+    fn div(self, rhs: i32) -> Self::Output {
+        Vec2 {
+            x: self.x / rhs,
+            y: self.y / rhs,
+        }
+    }
+}
+
 pub(crate) type Vec2i = Vec2<i32>;
 
 impl<T> Vec2<T> {
@@ -71,5 +92,18 @@ mod tests {
     fn negation_works() {
         assert_eq!(-vec2(1, 2), vec2(-1, -2));
         assert_eq!(-vec2(4, 1234), vec2(-4, -1234));
+    }
+
+    #[test]
+    fn mul_works() {
+        assert_eq!(0 * vec2(23148, 31241), vec2(0, 0));
+        assert_eq!(2 * vec2(0, 3), vec2(0, 6));
+        assert_eq!(3 * vec2(12, 42), vec2(36, 126));
+    }
+
+    #[test]
+    fn div_works() {
+        assert_eq!(vec2(0, 3) / 2, vec2(0, 1));
+        assert_eq!(vec2(12, 42) / 3, vec2(4, 14));
     }
 }
