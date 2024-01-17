@@ -14,6 +14,7 @@ pub(crate) struct Editor {
     camera: Vec2i,
     // TODO: Use a proper enum
     dragging: bool,
+    drag_offset: Vec2i,
 }
 
 impl Editor {
@@ -31,18 +32,29 @@ impl Editor {
             mouse_position: vec2(64, 64),
             camera: Vec2i::zero(),
             dragging: false,
+            drag_offset: vec2(0, 0),
         }
     }
 
     pub(crate) fn update(&mut self, msg: Msg) {
         match msg {
             Msg::MouseMove(mouse_position) => {
-                let delta = self.mouse_position - mouse_position;
+                let raw_delta = self.mouse_position - mouse_position;
 
                 // println!("[Map Editor] Mouse delta: {delta:?}");
 
                 self.mouse_position = mouse_position;
                 if self.dragging {
+                    // self.camera = self.camera - delta;
+                    self.drag_offset = self.drag_offset + raw_delta;
+                    //x
+                    let delta = {
+                        let tiles_to_move = self.drag_offset / 8;
+                        let delta = 8 * tiles_to_move;
+                        self.drag_offset = self.drag_offset - delta;
+
+                        delta
+                    };
                     self.camera = self.camera - delta;
                 }
             }
@@ -94,7 +106,13 @@ impl Editor {
 
         dbg!(num_to_fill_on_the_left);
 
-        let hovered_tile_highlight = self.highlight_hovered(x, y);
+        let hovered_tile_highlight = if !self.dragging {
+            self.highlight_hovered(x, y)
+        }
+        // Hide highlight while moving the map around
+        else {
+            Tree::new().into()
+        };
 
         // TODO: In Pico8, this padding isn't simply a black 1-pixel-tall line,
         // it's actually a "shadow". Tile pixels "underneath" it get "darkened".
