@@ -72,6 +72,20 @@ impl<T> Vec2<T> {
     pub fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
+
+    /// Convert this vec's elements into another type.
+    #[allow(unused)]
+    pub fn convert<U: From<T>>(self) -> Vec2<U> {
+        Vec2::new(self.x.into(), self.y.into())
+    }
+
+    /// Try to convert this vec's elements into another type.
+    pub fn try_convert<U: TryFrom<T>>(self) -> Result<Vec2<U>, U::Error> {
+        let x = self.x.try_into()?;
+        let y = self.y.try_into()?;
+
+        Ok(Vec2::new(x, y))
+    }
 }
 
 pub(crate) fn vec2<T>(x: T, y: T) -> Vec2<T> {

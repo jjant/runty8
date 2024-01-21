@@ -433,7 +433,6 @@ impl ElmApp for Editor {
                 }
                 Tab::MapEditor => Tree::new()
                     .push(self.map_editor.view(
-                        &resources.map,
                         0,
                         8,
                         &|x, y| Msg::ClickedMapTile { x, y },

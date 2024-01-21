@@ -6,7 +6,7 @@ use runty8_core::colors::{
     BLACK, BLUE, BROWN, DARK_BLUE, DARK_GREEN, DARK_GREY, DARK_PURPLE, GREEN, LAVENDER, LIGHT_GREY,
     LIGHT_PEACH, ORANGE, PINK, RED, WHITE, YELLOW,
 };
-use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, Map, MouseEvent, Sprite};
+use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseEvent, Sprite};
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -15,6 +15,11 @@ pub(crate) struct Editor {
     show_sprites_in_map: bool,
     hovered_tile: (usize, usize),
     mouse_position: Vec2i,
+    /// Offset in x,y in number of tiles.
+    /// ```
+    /// camera: vec2(5, 1)
+    /// ```
+    /// Means that tile (5, 1) is rendered in the top-left corner of the map.
     camera: Vec2i,
     // TODO: Use a proper enum
     dragging: bool,
@@ -51,15 +56,14 @@ impl Editor {
                 if self.dragging {
                     // self.camera = self.camera - delta;
                     self.drag_offset = self.drag_offset + raw_delta;
-                    //x
-                    let delta = {
-                        let tiles_to_move = self.drag_offset / 8;
-                        let delta = 8 * tiles_to_move;
-                        self.drag_offset = self.drag_offset - delta;
 
-                        delta
+                    let delta_tiles = {
+                        let delta_tiles = self.drag_offset / 8;
+                        self.drag_offset = self.drag_offset - 8 * delta_tiles;
+
+                        delta_tiles
                     };
-                    self.camera = self.camera - delta;
+                    self.camera = self.camera + delta_tiles;
                 }
             }
             Msg::SetDragging(dragging) => {
@@ -94,7 +98,6 @@ impl Editor {
 
     pub(crate) fn view<'a, 'b, Msg: Copy + Debug + 'a>(
         &'a mut self,
-        map: &'b Map,
         x: i32,
         y: i32,
         on_tile_click: &impl Fn(usize, usize) -> Msg,
@@ -123,7 +126,7 @@ impl Editor {
 
         Tree::new()
             .push(filler)
-            .push(self.actual_map(x, y, map, on_tile_click, on_map_editor_msg))
+            .push(self.actual_map(x, y, on_tile_click, on_map_editor_msg))
             .push(hovered_tile_highlight)
             .push(top_padding)
             .into()
@@ -153,42 +156,90 @@ impl Editor {
         &'a mut self,
         x: i32,
         y: i32,
-        map: &'b Map,
         on_tile_click: &impl Fn(usize, usize) -> Msg,
         on_map_editor_msg: &impl Fn(self::Msg) -> Msg,
     ) -> Vec<Element<'a, Msg>> {
-        let buttons_iter = self.buttons.iter_mut().chunks(16);
-        let camera = self.camera;
         let show_sprites_in_map = self.show_sprites_in_map;
 
-        buttons_iter
+        // buttons_iter
+        //     .into_iter()
+        //     .enumerate()
+        //     .flat_map(|(row_index, row)| {
+        //         row.into_iter().enumerate().map(move |(col_index, state)| {
+        //             let sprite = map.mget(col_index as i32, row_index as i32);
+        //
+        //             let Vec2i { x, y } = tile_position(camera, col_index, row_index) + vec2(x, y);
+        //             Button::new(
+        //                 x,
+        //                 y,
+        //                 8,
+        //                 8,
+        //                 Some(on_tile_click(col_index, row_index)),
+        //                 state,
+        //                 DrawFn::new(move |draw| {
+        //                     draw.palt(None);
+        //                     if show_sprites_in_map {
+        //                         draw.spr(sprite.into(), 0, 0);
+        //                     } else {
+        //                         draw.print(&format!("{sprite:0>2X}"), 0, 1, 7);
+        //                     }
+        //                 }),
+        //             )
+        //             .event_on_press()
+        //             .on_hover(on_map_editor_msg(self::Msg::HoveredTile((
+        //                 col_index, row_index,
+        //             ))))
+        //             .into()
+        //         })
+        //     })
+        //     .collect();
+
+        let camera = self.camera;
+        self.buttons
+            .iter_mut()
+            .chunks(16)
             .into_iter()
             .enumerate()
-            .flat_map(|(row_index, row)| {
-                row.into_iter().enumerate().map(move |(col_index, state)| {
-                    let sprite = map.mget(col_index as i32, row_index as i32);
+            .flat_map(move |(row, button_row)| {
+                button_row.enumerate().map(move |(col, state)| {
+                    let Vec2i { x, y } = tile_position(col, row) + vec2(x, y);
 
-                    let Vec2i { x, y } = tile_position(camera, col_index, row_index) + vec2(x, y);
+                    let Vec2i {
+                        x: map_tile_x,
+                        y: map_tile_y,
+                    } = vec2(col, row).try_convert::<i32>().unwrap() + camera;
+
+                    let inside_map = inside_map(map_tile_x, map_tile_y);
+                    let on_tile_click = if inside_map {
+                        // This conversion is fine because we checked the range in `inside_map`.
+                        Some(on_tile_click(map_tile_x as usize, map_tile_y as usize))
+                    } else {
+                        None
+                    };
                     Button::new(
                         x,
                         y,
+                        // TODO: Use constants
                         8,
                         8,
-                        Some(on_tile_click(col_index, row_index)),
+                        on_tile_click,
                         state,
-                        DrawFn::new(move |draw| {
-                            draw.palt(None);
-                            if show_sprites_in_map {
-                                draw.spr(sprite.into(), 0, 0);
+                        DrawFn::new(move |pico8| {
+                            pico8.palt(None);
+                            if inside_map {
+                                pico8.map(map_tile_x, map_tile_y, 0, 0, 1, 1, 0);
+                                if !show_sprites_in_map {
+                                    let sprite = pico8.mget(map_tile_x, map_tile_y);
+                                    pico8.print(&format!("{sprite:0>2X}"), 0, 1, 7);
+                                }
                             } else {
-                                draw.print(&format!("{sprite:0>2X}"), 0, 1, 7);
+                                pico8.spr(Self::FILLER_SPR, 0, 0);
                             }
+                            pico8.palt(Some(0));
                         }),
                     )
                     .event_on_press()
-                    .on_hover(on_map_editor_msg(self::Msg::HoveredTile((
-                        col_index, row_index,
-                    ))))
+                    .on_hover(on_map_editor_msg(self::Msg::HoveredTile((col, row))))
                     .into()
                 })
             })
@@ -231,8 +282,7 @@ impl Editor {
     }
 
     fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(&self, x: i32, y: i32) -> Element<'a, Msg> {
-        let tile_position =
-            tile_position(self.camera, self.hovered_tile.0, self.hovered_tile.1) + vec2(x, y);
+        let tile_position = tile_position(self.hovered_tile.0, self.hovered_tile.1) + vec2(x, y);
 
         DrawFn::new(move |pico8| {
             pico8.rect(
@@ -255,6 +305,15 @@ pub(crate) enum Msg {
     SetDragging(bool),
 }
 
-fn tile_position(camera: Vec2i, col_index: usize, row_index: usize) -> Vec2i {
-    camera + vec2(col_index as i32 * 8, row_index as i32 * 8)
+fn tile_position(col_index: usize, row_index: usize) -> Vec2i {
+    vec2(col_index as i32 * 8, row_index as i32 * 8)
+}
+
+/// Returns whether a tile coordinate is inside the map.
+fn inside_map(tile_x: i32, tile_y: i32) -> bool {
+    // TODO: Use constants from [`runty8_core::Map`].
+    let inside_x = (0..=127).contains(&tile_x);
+    let inside_y = (0..=63).contains(&tile_y);
+
+    inside_x && inside_y
 }
