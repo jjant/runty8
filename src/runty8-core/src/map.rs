@@ -28,6 +28,9 @@ impl Map {
     pub const HEIGHT_SPRITES: usize = Self::SCREENS_HEIGHT * Self::SPRITES_PER_SCREEN_ROW;
     const MAP_SIZE: usize = Self::WIDTH_SPRITES * Self::HEIGHT_SPRITES;
 
+    pub const WIDTH_PIXELS: usize = Self::WIDTH_SPRITES * Sprite::WIDTH;
+    pub const HEIGHT_PIXELS: usize = Self::HEIGHT_SPRITES * Sprite::WIDTH;
+
     // TODO: Make pub(crate)
     pub fn new() -> Self {
         let mut map = [0; Self::MAP_SIZE];

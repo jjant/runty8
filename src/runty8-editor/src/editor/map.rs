@@ -123,11 +123,13 @@ impl Editor {
 
         let top_padding = self.top_padding(y);
         let filler = self.filler(x, y);
+        let map_boundary_border = self.map_boundary_border(x, y);
 
         Tree::new()
             .push(filler)
             .push(self.actual_map(x, y, on_tile_click, on_map_editor_msg))
             .push(hovered_tile_highlight)
+            .push(map_boundary_border)
             .push(top_padding)
             .into()
     }
@@ -159,45 +161,11 @@ impl Editor {
         on_tile_click: &impl Fn(usize, usize) -> Msg,
         on_map_editor_msg: &impl Fn(self::Msg) -> Msg,
     ) -> Vec<Element<'a, Msg>> {
+        let camera = self.camera;
         let show_sprites_in_map = self.show_sprites_in_map;
 
-        // buttons_iter
-        //     .into_iter()
-        //     .enumerate()
-        //     .flat_map(|(row_index, row)| {
-        //         row.into_iter().enumerate().map(move |(col_index, state)| {
-        //             let sprite = map.mget(col_index as i32, row_index as i32);
-        //
-        //             let Vec2i { x, y } = tile_position(camera, col_index, row_index) + vec2(x, y);
-        //             Button::new(
-        //                 x,
-        //                 y,
-        //                 8,
-        //                 8,
-        //                 Some(on_tile_click(col_index, row_index)),
-        //                 state,
-        //                 DrawFn::new(move |draw| {
-        //                     draw.palt(None);
-        //                     if show_sprites_in_map {
-        //                         draw.spr(sprite.into(), 0, 0);
-        //                     } else {
-        //                         draw.print(&format!("{sprite:0>2X}"), 0, 1, 7);
-        //                     }
-        //                 }),
-        //             )
-        //             .event_on_press()
-        //             .on_hover(on_map_editor_msg(self::Msg::HoveredTile((
-        //                 col_index, row_index,
-        //             ))))
-        //             .into()
-        //         })
-        //     })
-        //     .collect();
-
-        let camera = self.camera;
-        self.buttons
-            .iter_mut()
-            .chunks(16)
+        let buttons_iter = self.buttons.iter_mut().chunks(16);
+        buttons_iter
             .into_iter()
             .enumerate()
             .flat_map(move |(row, button_row)| {
@@ -292,6 +260,41 @@ impl Editor {
                 tile_position.y + 8,
                 7,
             )
+        })
+        .into()
+    }
+
+    fn map_boundary_border<'a, Msg: Copy + Debug + 'a>(&self, x: i32, y: i32) -> Element<'a, Msg> {
+        let camera = self.camera;
+
+        DrawFn::new(move |pico8| {
+            let start_relative = vec2(-2, -2);
+            let border_size_in_pixels = vec2(
+                runty8_core::Map::WIDTH_PIXELS + 1,
+                runty8_core::Map::HEIGHT_PIXELS + 1,
+            )
+            .try_convert()
+            .unwrap();
+
+            let start_global = start_relative + vec2(x, y) - 8 * camera;
+            let end_global = start_global + border_size_in_pixels;
+
+            // Grey outer border
+            pico8.rect(
+                start_global.x,
+                start_global.y,
+                end_global.x + 2,
+                end_global.y + 2,
+                LIGHT_GREY,
+            );
+            // Black inner border
+            pico8.rect(
+                start_global.x + 1,
+                start_global.y + 1,
+                end_global.x + 1,
+                end_global.y + 1,
+                BLACK,
+            );
         })
         .into()
     }
