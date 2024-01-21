@@ -2,6 +2,10 @@ use crate::ui::button::{self, Button};
 use crate::ui::{DrawFn, Element, Tree};
 use crate::util::vec2::{vec2, Vec2i};
 use itertools::Itertools;
+use runty8_core::colors::{
+    BLACK, BLUE, BROWN, DARK_BLUE, DARK_GREEN, DARK_GREY, DARK_PURPLE, GREEN, LAVENDER, LIGHT_GREY,
+    LIGHT_PEACH, ORANGE, PINK, RED, WHITE, YELLOW,
+};
 use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, Map, MouseEvent, Sprite};
 use std::fmt::Debug;
 
@@ -114,15 +118,7 @@ impl Editor {
             Tree::new().into()
         };
 
-        // TODO: In Pico8, this padding isn't simply a black 1-pixel-tall line,
-        // it's actually a "shadow". Tile pixels "underneath" it get "darkened".
-        let top_padding = DrawFn::new(move |pico8| {
-            let end_x = 127;
-            pico8.palt(None);
-            pico8.line(x, y, end_x, y, 0);
-            pico8.palt(Some(0));
-        });
-
+        let top_padding = self.top_padding(y);
         let filler = self.filler(x, y);
 
         Tree::new()
@@ -197,6 +193,41 @@ impl Editor {
                 })
             })
             .collect()
+    }
+
+    fn top_padding<'a, Msg: Copy + Debug + 'a>(&self, y: i32) -> Element<'a, Msg> {
+        DrawFn::new(move |pico8| {
+            // Note: The "darkening" function for the 4-tile "separators"
+            // (shown when holding down the space bar) is different.
+            fn darken_pixel(pixel: u8) -> u8 {
+                match pixel {
+                    BLACK => BLACK,
+                    DARK_BLUE => BLACK,
+                    DARK_PURPLE => DARK_GREY,
+                    DARK_GREEN => DARK_BLUE,
+                    BROWN => DARK_PURPLE,
+                    DARK_GREY => DARK_BLUE,
+                    LIGHT_GREY => LAVENDER,
+                    WHITE => LIGHT_GREY,
+                    RED => DARK_PURPLE,
+                    ORANGE => BROWN,
+                    YELLOW => ORANGE,
+                    GREEN => DARK_GREEN,
+                    BLUE => LAVENDER,
+                    LAVENDER => DARK_GREY,
+                    PINK => LAVENDER,
+                    LIGHT_PEACH => LIGHT_GREY,
+                    16_u8..=u8::MAX => 0,
+                }
+            }
+            pico8.palt(None);
+            for x in 0..128 {
+                let color = pico8.pget(x, y);
+                pico8.pset(x, y, darken_pixel(color));
+            }
+            pico8.palt(Some(0));
+        })
+        .into()
     }
 
     fn highlight_hovered<'a, Msg: Copy + Debug + 'a>(&self, x: i32, y: i32) -> Element<'a, Msg> {
