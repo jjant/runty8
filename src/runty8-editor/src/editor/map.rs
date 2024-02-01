@@ -1,10 +1,11 @@
+use crate::pico8::Pico8EditorExt;
 use crate::ui::button::{self, Button};
 use crate::ui::{DrawFn, Element, Tree};
 use crate::util::vec2::{vec2, Vec2i};
 use itertools::Itertools;
 use runty8_core::colors::{
-    BLACK, BLUE, BROWN, DARK_BLUE, DARK_GREEN, DARK_GREY, DARK_PURPLE, GREEN, LAVENDER, LIGHT_GREY,
-    LIGHT_PEACH, ORANGE, PINK, RED, WHITE, YELLOW,
+    self, BLACK, BLUE, BROWN, DARK_BLUE, DARK_GREEN, DARK_GREY, DARK_PURPLE, GREEN, LAVENDER,
+    LIGHT_GREY, LIGHT_PEACH, ORANGE, PINK, RED, WHITE, YELLOW,
 };
 use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseEvent, Sprite};
 use std::fmt::Debug;
@@ -29,7 +30,7 @@ pub(crate) struct Editor {
 impl Editor {
     /// How many tiles is the map displayable area in height?
     /// It's actually 8.5 tiles, but we need to fill 9.
-    const MAP_H_TILES: i32 = 9;
+    // const MAP_H_TILES: i32 = 9;
 
     const FILLER_SPR: usize = 1;
 
@@ -122,36 +123,18 @@ impl Editor {
         };
 
         let top_padding = self.top_padding(y);
-        let filler = self.filler(x, y);
+        // let filler = self.filler(x, y);
         let map_boundary_border = self.map_boundary_border(x, y);
+        let drag_grid = self.drag_grid();
 
         Tree::new()
-            .push(filler)
+            // .push(filler)
             .push(self.actual_map(x, y, on_tile_click, on_map_editor_msg))
+            .push(drag_grid)
             .push(hovered_tile_highlight)
             .push(map_boundary_border)
             .push(top_padding)
             .into()
-    }
-
-    fn filler<'a, Msg: Copy + Debug + 'a>(&self, base_x: i32, base_y: i32) -> Element<'a, Msg> {
-        DrawFn::new(move |pico8| {
-            pico8.palt(None);
-            // TODO: Use a common constant for this
-            // This is equal to 128(pixels)/8(pixels/tile)
-            let width_tiles = 16;
-            for column in 0..width_tiles {
-                for row in 0..Self::MAP_H_TILES {
-                    let x = column * 8 + base_x;
-
-                    let top_padding = 1;
-                    let y = row * 8 + base_y + top_padding;
-                    pico8.spr(Self::FILLER_SPR, x, y);
-                }
-            }
-            pico8.palt(Some(0));
-        })
-        .into()
     }
 
     fn actual_map<'a, 'b, Msg: Copy + Debug + 'a>(
@@ -201,7 +184,7 @@ impl Editor {
                                     pico8.print(&format!("{sprite:0>2X}"), 0, 1, 7);
                                 }
                             } else {
-                                pico8.spr(Self::FILLER_SPR, 0, 0);
+                                pico8.editor_spr(Self::FILLER_SPR, 0, 0);
                             }
                             pico8.palt(Some(0));
                         }),
@@ -297,6 +280,49 @@ impl Editor {
             );
         })
         .into()
+    }
+
+    // TODO: Rename.
+    fn drag_grid<'a, Msg: Copy + Debug + 'a>(&self) -> Element<'a, Msg> {
+        const CROSS_SPR: usize = 31;
+        let camera_in_tiles = self.camera * 8;
+        let base_x = 0;
+        let base_y = 8;
+
+        let lines = (0..9)
+            .into_iter()
+            .flat_map(|col| {
+                [
+                    DrawFn::new(move |pico8| {
+                        let x = base_x + col * 16 - camera_in_tiles.x;
+                        let y = base_y - camera_in_tiles.y;
+                        pico8.line(x, y, x, y + 127, colors::DARK_GREY);
+                    }),
+                    DrawFn::new(move |pico8| {
+                        let x = base_x - camera_in_tiles.x;
+                        let y = base_y + col * 16 - camera_in_tiles.y;
+                        pico8.line(x, y, x + 127, y, colors::DARK_GREY);
+                    }),
+                ]
+            })
+            .map(|draw_fn| draw_fn.into())
+            .collect::<Vec<_>>();
+
+        let crosses = (0..3)
+            .flat_map(|col| {
+                (0..3).map(move |row| {
+                    DrawFn::new(move |pico8| {
+                        let x = base_x + col * 4 * 16 - camera_in_tiles.x;
+                        let y = base_y + row * 4 * 16 - camera_in_tiles.y;
+
+                        pico8.editor_spr(CROSS_SPR, x - 2, y - 2);
+                    })
+                    .into()
+                })
+            })
+            .collect();
+
+        Tree::with_children(lines).append(crosses).into()
     }
 }
 
