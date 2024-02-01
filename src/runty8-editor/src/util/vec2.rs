@@ -45,6 +45,12 @@ impl<T: Neg> Neg for Vec2<T> {
     }
 }
 
+/// Multiply a [`Vec2`] by a number.
+///
+/// ```
+///  let v: Vec2<i32> = vec2(1, 2) * 8;
+/// ```
+///
 impl Mul<Vec2<i32>> for i32 {
     type Output = Vec2<i32>;
 
@@ -55,6 +61,21 @@ impl Mul<Vec2<i32>> for i32 {
         }
     }
 }
+
+/// Multiply a number by a [`Vec2`].
+///
+/// ```
+///  let v: Vec2<i32> = 8 * vec2(1, 2);
+/// ```
+///
+impl Mul<i32> for Vec2<i32> {
+    type Output = Vec2<i32>;
+
+    fn mul(self, factor: i32) -> Self::Output {
+        i32::mul(factor, self)
+    }
+}
+
 impl Div<i32> for Vec2<i32> {
     type Output = Vec2<i32>;
 
