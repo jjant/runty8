@@ -414,9 +414,9 @@ impl ElmApp for Editor {
         const BACKGROUND: u8 = 5;
 
         Tree::new()
-            .push(DrawFn::new(|draw| {
-                draw.rectfill(0, 0, 127, 127, BACKGROUND)
-            }))
+            // .push(DrawFn::new(|draw| {
+            //     draw.rectfill(0, 0, 127, 127, BACKGROUND)
+            // }))
             .push(match self.tab {
                 Tab::SpriteEditor => {
                     let selected_sprite_flags =
@@ -441,20 +441,20 @@ impl ElmApp for Editor {
                     .into(),
             })
             .push(self.top_bar.view(self.tab))
-            .push(tools_row(
-                76,
-                self.selected_sprite,
-                self.selected_sprite_page,
-                &mut self.tab_buttons,
-                self.selected_tool,
-                &mut self.tool_buttons,
-            ))
-            .push(sprite_view(
-                self.selected_sprite,
-                self.selected_sprite_page,
-                &mut self.sprite_buttons,
-                87,
-            ))
+            // .push(tools_row(
+            //     76,
+            //     self.selected_sprite,
+            //     self.selected_sprite_page,
+            //     &mut self.tab_buttons,
+            //     self.selected_tool,
+            //     &mut self.tool_buttons,
+            // ))
+            // .push(sprite_view(
+            //     self.selected_sprite,
+            //     self.selected_sprite_page,
+            //     &mut self.sprite_buttons,
+            //     87,
+            // ))
             .push(bottom_bar(&self.bottom_bar_text))
             .push(Cursor::new(&mut self.cursor))
             .push(Notification::new(&mut self.notification))

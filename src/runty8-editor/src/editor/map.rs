@@ -10,6 +10,22 @@ use runty8_core::colors::{
 use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseEvent, Sprite};
 use std::fmt::Debug;
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum MapDrawMode {
+    Fullscreen,
+    Windowed,
+}
+impl MapDrawMode {
+    fn toggle(&mut self) {
+        let new = match self {
+            Self::Fullscreen => Self::Windowed,
+            Self::Windowed => Self::Fullscreen,
+        };
+
+        *self = new
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct Editor {
     buttons: Vec<button::State>,
@@ -25,24 +41,27 @@ pub(crate) struct Editor {
     // TODO: Use a proper enum
     dragging: bool,
     drag_offset: Vec2i,
+    map_draw_mode: MapDrawMode,
 }
 
 impl Editor {
     /// How many tiles is the map displayable area in height?
     /// It's actually 8.5 tiles, but we need to fill 9.
     // const MAP_H_TILES: i32 = 9;
+    const BUTTONS_COUNT: usize = 16 * 14;
 
     const FILLER_SPR: usize = 1;
 
     pub(crate) fn new() -> Self {
         Self {
-            buttons: vec![button::State::new(); 144],
+            buttons: vec![button::State::new(); Self::BUTTONS_COUNT],
             show_sprites_in_map: true,
             hovered_tile: (0, 0),
             mouse_position: vec2(64, 64),
             camera: Vec2i::zero(),
             dragging: false,
             drag_offset: vec2(0, 0),
+            map_draw_mode: MapDrawMode::Fullscreen,
         }
     }
 
@@ -76,6 +95,7 @@ impl Editor {
             Msg::HoveredTile(hovered_tile) => {
                 self.hovered_tile = hovered_tile;
             }
+            Msg::SwitchMapDrawMode => self.map_draw_mode.toggle(),
         }
     }
 
@@ -87,6 +107,7 @@ impl Editor {
                 match (key, state) {
                     (Key::C, KeyState::Down) => Some(Msg::SwitchMapMode),
                     (Key::Space, key_state) => Some(Msg::SetDragging(*key_state == KeyState::Down)),
+                    (Key::Tab, KeyState::Down) => Some(Msg::SwitchMapDrawMode),
                     _ => None,
                 }
             }
@@ -116,24 +137,23 @@ impl Editor {
 
         let hovered_tile_highlight = if !self.dragging {
             self.highlight_hovered(x, y)
-        }
-        // Hide highlight while moving the map around
-        else {
+        } else {
+            // Hide highlight while moving the map around
             Tree::new().into()
         };
 
         let top_padding = self.top_padding(y);
-        // let filler = self.filler(x, y);
         let map_boundary_border = self.map_boundary_border(x, y);
         let drag_grid = self.drag_grid();
+        let bottom_border: Element<'_, Msg> = self.bottom_border();
 
         Tree::new()
-            // .push(filler)
             .push(self.actual_map(x, y, on_tile_click, on_map_editor_msg))
             .push(drag_grid)
             .push(hovered_tile_highlight)
             .push(map_boundary_border)
             .push(top_padding)
+            .push(bottom_border)
             .into()
     }
 
@@ -324,6 +344,16 @@ impl Editor {
 
         Tree::with_children(lines).append(crosses).into()
     }
+
+    /// The bottom dark grey line that appears when the map is in fullscreen mode.
+    fn bottom_border<'a, Msg: Copy + Debug + 'a>(&self) -> Element<'a, Msg> {
+        let map_draw_mode = self.map_draw_mode;
+        DrawFn::new(move |pico8| match map_draw_mode {
+            MapDrawMode::Fullscreen => pico8.line(0, 120, 127, 120, colors::DARK_GREY),
+            _ => {}
+        })
+        .into()
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -332,6 +362,7 @@ pub(crate) enum Msg {
     HoveredTile((usize, usize)),
     MouseMove(Vec2i),
     SetDragging(bool),
+    SwitchMapDrawMode,
 }
 
 fn tile_position(col_index: usize, row_index: usize) -> Vec2i {
