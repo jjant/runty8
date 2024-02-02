@@ -161,6 +161,8 @@ pub enum Key {
     Alt,
     ///
     Space,
+    ///
+    Tab,
 }
 
 /// Keyboard event (key up/down).
