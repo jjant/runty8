@@ -10,12 +10,20 @@ use runty8_core::colors::{
 use runty8_core::{Event, InputEvent, Key, KeyState, KeyboardEvent, MouseEvent, Sprite};
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum MapDrawMode {
     Fullscreen,
     Windowed,
 }
 impl MapDrawMode {
+    const fn sprite(&self) -> usize {
+        match self {
+            // TODO: Use the right sprites
+            MapDrawMode::Fullscreen => 53,
+            MapDrawMode::Windowed => 54,
+        }
+    }
+
     fn toggle(&mut self) {
         let new = match self {
             Self::Fullscreen => Self::Windowed,
@@ -63,6 +71,29 @@ impl Editor {
             drag_offset: vec2(0, 0),
             map_draw_mode: MapDrawMode::Fullscreen,
         }
+    }
+
+    pub(crate) fn tools<'a, Msg: Copy + Debug + 'a>(&self) -> Element<'a, Msg> {
+        let current_map_draw_mode = self.map_draw_mode;
+
+        DrawFn::new(move |pico8| {
+            use MapDrawMode::*;
+            [Windowed, Fullscreen]
+                .into_iter()
+                .enumerate()
+                .for_each(move |(index, mode)| {
+                    let selected = current_map_draw_mode == mode;
+
+                    if selected {
+                        pico8.pal(2, 15);
+                    }
+                    pico8.editor_spr(mode.sprite(), 4 + index as i32 * 8, 0);
+                    if selected {
+                        pico8.pal(2, 2);
+                    }
+                });
+        })
+        .into()
     }
 
     pub(crate) fn update(&mut self, msg: Msg) {

@@ -7,6 +7,7 @@ mod sprite;
 mod tool;
 mod top_bar;
 mod undo_redo;
+use std::fmt::Debug;
 
 use crate::app::ElmApp;
 use crate::editor::notification::Notification;
@@ -18,11 +19,11 @@ use crate::ui::{
 };
 use crate::ui::{DrawFn, Element, Tree};
 use brush_size::BrushSize;
+use runty8_core::{colors, InputEvent, Pico8};
 use runty8_core::{
     serialize::Serialize, Color, Event, Flags, Key, KeyState, KeyboardEvent, Map, Resources,
     Sprite, SpriteSheet,
 };
-use runty8_core::{InputEvent, Pico8};
 use tool::Tool;
 
 use self::bucket_fill::PixelsMut;
@@ -411,12 +412,11 @@ impl ElmApp for Editor {
     }
 
     fn view(&mut self, resources: &Resources) -> Element<'_, Msg> {
-        const BACKGROUND: u8 = 5;
+        let background = DrawFn::new(|draw| draw.rectfill(0, 0, 127, 127, colors::DARK_GREY));
+        let tab_tools = self.tab_tools();
 
         Tree::new()
-            // .push(DrawFn::new(|draw| {
-            //     draw.rectfill(0, 0, 127, 127, BACKGROUND)
-            // }))
+            .push(background)
             .push(match self.tab {
                 Tab::SpriteEditor => {
                     let selected_sprite_flags =
@@ -441,20 +441,21 @@ impl ElmApp for Editor {
                     .into(),
             })
             .push(self.top_bar.view(self.tab))
-            // .push(tools_row(
-            //     76,
-            //     self.selected_sprite,
-            //     self.selected_sprite_page,
-            //     &mut self.tab_buttons,
-            //     self.selected_tool,
-            //     &mut self.tool_buttons,
-            // ))
-            // .push(sprite_view(
-            //     self.selected_sprite,
-            //     self.selected_sprite_page,
-            //     &mut self.sprite_buttons,
-            //     87,
-            // ))
+            .push(tab_tools)
+            .push(tools_row(
+                76,
+                self.selected_sprite,
+                self.selected_sprite_page,
+                &mut self.tab_buttons,
+                self.selected_tool,
+                &mut self.tool_buttons,
+            ))
+            .push(sprite_view(
+                self.selected_sprite,
+                self.selected_sprite_page,
+                &mut self.sprite_buttons,
+                87,
+            ))
             .push(bottom_bar(&self.bottom_bar_text))
             .push(Cursor::new(&mut self.cursor))
             .push(Notification::new(&mut self.notification))
@@ -476,6 +477,12 @@ impl ElmApp for Editor {
             _ => None.into_iter(),
         })
         .collect()
+    }
+}
+
+impl Editor {
+    pub(crate) fn tab_tools<'a, Msg: Copy + Debug + 'a>(&'_ self) -> Element<'a, Msg> {
+        self.map_editor.tools()
     }
 }
 
