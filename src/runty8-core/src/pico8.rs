@@ -134,6 +134,15 @@ impl Pico8 {
         self.draw_data.spr_(spr, x, y, w, h, flip_x, flip_y);
     }
 
+    /// <http://pico8wiki.com/index.php?title=Sget>
+    pub fn sget(&self, x: i32, y: i32) -> Color {
+        if let (Ok(x), Ok(y)) = (x.try_into(), y.try_into()) {
+            self.resources.sprite_sheet.get(x, y)
+        } else {
+            0
+        }
+    }
+
     // TODO: Test
     pub fn sset(&mut self, x: i32, y: i32, color: Color) {
         if let (Ok(x), Ok(y)) = (x.try_into(), y.try_into()) {

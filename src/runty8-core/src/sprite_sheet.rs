@@ -44,6 +44,18 @@ impl SpriteSheet {
         }
     }
 
+    /// Gets the color at coordinate `(x, y)` in the spritesheet.
+    /// This is used to implement [`Pico8::sget`].
+    ///
+    /// It will return 0 (black) if the given coordinate is outside the range `(0..=127, 0..=127)`.
+    // TODO: Test this function.
+    pub fn get(&self, x: usize, y: usize) -> Color {
+        self.sprite_sheet
+            .get(Self::to_linear_index(x, y))
+            .copied()
+            .unwrap_or(0)
+    }
+
     /// Sets the pixel at coordinate (x,y) in the spritesheet to a specified color
     pub fn set(&mut self, x: usize, y: usize, c: Color) {
         self.sprite_sheet[Self::to_linear_index(x, y)] = c;
